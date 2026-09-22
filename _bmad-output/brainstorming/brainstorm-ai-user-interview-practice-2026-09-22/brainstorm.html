@@ -1,0 +1,433 @@
+<title>Phiên Tảng Băng</title>
+<meta name="description" content="Kỷ niệm phiên brainstorm 22/09/2026 về sản phẩm AI luyện kỹ năng phỏng vấn người dùng.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#EFF4F4; --surface:#FFFFFF; --sunk:#E2EBEC; --ink:#10252D; --muted:#566B72;
+  --line:#C9D6D8; --accent:#1F6F8B; --accent-soft:#D3E7EE; --hook:#F4C63D; --hook-ink:#3A2C00;
+  --deep:#16394A; --deep-2:#0E2A38; --ice:#FFFFFF; --ice-edge:#9CC3D2; --drop:#B4452F; --keep:#2E7D5B;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Literata", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A171D; --surface:#10232B; --sunk:#0D1E25; --ink:#E1ECEE; --muted:#93A9B0;
+    --line:#22404B; --accent:#6CC3E0; --accent-soft:#16384A; --hook:#E6B82E; --hook-ink:#231A00;
+    --deep:#0F3446; --deep-2:#082230; --ice:#DCEEF4; --ice-edge:#6CA9BF; --drop:#E27D66; --keep:#6BC49A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A171D; --surface:#10232B; --sunk:#0D1E25; --ink:#E1ECEE; --muted:#93A9B0;
+  --line:#22404B; --accent:#6CC3E0; --accent-soft:#16384A; --hook:#E6B82E; --hook-ink:#231A00;
+  --deep:#0F3446; --deep-2:#082230; --ice:#DCEEF4; --ice-edge:#6CA9BF; --drop:#E27D66; --keep:#6BC49A;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 var(--body);padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0}
+h2{font-size:clamp(1.7rem,3.6vw,2.4rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.15rem;font-weight:700}
+p{margin:0}
+.prose{max-width:65ch}
+.eyebrow{font:500 .75rem/1.2 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+.mono{font-family:var(--mono)}
+mark{background:var(--hook);color:var(--hook-ink);padding:0 .2em;border-radius:2px}
+section{padding-block:56px 8px;display:grid;gap:22px}
+.sec-head{display:grid;gap:10px}
+.sec-head p{color:var(--muted);max-width:65ch}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* HERO */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:32px;align-items:center;padding-block:48px 12px}
+.hero h1{font-size:clamp(2.6rem,7vw,4.6rem);font-weight:800;letter-spacing:-.025em}
+.hero .lede{font-size:1.1rem;margin-top:16px;max-width:52ch}
+.transcript{margin-top:22px;border-left:2px solid var(--line);padding-left:14px;display:grid;gap:6px;font-size:.95rem}
+.transcript .t{font:400 .78rem var(--mono);color:var(--muted);margin-right:8px}
+.transcript .who{font:500 .78rem var(--mono);color:var(--accent);margin-right:6px}
+.stats{display:flex;flex-wrap:wrap;gap:22px 34px;margin-top:26px}
+.stat b{display:block;font:800 2rem/1 var(--display);font-variant-numeric:tabular-nums}
+.stat span{font:400 .78rem/1.3 var(--mono);color:var(--muted)}
+.iceberg{width:100%;height:auto;display:block}
+.iceberg .sky{fill:var(--bg)}
+.iceberg .sea{fill:var(--deep)}
+.iceberg .sea2{fill:var(--deep-2)}
+.iceberg .ice{fill:var(--ice);stroke:var(--ice-edge);stroke-width:1.5}
+.iceberg .under{fill:var(--ice);opacity:.18;stroke:var(--ice-edge);stroke-width:1.2}
+.iceberg .wl{stroke:var(--ice-edge);stroke-width:1;stroke-dasharray:4 5}
+.iceberg .lbl{font:500 12px var(--mono);fill:var(--muted)}
+.iceberg .lbl-d{font:500 12px var(--mono);fill:#CFE4EC}
+.iceberg .found{fill:var(--hook)}
+.iceberg .hidden{fill:none;stroke:#CFE4EC;stroke-width:1.5}
+.iceberg .big{font:700 15px var(--display);fill:#FFFFFF}
+
+/* REVERSE */
+.axis{display:grid;gap:10px}
+.axis > h3{font:500 .78rem var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:6px}
+.flip{display:grid;grid-template-columns:1fr auto 1fr;gap:6px 16px;align-items:start;padding-block:8px;border-bottom:1px dashed var(--line)}
+.flip .f{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--drop);text-decoration-thickness:1.5px}
+.flip .arr{font-family:var(--mono);color:var(--accent)}
+.flip .r{font-weight:600}
+.by{font:500 .7rem var(--mono);color:var(--muted);white-space:nowrap;margin-left:6px;text-decoration:none;display:inline-block}
+.by.coach{color:var(--accent)}
+.axes{display:grid;grid-template-columns:1fr 1fr;gap:28px 36px}
+.extreme{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px;display:grid;gap:8px}
+.extremes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.extreme .tag{font:500 .72rem var(--mono);color:var(--accent);text-transform:uppercase;letter-spacing:.08em}
+
+/* MORPH GRID */
+.combo-bar{display:flex;flex-wrap:wrap;gap:8px}
+.combo-bar button{font:600 .9rem var(--display);padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.combo-bar button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.combo-note{font-size:.95rem;color:var(--muted);max-width:70ch;min-height:3.2em}
+.grid-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table.morph{border-collapse:collapse;width:100%;min-width:760px;font-size:.88rem}
+.morph th{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;padding:12px 14px;vertical-align:top;width:150px;border-bottom:1px solid var(--line)}
+.morph th b{display:block;font:800 1.1rem var(--display);color:var(--ink);letter-spacing:0}
+.morph td{padding:10px 14px;border-bottom:1px solid var(--line)}
+.morph tr:last-child th,.morph tr:last-child td{border-bottom:0}
+.cells{display:flex;flex-wrap:wrap;gap:6px}
+.cell{padding:4px 10px;border-radius:4px;background:var(--sunk);border:1px solid transparent;transition:background .2s,border-color .2s,color .2s}
+.cell.on{background:var(--hook);color:var(--hook-ink);border-color:var(--hook);font-weight:600}
+
+/* JTBD */
+.jobs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.job{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px;display:grid;gap:10px;align-content:start}
+.job .who{font:500 .72rem var(--mono);color:var(--accent);text-transform:uppercase;letter-spacing:.08em}
+.job dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.95rem}
+.job dt{font:500 .75rem/1.9 var(--mono);color:var(--muted)}
+.job dd{margin:0}
+.job dd.so{font-weight:600}
+.job .vs{font-size:.88rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.thesis{font:700 clamp(1.3rem,3vw,1.8rem)/1.25 var(--display);max-width:32ch;padding-block:6px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink)}
+
+/* ANALOGIES */
+.analog{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:0 28px}
+.an{display:grid;grid-template-columns:7.5rem 1fr;gap:4px 14px;padding-block:12px;border-bottom:1px solid var(--line)}
+.an .field{font:700 .95rem/1.3 var(--display)}
+.an .steal{font-size:.93rem}
+.an .steal b{font-weight:600}
+
+/* GUARDS */
+.pipe{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.pipe > div{padding:18px 20px;display:grid;gap:6px;align-content:start}
+.pipe > div + div{border-left:1px solid var(--line)}
+.pipe .k{font:800 1.25rem var(--display)}
+.pipe .how{font-size:.92rem;color:var(--muted)}
+
+/* CONVERGE */
+.climax{background:var(--deep);color:#E6F1F4;border-radius:10px;padding:clamp(22px,4vw,40px);display:grid;gap:28px;margin-top:8px}
+.climax .eyebrow{color:var(--hook)}
+.climax h2{color:#FFFFFF}
+.climax p,.climax li{color:#D4E4EA}
+.dirs{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.dir{border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:18px 20px;display:grid;gap:8px;align-content:start}
+.dir.lead{background:rgba(255,255,255,.06);border-color:var(--hook)}
+.dir .tag{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--hook)}
+.dir h3{color:#FFFFFF;font-size:1.4rem}
+.ledger{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.step{flex:1 1 150px;border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:12px 14px;display:grid;gap:6px;align-content:start}
+.step .n{font:500 .7rem var(--mono);color:var(--hook);letter-spacing:.08em}
+.step b{font:700 1rem var(--display);color:#FFFFFF}
+.step span{font-size:.85rem;color:#B9CFD7}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:500 .7rem var(--mono);padding:2px 7px;border-radius:3px;background:var(--hook);color:var(--hook-ink)}
+.chip.drop{background:transparent;color:#F3A794;border:1px solid #F3A794}
+.chip.pick{background:transparent;color:#8FE0B8;border:1px solid #8FE0B8}
+.cut{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:16px}
+.cut > div{display:grid;gap:8px;align-content:start}
+.cut h3{font:500 .78rem var(--mono);text-transform:uppercase;letter-spacing:.1em;color:#FFFFFF;padding-bottom:6px;border-bottom:2px solid currentColor}
+.cut .in h3{color:#8FE0B8}.cut .later h3{color:var(--hook)}.cut .park h3{color:#9FB6BF}
+.cut ul{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:.9rem}
+.bets{margin:0;padding:0;list-style:none;display:grid;gap:10px;counter-reset:b}
+.bets li{counter-increment:b;display:grid;grid-template-columns:2rem 1fr;gap:10px;font-size:.95rem}
+.bets li::before{content:counter(b);font:800 1.4rem/1.1 var(--display);color:var(--hook)}
+.bets b{color:#FFFFFF}
+.open{display:flex;flex-wrap:wrap;gap:8px}
+.open span{font-size:.88rem;border:1px dashed rgba(255,255,255,.35);border-radius:4px;padding:5px 10px;color:#E6F1F4}
+
+/* DECISIONS */
+.decisions{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+.decisions li{padding-block:10px;border-bottom:1px solid var(--line);font-size:.93rem;display:grid;grid-template-columns:auto 1fr;gap:10px}
+.decisions li::before{content:"✓";font-family:var(--mono);color:var(--keep)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font:400 .8rem/1.6 var(--mono);color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between}
+
+@media (max-width:760px){
+  .hero,.axes,.extremes,.jobs,.dirs,.cut,.decisions,.pipe{grid-template-columns:1fr}
+  .pipe > div + div{border-left:0;border-top:1px solid var(--line)}
+  .flip{grid-template-columns:1fr}
+  .flip .arr{display:none}
+  .an{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div>
+    <div class="eyebrow">Brainstorm · 22.09.2026 · Creative Partner</div>
+    <h1>Phiên Tảng Băng</h1>
+    <p class="lede prose">Một buổi chiều nghĩ về sản phẩm AI giúp người ta <em>luyện</em> phỏng vấn người dùng: AI đóng vai người tham gia, giữ kín sự thật, và chỉ cho bạn thấy chính xác mình đã bỏ lỡ gì.</p>
+    <div class="transcript" aria-label="Trích đoạn phỏng vấn minh họa">
+      <div><span class="t">06:12</span><span class="who">PERSONA</span>Tụi mình cũng <mark>từng thử cách đó một lần</mark> rồi…</div>
+      <div><span class="t">06:20</span><span class="who">BẠN</span>Ok. Vậy chị có dùng tính năng X không?</div>
+      <div><span class="t">—</span><span class="who">REVEAL</span>Hook bị bỏ rơi. Chỉ cần một câu follow-up là chạm được mục lớn nhất.</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>85</b><span>ý tưởng ghi lại</span></div>
+      <div class="stat"><b>71</b><span>của Thanh</span></div>
+      <div class="stat"><b>16</b><span>cách làm hỏng</span></div>
+      <div class="stat"><b>4</b><span>kỹ thuật</span></div>
+    </div>
+  </div>
+  <svg class="iceberg" viewBox="0 0 440 400" role="img" aria-label="Minh họa tảng băng: phía trên mặt nước là điều bạn hỏi được, phía dưới là 11 mục ẩn, 4 mục đã tìm thấy">
+    <rect class="sky" x="0" y="0" width="440" height="140"/>
+    <rect class="sea" x="0" y="140" width="440" height="260"/>
+    <rect class="sea2" x="0" y="300" width="440" height="100"/>
+    <polygon class="under" points="150,140 290,140 350,215 330,300 250,360 170,345 100,270 110,190"/>
+    <polygon class="ice" points="175,140 200,80 222,52 245,88 268,108 285,140"/>
+    <line class="wl" x1="0" y1="140" x2="440" y2="140"/>
+    <text class="lbl" x="16" y="30">ĐIỀU BẠN HỎI ĐƯỢC</text>
+    <text class="lbl" x="16" y="48">câu hỏi · lượt · phút</text>
+    <text class="lbl-d" x="16" y="166">TẢNG BĂNG ẨN · 11 MỤC</text>
+    <circle class="found" cx="180" cy="170" r="7"/><circle class="found" cx="215" cy="185" r="7"/>
+    <circle class="found" cx="255" cy="172" r="7"/><circle class="found" cx="150" cy="210" r="7"/>
+    <circle class="hidden" cx="200" cy="228" r="7"/><circle class="hidden" cx="245" cy="220" r="7"/>
+    <circle class="hidden" cx="290" cy="205" r="7"/><circle class="hidden" cx="175" cy="270" r="7"/>
+    <circle class="hidden" cx="225" cy="280" r="7"/><circle class="hidden" cx="275" cy="262" r="7"/>
+    <circle class="hidden" cx="222" cy="325" r="9" stroke-width="2.5"/>
+    <text class="big" x="16" y="355">Bạn tìm ra 4/11</text>
+    <text class="lbl-d" x="16" y="376">mục lớn nhất cách một câu follow-up</text>
+  </svg>
+</header>
+
+<!-- REVERSE BRAINSTORMING -->
+<section id="reverse">
+  <div class="sec-head">
+    <div class="eyebrow">Kỹ thuật 1 · Reverse Brainstorming</div>
+    <h2>Làm nó thất bại trước đã</h2>
+    <p>16 cách để sản phẩm tự phá hỏng mình, trải đều bốn trục. Mỗi thất bại đảo ngược thành một hướng thiết kế.</p>
+  </div>
+  <div class="axes">
+    <div class="axis">
+      <h3>Persona</h3>
+      <div class="flip"><span class="f">Người được phỏng vấn hoàn hảo, tự kể hết nỗi đau</span><span class="arr">→</span><span class="r">Phải tự khai thác mới thấy insight <span class="by coach">coach</span></span></div>
+      <div class="flip"><span class="f">Chiều lòng: "Có, chắc chắn rồi!" với câu dẫn dắt</span><span class="arr">→</span><span class="r">Phản ứng thật với câu dẫn dắt <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">Tự mâu thuẫn: freelancer 24 tuổi rồi "team 15 người"</span><span class="arr">→</span><span class="r">Fact sheet + tự kiểm tra nhất quán <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">Quá khó chịu, người mới bỏ sau 3 phút</span><span class="arr">→</span><span class="r">Độ khó hiệu chỉnh theo trình độ <span class="by">Thanh</span></span></div>
+    </div>
+    <div class="axis">
+      <h3>Feedback</h3>
+      <div class="flip"><span class="f">Bịa trích dẫn không có trong transcript</span><span class="arr">→</span><span class="r">Mọi trích dẫn được xác minh <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">Checklist chung chung lặp lại</span><span class="arr">→</span><span class="r">Cụ thể theo buổi này, người này <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">Một điểm số 72/100 bị "cày"</span><span class="arr">→</span><span class="r">Không có điểm tiêu đề <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">Báo cáo 3.000 chữ, đóng tab</span><span class="arr">→</span><span class="r">Một khoảnh khắc + "luyện lại từ đây" <span class="by coach">coach</span></span></div>
+    </div>
+    <div class="axis">
+      <h3>Định vị</h3>
+      <div class="flip"><span class="f">"AI user research", hút PM muốn bỏ qua người thật</span><span class="arr">→</span><span class="r">Buồng mô phỏng, không thay người dùng <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">"Chat với persona AI", ChatGPT làm được miễn phí</span><span class="arr">→</span><span class="r">Dẫn bằng điều ChatGPT không làm được <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">"Cho UX, BA, PM và sinh viên"</span><span class="arr">→</span><span class="r">Một đối tượng đầu cầu sắc nét <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">"Chấm điểm kỹ năng", người mới thấy bị phán xét</span><span class="arr">→</span><span class="r">Tách lời chào người học khỏi đánh giá <span class="by">Thanh</span></span></div>
+    </div>
+    <div class="axis">
+      <h3>Tiền &amp; quay lại</h3>
+      <div class="flip"><span class="f">Chỉ cần trong 2 tuần trước deadline</span><span class="arr">→</span><span class="r">Giá theo đợt, gắn ngày thật <span class="by">Thanh</span></span></div>
+      <div class="flip"><span class="f">"Qua" vài buổi rồi thấy xong</span><span class="arr">→</span><span class="r">Luôn có thứ mới để luyện <span class="by">Thanh</span></span></div>
+    </div>
+  </div>
+  <div class="extremes">
+    <div class="extreme"><span class="tag">Đảo ngược cực đoan · Thanh</span><h3>Tảng băng lộ diện</h3><p>"Bạn tìm ra 4/11. Mục lớn nhất, chị ấy lén trả tiền cho đối thủ, cách một câu follow-up ở phút 6." ChatGPT không thể chỉ ra điều bạn không tìm thấy, vì nó chưa từng giấu gì.</p></div>
+    <div class="extreme"><span class="tag">Đảo ngược cực đoan · Thanh</span><h3>Lộ trình đối kháng</h3><p>Sản phẩm học thói quen xấu của bạn và dựng persona tiếp theo để khai thác đúng thói quen đó. Hay dẫn dắt? Persona sau sẽ dễ dãi hơn, bẫy lớn hơn.</p></div>
+    <div class="extreme"><span class="tag">Đảo ngược cực đoan · Thanh</span><h3>Đẩy ra khỏi cửa</h3><p>Đầu ra không bao giờ là "người dùng nghĩ gì", mà là bộ câu hỏi của chính bạn, sẵn sàng dùng với người thật ngày mai.</p></div>
+  </div>
+</section>
+
+<!-- MORPHOLOGICAL -->
+<section id="morph">
+  <div class="sec-head">
+    <div class="eyebrow">Kỹ thuật 2 · Morphological Analysis</div>
+    <h2>Tám hàng, ba lối đi</h2>
+    <p>Mỗi hàng là một tham số độc lập. Chọn một tổ hợp để thấy lối đi của nó xuyên qua lưới.</p>
+  </div>
+  <div class="combo-bar" role="group" aria-label="Chọn tổ hợp">
+    <button type="button" id="c-capstone" data-combo="capstone" aria-pressed="true">Capstone Sprint</button>
+    <button type="button" id="c-panel" data-combo="panel" aria-pressed="false">Panel Rehearsal</button>
+    <button type="button" id="c-wager" data-combo="wager" aria-pressed="false">Founder's Wager</button>
+  </div>
+  <p class="combo-note" id="combo-note" aria-live="polite"></p>
+  <div class="grid-scroll">
+    <table class="morph">
+      <tr><th><b>A</b>Người học</th><td><div class="cells">
+        <span class="cell" data-c="capstone">SV HCI làm capstone, 5 phỏng vấn</span><span class="cell">UXR junior, study solo đầu tiên</span><span class="cell">Người chuyển ngành làm PM</span><span class="cell">BA junior hỏi "cái gì" thay vì "tại sao"</span><span class="cell" data-c="wager">Founder hỏi "bạn có trả tiền không?"</span><span class="cell">Kỹ sư bị kéo vào discovery call</span><span class="cell">Người phỏng vấn bằng ngôn ngữ thứ hai</span><span class="cell" data-c="panel">Ứng viên có vòng mock interview</span><span class="cell">Giỏi nhưng đơ khi im lặng</span>
+      </div></td></tr>
+      <tr><th><b>B</b>Trigger</th><td><div class="cells">
+        <span class="cell" data-c="capstone">Hạn phỏng vấn trong 3 tuần</span><span class="cell" data-c="panel">Ngày hội đồng cố định</span><span class="cell" data-c="wager">10 cuộc gọi khách tuần sau</span><span class="cell">Buổi đầu với khách đã lên lịch</span>
+      </div></td></tr>
+      <tr><th><b>C</b>Định vị</th><td><div class="cells">
+        <span class="cell" data-c="panel wager">Buồng mô phỏng bay</span><span class="cell" data-c="capstone">Bạn tập đấu</span><span class="cell">"OSCE cho UX"</span>
+      </div></td></tr>
+      <tr><th><b>D</b>Nguồn persona</th><td><div class="cells">
+        <span class="cell">Thư viện soạn sẵn</span><span class="cell" data-c="capstone">Từ chủ đề nghiên cứu riêng</span><span class="cell" data-c="wager">Từ ý tưởng startup riêng</span><span class="cell" data-c="panel">Từ domain sản phẩm của công ty</span>
+      </div></td></tr>
+      <tr><th><b>E</b>Feedback</th><td><div class="cells">
+        <span class="cell" data-c="capstone wager">Tảng băng lộ diện</span><span class="cell" data-c="capstone">Cách mở khóa từng mục</span><span class="cell" data-c="capstone panel">Đoán trước khi lộ</span><span class="cell" data-c="panel wager">Ghost run</span><span class="cell">Luyện lại từ đây</span><span class="cell" data-c="wager">Ôn lại sau 1 tuần</span><span class="cell" data-c="capstone">Thẻ pre-flight</span><span class="cell" data-c="capstone">Training mode</span><span class="cell" data-c="panel">Exam mode</span><span class="cell">Timeline loại câu hỏi</span><span class="cell">Persona debrief</span><span class="cell">Persona "sống"</span><span class="cell">Gut flag</span><span class="cell">Áp lực đồng hồ</span>
+      </div></td></tr>
+      <tr><th><b>F</b>Tiền</th><td><div class="cells">
+        <span class="cell">Gói 14 ngày</span><span class="cell">Miễn phí luyện, trả tiền chiều sâu</span><span class="cell" data-c="panel">Gói rủi ro cao</span><span class="cell" data-c="panel">Hoàn / gia hạn nếu đổi ngày</span><span class="cell" data-c="wager">Đặt cọc cam kết</span><span class="cell" data-c="capstone">Nhà tài trợ trả, giá SV VN</span><span class="cell">Trả bằng cách soạn persona</span>
+      </div></td></tr>
+      <tr><th><b>G</b>Hình thức</th><td><div class="cells">
+        <span class="cell" data-c="capstone wager">Chat</span><span class="cell" data-c="panel">Giọng nói</span>
+      </div></td></tr>
+      <tr><th><b>H</b>Ngôn ngữ</th><td><div class="cells">
+        <span class="cell" data-c="capstone">Tiếng Việt</span><span class="cell" data-c="panel wager">English</span>
+      </div></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- GUARDS -->
+<section id="guards">
+  <div class="sec-head">
+    <div class="eyebrow">Phát hiện từ lưới · hàng D</div>
+    <h2>Chặn nghiên cứu giả bằng cấu trúc, không bằng disclaimer</h2>
+    <p>Luyện trên chủ đề của chính mình là giá trị cao nhất và cũng là chỗ ranh giới mỏng nhất. Ba cơ chế của Thanh nối thành một đường ống.</p>
+  </div>
+  <div class="pipe">
+    <div><span class="eyebrow">Không tin được</span><span class="k">Biến thể theo seed</span><span class="how">Mỗi lần chạy, cùng persona rút một sự thật khác. Ba câu trả lời mâu thuẫn đặt cạnh nhau.</span></div>
+    <div><span class="eyebrow">Không chép được</span><span class="k">Lời persona không rời app</span><span class="how">Chỉ xuất câu hỏi của bạn, báo cáo kỹ năng và bộ câu hỏi.</span></div>
+    <div><span class="eyebrow">Chỉ còn cách đi hỏi</span><span class="k">Phát hiện thành giả thuyết</span><span class="how">"X xuất hiện khi luyện. Trạng thái: CHƯA KIỂM CHỨNG. Hãy hỏi người thật: Kể lần gần nhất…"</span></div>
+  </div>
+</section>
+
+<!-- JTBD -->
+<section id="jtbd">
+  <div class="sec-head">
+    <div class="eyebrow">Kỹ thuật 3 · Job to Be Done</div>
+    <h2>Không ai thuê sản phẩm này để "học kỹ thuật"</h2>
+  </div>
+  <div class="jobs">
+    <article class="job"><span class="who">A1 · Sinh viên capstone</span><dl><dt>Khi</dt><dd>capstone cần 5 phỏng vấn mà chưa làm lần nào</dd><dt>Muốn</dt><dd>biết cách gỡ khi buổi phỏng vấn lệch kịch bản</dd><dt>Để</dt><dd class="so">không trông ngớ ngẩn trước stakeholder và người hướng dẫn</dd></dl><p class="vs">Đối thủ bất ngờ: phỏng vấn bạn bè trước.</p></article>
+    <article class="job"><span class="who">A8 · Ứng viên vòng tuyển</span><dl><dt>Khi</dt><dd>hội đồng xem tôi phỏng vấn trực tiếp vào ngày cố định</dd><dt>Muốn</dt><dd>trông bình tĩnh, có phương pháp khi bị quan sát</dd><dt>Để</dt><dd class="so">chứng minh mình là researcher thật và nhận offer</dd></dl><p class="vs">Đối thủ bất ngờ: buổi mock miễn phí với senior.</p></article>
+    <article class="job"><span class="who">A5 · Indie founder</span><dl><dt>Khi</dt><dd>sắp nói chuyện với khách về ý tưởng</dd><dt>Muốn</dt><dd>nghe tín hiệu có nên tiếp tục không</dd><dt>Để</dt><dd class="so">thấy thời gian và tiền tiết kiệm bỏ vào là xứng đáng</dd></dl><p class="vs">Đối thủ bất ngờ: landing page kèm waitlist.</p></article>
+    <article class="job"><span class="who">A3 · Chuyển ngành làm PM</span><dl><dt>Khi</dt><dd>tuần 2 bị giao "đi nói chuyện với khách"</dd><dt>Muốn</dt><dd>mang về thứ mà sếp và team coi trọng</dd><dt>Để</dt><dd class="so">chứng minh mình thuộc về nơi này</dd></dl><p class="vs">Đối thủ bất ngờ: ngồi dự cuộc gọi của senior.</p></article>
+  </div>
+  <p class="thesis">Công việc thật: trông đáng tin khi có người đang đánh giá mình.</p>
+  <p class="prose">Không thay thế con người. Làm điều họ không làm được: <strong>chỉ ra chính xác điều bạn bỏ lỡ, cho luyện lại khoảnh khắc đó, và có mặt lúc 11 giờ đêm mà không phải nhờ vả ai</strong> <span class="by">Thanh</span>. Góc nhìn khán giả thưởng cho việc <em>giỏi thật</em>, không phải <em>trông giỏi</em>.</p>
+</section>
+
+<!-- ANALOGIES -->
+<section id="analog">
+  <div class="sec-head">
+    <div class="eyebrow">Kỹ thuật 4 · Analogical Thinking</div>
+    <h2>Nó giống cái gì?</h2>
+  </div>
+  <div class="analog">
+    <div class="an"><span class="field">OSCE y khoa</span><span class="steal">Bệnh nhân chuẩn hóa chỉ kể khi được hỏi đúng cách, rồi phản hồi từ phía họ. <b>Bằng chứng tảng băng + debrief đã được chứng minh.</b></span></div>
+    <div class="an"><span class="field">Mô phỏng bay</span><span class="steal"><b>Bơm sự cố</b> đúng lúc: im lặng, mâu thuẫn, cảm xúc, theo điều bạn chưa luyện.</span></div>
+    <div class="an"><span class="field">Kịch ứng tác</span><span class="steal"><b>Sổ "offer"</b>: mỗi câu trả lời chứa hook, và agent theo dõi hook nào bị bỏ rơi.</span></div>
+    <div class="an"><span class="field">Đào tạo trị liệu</span><span class="steal"><b>Ghi chú ý định</b>: "lúc này tôi đang cố làm gì", so với điều câu hỏi thực sự làm.</span></div>
+    <div class="an"><span class="field">Đàm phán</span><span class="steal"><b>Lập trường và lợi ích</b>: persona nói lập trường, tảng băng giữ lợi ích phía sau.</span></div>
+    <div class="an"><span class="field">Tranh biện</span><span class="steal"><b>Bảng luồng mở</b>: chủ đề persona nêu ra mà bạn chưa quay lại.</span></div>
+    <div class="an"><span class="field">Cờ vua <span class="by coach">coach</span></span><span class="steal"><b>Câu đố "tìm câu follow-up"</b> từ khoảnh khắc trong chính buổi của bạn.</span></div>
+  </div>
+</section>
+
+<!-- CONVERGE -->
+<section id="converge">
+  <div class="climax">
+    <div class="sec-head">
+      <div class="eyebrow">Hội tụ · hướng tạm chọn cho forge</div>
+      <h2>Một cơ chế, một đối tượng, hai tuần</h2>
+    </div>
+
+    <div class="dirs">
+      <div class="dir lead"><span class="tag">Hướng chính</span><h3>Capstone Sprint</h3><p>Sinh viên HCI/UX năm cuối ở VN, phỏng vấn stakeholder thật trong 1–3 tuần. "Bạn tập đấu" cho buổi phỏng vấn người dùng thật đầu tiên. Mỗi học kỳ có một lứa mới.</p></div>
+      <div class="dir"><span class="tag">Dự phòng</span><h3>Panel Rehearsal</h3><p>Ứng viên UX có vòng mock interview. Sẵn lòng trả tiền cao nhất. Chuyển sang nếu hướng chính vấp ở câu hỏi ai trả tiền.</p></div>
+    </div>
+
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px">Cơ chế lõi · hook ledger</div>
+      <div class="ledger">
+        <div class="step"><span class="n">LƯỢT PERSONA</span><b>Phát ra hook</b><div class="chips"><span class="chip">cách xoay xở</span><span class="chip">cảm xúc</span><span class="chip">sự kiện cũ</span><span class="chip">lập trường</span></div></div>
+        <div class="step"><span class="n">GẮN VỚI</span><b>Mục trong tảng băng</b><span>mỗi mục có cách mở khóa: bề mặt, 1 follow-up, chuyện quá khứ, cần tin tưởng</span></div>
+        <div class="step"><span class="n">MỖI LƯỢT</span><b>Nhặt hay bỏ rơi</b><div class="chips"><span class="chip pick">nhặt</span><span class="chip drop">bỏ rơi</span></div><span>độ cởi mở phản ứng theo loại câu hỏi</span></div>
+        <div class="step"><span class="n">CUỐI BUỔI</span><b>Đoán → lộ → luyện lại</b><span>trích dẫn được xác minh; một khoảnh khắc then chốt</span></div>
+      </div>
+    </div>
+
+    <div class="cut">
+      <div class="in"><h3>MVP · làm ngay</h3><ul>
+        <li>2–3 kịch bản soạn tay có tảng băng</li><li>Chat, tiếng Việt mặc định, có English</li><li>Persona "sống" theo loại câu hỏi</li><li>Phân loại câu hỏi + hook ledger</li><li>Tự kiểm tra fact sheet</li><li>Đoán trước → lộ tảng băng, xác minh trích dẫn</li><li>Luyện lại từ đây (cắt đầu tiên nếu trễ)</li><li>Timeline câu hỏi + tỉ lệ nói</li><li>Thẻ pre-flight theo yêu cầu</li><li>Lưu riêng tư, miễn phí có giới hạn</li></ul></div>
+      <div class="later"><h3>Để sau</h3><ul>
+        <li>Thanh toán, gói 14 ngày</li><li>Nhắc lịch pre/post-flight</li><li>Ghost run</li><li>Lộ trình đối kháng</li><li>Persona từ chủ đề riêng + bộ chắn</li><li>Exam mode, gợi ý, timeout</li><li>Góc nhìn khán giả</li><li>Giọng nói</li></ul></div>
+      <div class="park"><h3>Gác lại</h3><ul>
+        <li>Cửa giảng viên</li><li>Người học soạn persona</li><li>Đặt cọc cam kết</li><li>Đối tượng founder</li><li>Observer là agent thứ 2</li></ul></div>
+    </div>
+
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px">Giả định chịu lực</div>
+      <ol class="bets">
+        <li><span><b>Học được thật:</b> lộ tảng băng + luyện lại làm hành vi đổi ở buổi sau.</span></li>
+        <li><span><b>Kỹ thuật đứng vững:</b> một agent giữ tảng băng nhất quán, không chiều lòng, không bịa trích dẫn.</span></li>
+        <li><span><b>Trigger có thật:</b> sinh viên capstone thử công cụ 1–3 tuần trước buổi thật.</span></li>
+        <li><span><b>Khác biệt đủ lớn:</b> "thấy điều mình không tìm ra" thắng ChatGPT và tập với bạn bè.</span></li>
+        <li><span><b>Có người trả tiền:</b> sinh viên với giá VN, hoặc nhà tài trợ.</span></li>
+      </ol>
+    </div>
+
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px">Câu hỏi mở</div>
+      <div class="open"><span>Ai trả tiền?</span><span>Điều gì kéo người học quay lại?</span><span>Bạn tập đấu hay buồng mô phỏng hay OSCE cho UX?</span><span>Persona soạn sẵn hay từ chủ đề riêng?</span><span>VI hay EN mặc định?</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <div class="sec-head">
+    <div class="eyebrow">Đã chốt trong phiên</div>
+    <h2>Không mở lại</h2>
+  </div>
+  <ul class="decisions">
+    <li>Không bao giờ tạo phát hiện nghiên cứu giả</li>
+    <li>Chỉ phục vụ người học cá nhân, bỏ cửa giảng viên</li>
+    <li>Transcript và kết quả chỉ thuộc về người học</li>
+    <li>Lỗi phân loại theo loại câu hỏi bị thiếu</li>
+    <li>Một agent; góc nhìn hội đồng là cách diễn đạt của cùng dữ liệu</li>
+    <li>Thưởng cho giỏi thật, không phải trông giỏi</li>
+  </ul>
+</section>
+
+<footer>
+  <span>bmad-brainstorming · Creative Partner · 22.09.2026</span>
+  <span>Nguồn: .memlog.md · 134 mục</span>
+</footer>
+</div>
+
+<script>
+(function(){
+  var notes={
+    capstone:"Sinh viên luyện đúng chủ đề phải nghiên cứu thật, nên thẻ pre-flight dùng được ngay. Rủi ro: hàng D, nguồn persona từ chủ đề riêng.",
+    panel:"Ngày cố định, rủi ro cao, lý do trả tiền mạnh nhất. Exam mode tạo cảm giác như thật.",
+    wager:"Trông sai: founder là người dễ coi persona là bằng chứng nhất. Nhưng tiền cọc chỉ hoàn lại sau khi nói chuyện với khách thật."
+  };
+  var buttons=document.querySelectorAll(".combo-bar button");
+  var cells=document.querySelectorAll(".cell[data-c]");
+  var note=document.getElementById("combo-note");
+  function pick(key){
+    buttons.forEach(function(b){b.setAttribute("aria-pressed",b.dataset.combo===key?"true":"false");});
+    cells.forEach(function(c){c.classList.toggle("on",c.dataset.c.split(" ").indexOf(key)>-1);});
+    note.textContent=notes[key];
+    try{localStorage.setItem("iceberg-combo",key);}catch(e){}
+  }
+  buttons.forEach(function(b){b.addEventListener("click",function(){pick(b.dataset.combo);});});
+  var start="capstone";
+  try{var s=localStorage.getItem("iceberg-combo");if(s&&notes[s])start=s;}catch(e){}
+  pick(start);
+})();
+</script>
