@@ -1,0 +1,643 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Định vị agent luyện phỏng vấn</title>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d1d1b;--muted:#5d5d58;--line:#e2e1dc;--accent:#2f5d8a;--card:#fff;
+--hi:#dcefe0;--hi-fg:#1f5a2c;--md:#fdf1d3;--md-fg:#6b4b00;--lo:#fbdad6;--lo-fg:#8a1c10}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ecebe6;--muted:#a6a59f;--line:#34332f;--accent:#8db8e3;--card:#1f1f1d;
+--hi:#1f3a25;--hi-fg:#a8dcb3;--md:#3d3217;--md-fg:#f0d58c;--lo:#4a1f1a;--lo-fg:#ffb3a8}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:32px 16px 16px;max-width:1100px;margin:auto}header h1{margin:0 0 8px;font-size:1.7rem}
+.meta{color:var(--muted);font-size:.9rem}
+.wrap{max-width:1100px;margin:auto;padding:0 16px 64px;display:grid;grid-template-columns:240px 1fr;gap:32px}
+nav{position:sticky;top:12px;align-self:start;font-size:.85rem;max-height:95vh;overflow:auto}nav ul{padding-left:14px}nav a{color:var(--muted);text-decoration:none}
+main{min-width:0}h2{border-top:1px solid var(--line);padding-top:24px;margin-top:32px}
+main>h2:first-of-type{border:0;margin-top:0;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:10px 10px 0 0;margin-bottom:0}
+table{border-collapse:collapse;width:100%;font-size:.88rem;display:block;overflow-x:auto}th,td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+th{background:var(--card)}a{color:var(--accent)}a.cite{font-size:.8em;text-decoration:none}
+.badge{padding:1px 7px;border-radius:9px;font-size:.8rem;white-space:nowrap}.b-high{background:var(--hi);color:var(--hi-fg)}
+.b-med{background:var(--md);color:var(--md-fg)}.b-low{background:var(--lo);color:var(--lo-fg);font-weight:700;outline:1px solid var(--lo-fg)}
+details{margin-top:32px}summary{cursor:pointer;font-weight:700;font-size:1.3rem}
+@media (max-width:800px){.wrap{grid-template-columns:1fr}nav{position:static;max-height:none}}
+</style></head><body>
+<header><h1>Định vị agent AI luyện phỏng vấn</h1>
+<div class="meta">Loại: competitive + user-voice · Preset: standard · Validation: normal · Ngày: 2026-09-22 · Claim: 6 verified / 10 unverified / 1 disputed</div>
+<p><b>Quyết định:</b> Agent AI luyện phỏng vấn nên định vị thế nào, nỗi đau của người học có thật không, bằng chứng nào ủng hộ thiết kế</p></header>
+<div class="wrap"><nav><div class="toc">
+<ul>
+<li><a href="#nghien-cuu-canh-tranh-tieng-noi-nguoi-dung-inh-vi-agent-ai-luyen-phong-van">Nghiên cứu cạnh tranh + tiếng nói người dùng: Định vị agent AI luyện phỏng vấn</a><ul>
+<li><a href="#tom-tat-ieu-hanh">Tóm tắt điều hành</a></li>
+<li><a href="#1-cong-cu-ai-hien-co-luyen-phong-van-va-synthetic-users">1. Công cụ AI hiện có: luyện phỏng vấn và "synthetic users"</a></li>
+<li><a href="#2-lua-chon-khong-dung-ai-khoa-hoc-mock-interview-voi-ban-mentoring">2. Lựa chọn không dùng AI: khóa học, mock interview với bạn, mentoring</a></li>
+<li><a href="#3-nguoi-hoc-noi-gi-ve-viec-luyen-phong-van">3. Người học nói gì về việc luyện phỏng vấn</a></li>
+<li><a href="#4-bang-chung-cho-role-play-co-thong-tin-an">4. Bằng chứng cho role-play có thông tin ẩn</a></li>
+<li><a href="#5-phe-phan-synthetic-users-va-rui-ro-neomoi-truoc-fieldwork">5. Phê phán synthetic users và rủi ro neo/mồi trước fieldwork</a></li>
+<li><a href="#6-cach-stakeholder-thuc-su-noi-tu-lieu-cho-bo-sinh-kich-ban-bapm">6. Cách stakeholder thực sự nói: tư liệu cho bộ sinh kịch bản BA/PM</a></li>
+<li><a href="#7-tin-hieu-gia-ai-tra-tien">7. Tín hiệu giá: ai trả tiền</a></li>
+<li><a href="#insight-lien-chieu">Insight liên chiều</a></li>
+<li><a href="#anh-gia-cac-gia-inh-trong-forged-ideamd">Đánh giá các giả định trong forged-idea.md</a></li>
+<li><a href="#khuyen-nghi">Khuyến nghị</a></li>
+<li><a href="#cau-hoi-mo">Câu hỏi mở</a></li>
+<li><a href="#ban-o-o-cu">Bản đồ độ cũ</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</nav><main><h1 id="nghien-cuu-canh-tranh-tieng-noi-nguoi-dung-inh-vi-agent-ai-luyen-phong-van">Nghiên cứu cạnh tranh + tiếng nói người dùng: Định vị agent AI luyện phỏng vấn</h1>
+<p><strong>Quyết định mà nghiên cứu này phục vụ:</strong> Agent AI luyện phỏng vấn nên định vị thế nào, nỗi đau của người học có thật không, bằng chứng nào ủng hộ thiết kế.</p>
+<h2 id="tom-tat-ieu-hanh">Tóm tắt điều hành</h2>
+<p><strong>Khuyến nghị:</strong> Định vị là <strong>phòng tập phỏng vấn người dùng / stakeholder có phản hồi kèm bằng chứng</strong>, không phải "synthetic users" và không phải "luyện với AI" chung chung. Giữ nguyên thiết kế tin cậy theo cấu trúc. Không tuyên bố replay hay OSCE là "đã có bằng chứng". Về câu hỏi ai trả tiền, thử B2B2C (giảng viên, trung tâm đào tạo) song song với B2C.</p>
+<p><strong>Ba phát hiện quyết định:</strong>
+1. <strong>Khoảng trống có thật nhưng hẹp.</strong> Không tìm thấy sản phẩm thương mại nào có đủ thông tin ẩn cố định, lộ kèm bằng chứng theo lượt và replay <a class="cite" href="#src-1">[1]</a>. Gần nhất là mom-test (mã nguồn mở, cho founder, có hidden facts và scorecard nhưng không có replay) <a class="cite" href="#src-1">[1]</a> và UXPressia (quảng cáo "practice conversations" nhưng không có phản hồi) <a class="cite" href="#src-4">[4]</a>. Đối thủ thực tế là ChatGPT tự dựng, giá 0–150k VND/tháng ở VN <a class="cite" href="#src-14">[14]</a><a class="cite" href="#src-20">[20]</a>.
+2. <strong>Phản hồi mới là đòn bẩy, và thông tin ẩn không tự giữ được.</strong> Luyện với LLM mà không có phản hồi thì không tiến bộ, thậm chí làm độ đồng cảm giảm (RCT n=94) <a class="cite" href="#src-6">[6]</a>. Phản hồi có ES 0,44 trong mô phỏng y khoa <a class="cite" href="#src-26">[26]</a>. Bệnh nhân ảo chỉ dựa vào prompt vẫn rò thông tin cấm khoảng 0,6 lần mỗi episode <a class="cite" href="#src-7">[7]</a>. Persona có grounding giúp sinh viên đặt câu hỏi tốt hơn người đóng vai, nhưng bị đánh giá là kém thật hơn <a class="cite" href="#src-8">[8]</a>. Điều này ủng hộ lõi thiết kế (ledger, cổng mở khóa, trích dẫn) và cảnh báo về độ thật.
+3. <strong>Nỗi đau của người học có thật nhưng bằng chứng mỏng, và người học không nói bằng ngôn ngữ "feedback".</strong> Người mới mắc lỗi có hệ thống: câu hỏi mơ hồ, bỏ sót câu hỏi, sai thứ tự <a class="cite" href="#src-32">[32]</a>. Tiếng nói người học là sợ hãi và lỗi nhận ra muộn ("terrifying", "filtered for what I wanted to hear") <a class="cite" href="#src-50">[50]</a>. Có 0 tiếng nói người học BA, 0 tiếng nói người học VN, và không ai nói thẳng "tôi muốn feedback".</p>
+<p><strong>Lưu ý lớn nhất:</strong> beachhead (sinh viên HCI ở VN), nhu cầu BA/PM và khả năng trả tiền đều <strong>chưa được kiểm</strong> bằng dữ liệu. Reddit và các group Facebook không truy cập được. Cần 5–8 phỏng vấn người học thật trước khi khóa thông điệp.</p>
+<p><strong>Bằng chứng mỏng ở:</strong> tiếng nói người học (§3), giá tại VN cho khóa BA (§7), replay trong kỹ năng hội thoại (§4), neo/mồi do persona AI (§5), mẫu lời nói về ngưỡng tiền phê duyệt (§6).</p>
+<h2 id="1-cong-cu-ai-hien-co-luyen-phong-van-va-synthetic-users">1. Công cụ AI hiện có: luyện phỏng vấn và "synthetic users"</h2>
+<p><strong>Kết luận:</strong> Không tìm thấy sản phẩm thương mại nào kết hợp đủ ba thứ: persona giữ thông tin ẩn cố định, màn lộ kèm bằng chứng theo từng lượt, và replay từ khoảnh khắc bị lỡ, dành cho người học UX/BA/PM <a class="cite" href="#src-1">[1]</a>. Khoảng trống này có thật. Nhưng nó hẹp, và đối thủ thực tế là ChatGPT tự dựng, gần như miễn phí.</p>
+<p>Các nhóm công cụ:</p>
+<table>
+<thead>
+<tr>
+<th>Nhóm</th>
+<th>Ví dụ</th>
+<th>Định vị</th>
+<th>Giá</th>
+<th>Khoảng trống so với ý tưởng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synthetic users (sinh phát hiện nghiên cứu)</td>
+<td>Synthetic Users</td>
+<td>"discovery co-pilot" cho team nghiên cứu</td>
+<td>từ $12.500/năm, không có gói giáo dục <a class="cite" href="#src-2">[2]</a></td>
+<td>Bán <em>insight</em>, đúng thứ ý tưởng cam kết không làm</td>
+</tr>
+<tr>
+<td>Persona chat kép (vừa "luyện" vừa bán insight)</td>
+<td>UXPressia AI Persona Chat</td>
+<td>"human-like practice conversations, refining your questions and approach before meeting real customers" <a class="cite" href="#src-4">[4]</a></td>
+<td>không công bố trên trang <a class="cite" href="#src-4">[4]</a></td>
+<td>Không mô tả chấm điểm, thông tin ẩn hay phản hồi</td>
+</tr>
+<tr>
+<td>Luyện customer discovery có thông tin ẩn</td>
+<td>mom-test (mã nguồn mở, MIT)</td>
+<td>Dành cho founder, chạy trong Claude Code</td>
+<td>miễn phí <a class="cite" href="#src-1">[1]</a></td>
+<td>Có "hidden facts", có scorecard 15 mục /75, có debrief gắn lượt F:/C:. Không có replay từ khoảnh khắc; "league" chỉ theo dõi xu hướng giữa các run <a class="cite" href="#src-1">[1]</a></td>
+</tr>
+<tr>
+<td>Nguyên mẫu học thuật</td>
+<td>PEARL (GPT-4)</td>
+<td>Sinh viên sau đại học luyện phỏng vấn nghiên cứu</td>
+<td>–</td>
+<td>Người dùng tự viết persona, không có thông tin ẩn, chỉ trả transcript. n=4 <a class="cite" href="#src-15">[15]</a></td>
+</tr>
+<tr>
+<td>Roleplay bán hàng / phỏng vấn xin việc</td>
+<td>Yoodli, Hyperbound, Mockin</td>
+<td>Phỏng vấn xin việc, gọi bán hàng</td>
+<td>Yoodli miễn phí / $8 / $20 mỗi tháng, thanh toán theo năm <a class="cite" href="#src-3">[3]</a>; Hyperbound ~$63–70/seat/tháng (nguồn đối thủ, độ tin thấp) <a class="cite" href="#src-16">[16]</a></td>
+<td>Khác kỹ năng. Cụm "UX interview practice" đã bị công cụ phỏng vấn xin việc chiếm <a class="cite" href="#src-22">[22]</a></td>
+</tr>
+<tr>
+<td>Chatbot tổng quát</td>
+<td>ChatGPT kèm template tự dựng</td>
+<td>Hướng dẫn tự dựng persona để "mock interview" <a class="cite" href="#src-20">[20]</a><a class="cite" href="#src-21">[21]</a>; IIBA gợi ý prompt AI đóng stakeholder <a class="cite" href="#src-19">[19]</a></td>
+<td>0–571k VND/tháng tại VN <a class="cite" href="#src-14">[14]</a></td>
+<td>Không giữ trạng thái ẩn, không chấm theo bằng chứng</td>
+</tr>
+</tbody>
+</table>
+<p>Điểm đáng chú ý:
+- <strong>mom-test là prior art gần nhất và chứng minh khái niệm</strong> (persona giữ sự thật ẩn cộng debrief theo lượt) <a class="cite" href="#src-1">[1]</a>. Vì nó mở mã nguồn, ai cũng có thể đóng gói lại. Lợi thế của mình vì vậy phải đến từ replay, trích dẫn chứng minh được, người học UX/BA và tiếng Việt, không phải từ "thông tin ẩn" đơn thuần.
+- <strong>Không tìm thấy simulator phỏng vấn stakeholder chuyên cho BA.</strong> Chỉ có bài viết khuyên prompt ChatGPT <a class="cite" href="#src-19">[19]</a>. Đây là khoảng trống, nhưng cũng là chỗ thiếu bằng chứng về nhu cầu (xem §3).
+- <strong>Một người làm nghề đánh giá synthetic users cao hơn NN/g:</strong> John Whalen kể rằng trong khóa của ông, synthetic users tìm lại được "six or seven" trên khoảng bảy phát hiện chính của phỏng vấn thật. Ông coi chúng là "a way to broaden my thinking. To prepare for being with real humans" <a class="cite" href="#src-23">[23]</a>. Đây là giai thoại cấp khóa học, không công bố phương pháp (độ tin trung bình).</p>
+<h2 id="2-lua-chon-khong-dung-ai-khoa-hoc-mock-interview-voi-ban-mentoring">2. Lựa chọn không dùng AI: khóa học, mock interview với bạn, mentoring</h2>
+<table>
+<thead>
+<tr>
+<th>Lựa chọn</th>
+<th>Có luyện kèm phản hồi không?</th>
+<th>Giá</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Khóa NN/g "User Interviews" (live)</td>
+<td>Có: bài tập giữa học viên, giảng viên hướng dẫn cách hỏi sâu</td>
+<td>US$1.215/ngày <a class="cite" href="#src-17">[17]</a></td>
+</tr>
+<tr>
+<td>Product Talk "Continuous Interviewing" (Teresa Torres)</td>
+<td>5 buổi live 90 phút, hoạt động nhóm nhỏ, case study. Trang không hứa phản hồi trên mock interview</td>
+<td>trang không hiện giá <a class="cite" href="#src-24">[24]</a></td>
+</tr>
+<tr>
+<td>ADPList mentoring</td>
+<td>Tư vấn nghề 1:1. Không thấy bằng chứng mentor chạy mock user interview có cấu trúc</td>
+<td>miễn phí, 40.000+ mentor, có mentor người Việt <a class="cite" href="#src-18">[18]</a></td>
+</tr>
+<tr>
+<td>Chương trình luyện trong công ty</td>
+<td>GitLab "Interview Carousel": mỗi người nói chuyện với 3–4 user trong một sự kiện live <a class="cite" href="#src-44">[44]</a></td>
+<td>nội bộ</td>
+</tr>
+<tr>
+<td>Khóa UX tại VN</td>
+<td>Capi Demy có buổi "Phỏng vấn sâu (User Interview) và Nghiên cứu thực địa" và challenge thực địa <a class="cite" href="#src-11">[11]</a>. ColorME <a class="cite" href="#src-12">[12]</a> và Keyframe <a class="cite" href="#src-13">[13]</a> không liệt kê user research</td>
+<td>2,2 triệu – 9,99 triệu VND <a class="cite" href="#src-11">[11]</a><a class="cite" href="#src-12">[12]</a><a class="cite" href="#src-13">[13]</a></td>
+</tr>
+<tr>
+<td>Khóa BA tại VN</td>
+<td>không kiểm được nội dung</td>
+<td>~3,2–12 triệu VND, lấy từ trang tổng hợp, độ tin thấp <a class="cite" href="#src-25">[25]</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nhận định:</strong> Con người mang lại phán đoán và độ thật (xem §4, nghiên cứu RE 2026 <a class="cite" href="#src-8">[8]</a>). Nhưng họ đắt (NN/g) hoặc không có cấu trúc (ADPList miễn phí nhưng chỉ tư vấn nghề). Ở VN, khóa UX tốt nhất có dạy phỏng vấn nhưng chỉ vài buổi. Điều này hợp với định vị "bổ trợ, không thay thế" và gợi ra một kênh: <strong>làm bài tập luyện giữa các buổi của khóa học</strong> (suy luận, chưa kiểm).</p>
+<h2 id="3-nguoi-hoc-noi-gi-ve-viec-luyen-phong-van">3. Người học nói gì về việc luyện phỏng vấn</h2>
+<p><strong>Kết luận:</strong> Nỗi đau có thật nhưng <strong>bằng chứng từ chính người học còn mỏng</strong>. Qua hai vòng tìm kiếm chỉ thu được khoảng 6 người học UX/PM, chủ yếu từ một loại cộng đồng (Medium Bootcamp, Substack). Nguồn học thuật mạnh hơn: người mới mắc lỗi có hệ thống <a class="cite" href="#src-32">[32]</a>. <strong>Chưa tìm thấy ai nói thẳng "tôi ước có phản hồi cho buổi phỏng vấn của mình".</strong> Tiếng nói người học BA và người học VN: <strong>0</strong>. Reddit không truy cập được bằng công cụ của lượt chạy này, nên đây là lỗ hổng phương pháp chứ không phải bằng chứng vắng mặt.</p>
+<table>
+<thead>
+<tr>
+<th>Vai trò</th>
+<th>Khó khăn quan sát được</th>
+<th>Bằng chứng</th>
+<th>Độ tin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UX / sinh viên</td>
+<td>Có một thể loại bài "buổi phỏng vấn đầu tiên của tôi là một mớ hỗn độn" (≥5 tác giả khác nhau). Lỗi hay gặp: hồi hộp, hỏi đúng thứ tự kịch bản dù người dùng đã trả lời, lấp khoảng lặng quá nhanh, vào đề lạnh không khởi động, chỉ phỏng vấn bạn cùng lớp</td>
+<td><a class="cite" href="#src-41">[41]</a> (chỉ tiêu đề và snippet, không đọc được Medium)</td>
+<td><span class="badge b-low">thấp</span></td>
+</tr>
+<tr>
+<td>UX / sinh viên (VN, lời giảng viên)</td>
+<td>Câu hỏi dẫn dắt, không hỏi sâu ("Tại sao?", "Bạn có thể nói rõ hơn không?"), không để người dùng nói tự do</td>
+<td><a class="cite" href="#src-42">[42]</a></td>
+<td><span class="badge b-low">thấp–trung bình</span></td>
+</tr>
+<tr>
+<td>PM (người chuyển ngành)</td>
+<td>"My first few user discovery interviews were terrifying"; "I stumbled and mumbled through my questions and follow-ups"; "I filtered for what I wanted to hear"; phát hiện bài test của mình có lỗi <em>sau khi</em> đã tổng hợp xong</td>
+<td><a class="cite" href="#src-50">[50]</a> (bài gốc, đọc đầy đủ)</td>
+<td><span class="badge b-high">cao (một người)</span></td>
+</tr>
+<tr>
+<td>PM / founder</td>
+<td>Dẫn dắt khách hàng "to the answers they want to hear" (quan sát của người làm nghề); founder rao "trade" phỏng vấn để luyện, nhưng thread chỉ có 1 trả lời và nói về chuyện tìm người phỏng vấn chứ không phải kỹ năng</td>
+<td><a class="cite" href="#src-55">[55]</a><a class="cite" href="#src-43">[43]</a></td>
+<td><span class="badge b-med">trung bình / yếu</span></td>
+</tr>
+<tr>
+<td>BA (VN, lời người làm nghề)</td>
+<td>"Nếu bạn mới chỉ là Fresher BA, việc bạn không thể khai thác đúng, đủ thông tin là việc rất bình thường" <a class="cite" href="#src-51">[51]</a>. Văn viết VN thường <strong>đổ lỗi cho stakeholder</strong> ("nhiều khách hàng không thể diễn đạt chính xác họ muốn gì") thay vì kỹ năng người hỏi <a class="cite" href="#src-52">[52]</a></td>
+<td><a class="cite" href="#src-51">[51]</a><a class="cite" href="#src-52">[52]</a></td>
+<td><span class="badge b-med">trung bình (ngôi thứ ba)</span></td>
+</tr>
+<tr>
+<td>Mọi vai trò</td>
+<td>Lời khuyên của người làm nghề là nhờ quản lý hoặc đồng nghiệp nghe lại buổi phỏng vấn và góp ý, tức là phản hồi <strong>phụ thuộc vào việc có người xem lại</strong>. Công ty như GitLab phải lập hẳn chương trình luyện chính thức</td>
+<td><a class="cite" href="#src-54">[54]</a><a class="cite" href="#src-44">[44]</a></td>
+<td><span class="badge b-low">thấp</span></td>
+</tr>
+</tbody>
+</table>
+<p>Những gì đủ chuẩn "hai cộng đồng độc lập": chỉ có <strong>câu hỏi dẫn dắt</strong> và <strong>không hỏi đủ sâu</strong>, xuất hiện ở blog UX tiếng Anh, tài liệu đào tạo VN <a class="cite" href="#src-41">[41]</a><a class="cite" href="#src-42">[42]</a> và nghiên cứu RE <a class="cite" href="#src-32">[32]</a>. Nhu cầu "muốn có phản hồi sớm hơn" chỉ là <strong>suy luận</strong> từ <a class="cite" href="#src-50">[50]</a> và <a class="cite" href="#src-32">[32]</a>.</p>
+<p><strong>Hệ quả cho thông điệp:</strong> người học nói bằng ngôn ngữ <strong>sợ hãi và lỗi nhìn lại sau</strong> ("terrifying", "mess", "mistakes"), không bằng ngôn ngữ "thiếu phản hồi". Headline nên chạm vào nỗi sợ trước buổi thật và việc bắt lỗi <em>trước</em> khi nó tốn công, không nên chạm vào "feedback". Với BA ở VN, cần đổi khung từ "khách hàng không nói rõ" sang "câu hỏi của bạn quyết định họ nói được gì". Đây là một thuyết phục khó hơn và chưa được kiểm chứng.</p>
+<h2 id="4-bang-chung-cho-role-play-co-thong-tin-an">4. Bằng chứng cho role-play có thông tin ẩn</h2>
+<p><strong>Kết luận:</strong> Role-play với bệnh nhân chuẩn hóa (SP) có hiệu quả, nhưng <strong>phản hồi và lặp lại mới là đòn bẩy</strong>, không phải bản thân mô phỏng. Chưa có nghiên cứu nào tách riêng cơ chế "thông tin chỉ lộ khi được hỏi". Replay từ khoảnh khắc chỉ có bằng chứng gián tiếp.</p>
+<ul>
+<li><strong>Hiệu quả SP trên kỹ năng giao tiếp:</strong> SMD 0,74 (KTC 95% 0,37–1,11), n=2061, 10 nghiên cứu được gộp, dị biệt cao <a class="cite" href="#src-5">[5]</a>. Số liệu lấy từ abstract, chưa đọc full text (độ tin trung bình). Kaplonyi 2017 thấy phần lớn nghiên cứu có cải thiện đáng kể, nhưng kết quả quá khác nhau để gộp <a class="cite" href="#src-27">[27]</a>.</li>
+<li><strong>Đòn bẩy thiết kế:</strong> trong mô phỏng y khoa, phản hồi cho ES 0,44 (80 nghiên cứu). Lặp lại cho ES 0,68 (7 nghiên cứu, không có ý nghĩa thống kê) <a class="cite" href="#src-26">[26]</a>.</li>
+<li><strong>Luyện với AI mà không có phản hồi có thể gây hại.</strong> RCT n=94 cố vấn mới vào nghề: nhóm luyện với LLM kèm phản hồi LLM cải thiện kỹ năng phản ánh và đặt câu hỏi. Nhóm chỉ luyện thì không tiến bộ, và độ đồng cảm giảm dần <a class="cite" href="#src-6">[6]</a> (đã kiểm độc lập). Brügge 2024 (RCT n=21): phản hồi AI cải thiện ra quyết định lâm sàng, partial η² 0,198, nhưng mẫu rất nhỏ <a class="cite" href="#src-29">[29]</a>. Một RCT khác (n=84) với bệnh nhân số LLM: điểm hỏi bệnh sử cao hơn 10,5 điểm so với dạy truyền thống <a class="cite" href="#src-31">[31]</a> (lấy từ snippet).</li>
+<li><strong>Thông tin ẩn bị rò khi chỉ dựa vào prompt.</strong> Một benchmark bệnh nhân ảo gpt-4o-mini đạt độ trung thành ca bệnh F1 0,947, nhưng vẫn rò thông tin cấm khoảng 0,6 lần mỗi episode ngay trong điều kiện sạch. Trong điều kiện "direct contamination" (nhiễm trực tiếp), độ trung thành sụp còn 0,098 <a class="cite" href="#src-7">[7]</a>. Đây là benchmark một tác giả và không đo việc học.</li>
+<li><strong>Persona bám tài liệu cố định có lợi.</strong> Một stakeholder tự động có grounding RAG trên tài liệu ca của giảng viên (n=69 sinh viên) giúp sinh viên đặt câu hỏi elicitation tốt hơn và nhận diện tính năng đầy đủ hơn so với người đóng vai. Tuy vậy, sinh viên đánh giá người thật là <strong>thật và cuốn hút hơn</strong> <a class="cite" href="#src-8">[8]</a> (đã kiểm độc lập). Đây là tương tự gần nhất với ý tưởng.</li>
+<li><strong>Nỗi đau của người mới là có thật trong dữ liệu học thuật.</strong> Sinh viên phỏng vấn elicitation với khách hàng đóng vai mắc các lỗi thuộc 7–8 nhóm (con số 34 loại lấy từ snippet). Khó nhất là cách đặt câu hỏi, <strong>câu hỏi bị bỏ sót</strong>, và thứ tự hỏi. Nhóm tác giả sau đó dạy bằng cách kết hợp role-play, tự đánh giá và peer-review để sinh viên nhìn lại lỗi của mình. Nhận định "không tiến bộ qua ba buổi nếu không phản tư" lấy từ snippet và <strong>chưa kiểm được</strong> vì full text nằm sau tường đăng nhập. "Question omission" tương ứng trực tiếp với "khoảnh khắc bị lỡ".</li>
+<li><strong>Replay / "làm lại":</strong> rapid cycle deliberate practice (dừng, debrief, tua lại, thử lại) chỉ có bằng chứng trong hồi sức cấp cứu, độ chắc chắn RẤT THẤP <a class="cite" href="#src-28">[28]</a>. <strong>Chưa có bằng chứng nào cho kỹ năng hội thoại.</strong></li>
+<li><strong>Bằng chứng về dạng phản hồi trích theo lượt so với phản hồi tổng quát:</strong> không tìm thấy.</li>
+<li>Tổng quan 39 nghiên cứu về bệnh nhân ảo LLM: nguy cơ sai lệch trung bình, cỡ mẫu nhỏ, hallucination là thách thức được nêu tên <a class="cite" href="#src-30">[30]</a>. <strong>Chưa nghiên cứu nào chứng minh kỹ năng chuyển sang được với người thật.</strong></li>
+</ul>
+<h2 id="5-phe-phan-synthetic-users-va-rui-ro-neomoi-truoc-fieldwork">5. Phê phán synthetic users và rủi ro neo/mồi trước fieldwork</h2>
+<ul>
+<li><strong>NN/g</strong> so sánh Synthetic Users và ChatGPT với ba nghiên cứu phỏng vấn thật. Synthetic users xu nịnh và lý tưởng hóa: họ "completed all courses", trong khi người thật chỉ xong 3/7. Họ đưa danh sách tính năng dài không có ưu tiên và khen concept không phê phán. NN/g chấp nhận dùng chúng để sinh giả thuyết và <strong>pilot bộ câu hỏi phỏng vấn</strong> <a class="cite" href="#src-9">[9]</a>. Ngoại lệ này tương thích với định vị "chỉ luyện kỹ năng".</li>
+<li><strong>Wang et al. (Nature Machine Intelligence 2025, 3.200 người thật):</strong> LLM "đóng vai" một nhóm nhân khẩu học thì mô tả sai nhóm đó và làm phẳng sự đa dạng trong nhóm <a class="cite" href="#src-33">[33]</a>.</li>
+<li><strong>Neo/mồi:</strong> thí nghiệm kinh điển Snyder &amp; Swann (1978) cho thấy người phỏng vấn được gán giả thuyết sẽ chọn câu hỏi xác nhận giả thuyết <a class="cite" href="#src-10">[10]</a>. Kết quả này bị tranh cãi: Pennington 1987 báo cáo không tái lập được khi phỏng vấn trực tiếp <a class="cite" href="#src-34">[34]</a>. <strong>Không tìm thấy nghiên cứu nào cho thấy luyện với persona AI làm lệch giả định của người học về người dùng thật</strong> <a class="cite" href="#src-10">[10]</a>. Rủi ro này là suy luận hợp lý, chưa được chứng minh.</li>
+<li><strong>Hệ quả cho định vị:</strong> phê phán tập trung vào việc <em>thay thế</em> nghiên cứu thật. Sản phẩm không sinh phát hiện về người dùng thật và dùng persona cùng lĩnh vực nhưng khác câu hỏi. Cách này đứng về phía đồng thuận của giới phê bình, nên có thể biến thành thông điệp khác biệt so với Synthetic Users và UXPressia <a class="cite" href="#src-2">[2]</a><a class="cite" href="#src-4">[4]</a><a class="cite" href="#src-9">[9]</a>.</li>
+</ul>
+<h2 id="6-cach-stakeholder-thuc-su-noi-tu-lieu-cho-bo-sinh-kich-ban-bapm">6. Cách stakeholder thực sự nói: tư liệu cho bộ sinh kịch bản BA/PM</h2>
+<p><strong>Nguồn mạnh nhất:</strong> nghiên cứu định tính JMIR 2025 gồm 26 phỏng vấn điều dưỡng và bác sĩ ở Đức và Mỹ, có trích dẫn nguyên văn về workaround <a class="cite" href="#src-35">[35]</a>. Các nguồn ERP/shadow system chủ yếu là blog nhà cung cấp (độ tin thấp) <a class="cite" href="#src-38">[38]</a><a class="cite" href="#src-39">[39]</a><a class="cite" href="#src-40">[40]</a>. Nguồn PM là tóm tắt The Mom Test <a class="cite" href="#src-37">[37]</a>.</p>
+<p><strong>Danh mục mẫu lời nói (nguyên văn khi có; "suy ra" nghĩa là khuôn được trừu tượng hóa từ nguồn):</strong></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Mẫu</th>
+<th>Ví dụ</th>
+<th>Nguồn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Excel ngầm gắn với khoảng trống hệ thống</td>
+<td>"We built an Excel list… This is what [HIS] in its present version cannot provide."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Bỏ bước theo điều kiện</td>
+<td>"you deliberately omit this if you know your patient will be admitted as inpatient anyway"</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Ngoại lệ lúc quá tải</td>
+<td>"Whenever it's a really stressful day… I reduce documentation, or leave things out."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Hệ thống đánh dấu, con người mới là kiểm soát thật</td>
+<td>"the system… marks it red, but there is no notification… the laboratory has the instruction to call."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Không tin dữ liệu, kiểm tra song song</td>
+<td>"I can't rely on anything at all to be up to date."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Ngoại lệ theo khung giờ</td>
+<td>"at night it becomes difficult, there is an emergency on-call service, but it is only for emergencies."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Nhập kép</td>
+<td>"I already have to operate two systems."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Triển khai áp đặt, không ai vẽ quy trình</td>
+<td>"'We have the system now, please all work with it from today'."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Kiến thức truyền miệng</td>
+<td>"they always prefer the snowball system."</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Dùng login đồng nghiệp, nhập sai trường, nhập trễ</td>
+<td>(mô tả, không có nguyên văn)</td>
+<td><a class="cite" href="#src-35">[35]</a></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Một người duyệt duy nhất, điểm nghẽn ẩn</strong></td>
+<td>"There's one member of staff who approves my orders. When she's not in then whatever I've ordered just waits until she's around to approve it"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>12</td>
+<td>Bước duyệt mới làm tắc</td>
+<td>"Now my orders have to be approved which has gummed the works up… orders that have been on more than a week"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Vượt luật vì "biết là đúng"</strong></td>
+<td>"I am defying all the rules, when it comes to ordering I do my ordering because I know it's right"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>14</td>
+<td>Tự phê duyệt khi khẩn cấp</td>
+<td>"I had to make my own decision…. I phoned the company, submitted my name to them"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>15</td>
+<td>Kênh quan hệ thay kênh chính thức</td>
+<td>"I have a very good relationship, so I can phone up any of these suppliers and talk to their managers"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>16</td>
+<td>Ủy quyền ngầm</td>
+<td>"I assist the matron, the clinical sisters with ordering items, because I know at the moment we're quite short staffed" (lý do là thiếu người)</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>17</td>
+<td>Quy trình hỏng dẫn tới thay thế tốn kém</td>
+<td>"If we have no [bus] tickets we have been known to have to call an ambulance for someone"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>18</td>
+<td>Yêu cầu chết trong hàng đợi</td>
+<td>"took about 3 months. I had to email, and then it got cancelled"</td>
+<td><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>19</td>
+<td>Xuất báo cáo ra Excel vì ERP không cho</td>
+<td>suy ra</td>
+<td><a class="cite" href="#src-39">[39]</a> (nhà cung cấp)</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Thiếu trường, ticket IT chậm, nên giữ trong sheet</td>
+<td>suy ra</td>
+<td><a class="cite" href="#src-40">[40]</a> (nhà cung cấp)</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Nói bằng danh từ hóa giấu tác nhân ("rồi nó đi qua phê duyệt")</td>
+<td>suy ra</td>
+<td><a class="cite" href="#src-36">[36]</a></td>
+</tr>
+<tr>
+<td>22</td>
+<td>PM: thói quen chung chung / hứa tương lai ("I usually", "I would")</td>
+<td>dấu hiệu có nguồn</td>
+<td><a class="cite" href="#src-37">[37]</a></td>
+</tr>
+<tr>
+<td>23</td>
+<td>PM: khen lịch sự ("That sounds great, I'd totally use that")</td>
+<td>có nguồn</td>
+<td><a class="cite" href="#src-46">[46]</a></td>
+</tr>
+<tr>
+<td>24</td>
+<td>PM: nhu cầu nói ra che job thật (xin dashboard tùy biến, thật ra chỉ cần "pretty charts to show their own clients each week")</td>
+<td>có nguồn (giai thoại)</td>
+<td><a class="cite" href="#src-37">[37]</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Chưa có nguồn:</strong> câu nói về <strong>ngưỡng tiền phê duyệt</strong> kiểu "dưới X thì tôi tự ký". Không tìm được qua hai vòng. Bộ sinh kịch bản nên coi mẫu này là giả định, hoặc dựa vào mẫu 11–16 (có nguồn) thay thế.</p>
+<p><strong>Quy tắc sinh kịch bản rút ra được:</strong>
+1. <strong>Nói bằng danh từ hóa để giấu tác nhân.</strong> Theo Grammar-targeted Interview Method, giả định ngầm nằm trong cụm danh từ như "rồi nó đi qua phê duyệt". Persona nên nói như vậy, và phản hồi thưởng cho người học biết mở ra "ai duyệt cái gì, khi nào, ngưỡng bao nhiêu" <a class="cite" href="#src-36">[36]</a>. Quy tắc này ánh xạ thẳng vào <code>boundary-probe</code>.
+2. <strong>"Hệ thống làm X, nhưng thực tế là Y" luôn đi kèm một khoảng trống cụ thể của hệ thống</strong> (không có thông báo, không có trường dữ liệu, báo cáo không xuất được) cộng một bù đắp của con người (gọi điện, Excel, nhập kép) <a class="cite" href="#src-35">[35]</a><a class="cite" href="#src-38">[38]</a>. Đây là khuôn tốt cho item mở bằng "chuyện quá khứ".
+3. <strong>Ngoại lệ gắn với điều kiện</strong> (ngày bận, ban đêm, "nếu biết đằng nào cũng…") <a class="cite" href="#src-35">[35]</a> là chất liệu tự nhiên cho item mở bằng follow-up.
+4. <strong>Kiến thức truyền miệng</strong> ("snowball system") <a class="cite" href="#src-35">[35]</a> giải thích vì sao quy trình thật không có trong tài liệu, và hợp với item mở bằng tin tưởng.
+5. <strong>PM:</strong> các dấu hiệu "fluff" như "I usually", "I would", "I might" và lời khen lịch sự "that sounds great, I'd totally use that" <a class="cite" href="#src-37">[37]</a><a class="cite" href="#src-46">[46]</a> cho persona PM chất liệu để thưởng người học biết kéo về một lần cụ thể trong quá khứ.</p>
+<h2 id="7-tin-hieu-gia-ai-tra-tien">7. Tín hiệu giá: ai trả tiền</h2>
+<table>
+<thead>
+<tr>
+<th>Mốc giá</th>
+<th>Con số</th>
+<th>Nguồn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thay thế rẻ nhất tại VN</td>
+<td>ChatGPT Go 132.000 VND/tháng; Plus share ~150.000 VND; Plus chính chủ ~571.000 VND; không có giảm giá sinh viên chính thức</td>
+<td><a class="cite" href="#src-14">[14]</a></td>
+</tr>
+<tr>
+<td>Mentoring</td>
+<td>ADPList miễn phí</td>
+<td><a class="cite" href="#src-18">[18]</a></td>
+</tr>
+<tr>
+<td>Khóa UX tại VN (trọn gói)</td>
+<td>2,2 triệu (ColorME, 8 buổi) – 5,2–5,8 triệu (Keyframe, 12 buổi) – 9,99 triệu VND (Capi Demy, 16 buổi, có buổi phỏng vấn)</td>
+<td><a class="cite" href="#src-11">[11]</a><a class="cite" href="#src-12">[12]</a><a class="cite" href="#src-13">[13]</a></td>
+</tr>
+<tr>
+<td>Khóa BA tại VN</td>
+<td>~3,2–12 triệu VND (trang tổng hợp)</td>
+<td><a class="cite" href="#src-25">[25]</a></td>
+</tr>
+<tr>
+<td>Công cụ luyện AI cho cá nhân (toàn cầu)</td>
+<td>$0 / $8 / $20 mỗi tháng, thanh toán theo năm (Yoodli, gói miễn phí giới hạn số buổi)</td>
+<td><a class="cite" href="#src-3">[3]</a></td>
+</tr>
+<tr>
+<td>Roleplay B2B</td>
+<td>~$63–70/seat/tháng (độ tin thấp)</td>
+<td><a class="cite" href="#src-16">[16]</a></td>
+</tr>
+<tr>
+<td>Khóa luyện có người (toàn cầu)</td>
+<td>US$1.215/ngày (NN/g)</td>
+<td><a class="cite" href="#src-17">[17]</a></td>
+</tr>
+<tr>
+<td>Kênh qua trường</td>
+<td>Yoodli được trung tâm hướng nghiệp University of Washington dùng (cho phỏng vấn xin việc)</td>
+<td><a class="cite" href="#src-47">[47]</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Đọc tín hiệu (suy luận từ các mốc trên, chưa kiểm):</strong> Với sinh viên VN, sản phẩm thay thế trực tiếp gần như miễn phí (ChatGPT 0–150k/tháng, ADPList 0đ). Nếu sinh viên tự trả thì giá phải ngang mức một tháng ChatGPT Go, tức khoảng 100–200k VND cho một gói prep-sprint. Trong khi đó, sinh viên VN vẫn trả 2–10 triệu cho khóa có cấu trúc. Vì vậy <strong>B2B2C</strong> (trung tâm đào tạo hoặc giảng viên HCI mua theo lớp, làm bài tập giữa các buổi học phỏng vấn) có sức mua cao hơn nhiều so với B2C. Tiền lệ Yoodli ở trung tâm hướng nghiệp đại học ủng hộ hướng này nhưng ở một kỹ năng khác <a class="cite" href="#src-47">[47]</a>. Chưa có dữ liệu WTP trực tiếp nào.</p>
+<h2 id="insight-lien-chieu">Insight liên chiều</h2>
+<ol>
+<li><strong>Khoảng trống cạnh tranh trùng đúng chỗ bằng chứng mạnh nhất.</strong> Đối thủ gần nhất (UXPressia <a class="cite" href="#src-4">[4]</a>, ChatGPT tự dựng <a class="cite" href="#src-20">[20]</a><a class="cite" href="#src-21">[21]</a>) cho <em>luyện</em> nhưng không cho <em>phản hồi</em>. Còn bằng chứng mạnh nhất (§4) nói rằng luyện không có phản hồi thì không tiến bộ, thậm chí làm độ đồng cảm giảm <a class="cite" href="#src-6">[6]</a>, và phản hồi mới là đòn bẩy <a class="cite" href="#src-26">[26]</a>. Vì vậy thông điệp khác biệt nên là "luyện <em>kèm</em> bằng chứng bạn sai ở đâu" chứ không phải "luyện với AI". Ý này mạnh hơn ẩn dụ buồng mô phỏng bay đứng một mình.</li>
+<li><strong>"Tin cậy theo cấu trúc" không phải trang trí mà là điều kiện để chạy được.</strong> Prompt-only rò thông tin ẩn khoảng 0,6 lần mỗi episode <a class="cite" href="#src-7">[7]</a>. Đó chính là điểm yếu của ChatGPT tự dựng, và là lý do một bộ đếm niêm phong kèm replay mới có thể "chứng minh được". Việc forged-idea chọn cho persona chỉ thấy các item đã mở là cách giảm nhẹ đúng với lỗi mà benchmark đo được. Phải đo lại bằng eval adversarial của chính sản phẩm.</li>
+<li><strong>Độ thật là điểm yếu chung của mọi persona AI, và nó chồng lên rủi ro BA/PM không có người làm nghề kiểm tra.</strong> Sinh viên đánh giá người thật "thật hơn" dù persona RAG dạy tốt hơn <a class="cite" href="#src-8">[8]</a>. Synthetic users xu nịnh và phẳng <a class="cite" href="#src-9">[9]</a><a class="cite" href="#src-33">[33]</a>. Danh mục §6 có nguồn, nhưng từ y tế và mua sắm công, không phải phần mềm doanh nghiệp VN. Kịch bản BA/PM do AI soạn sẽ đi đúng vào vùng yếu nhất.</li>
+<li><strong>Định vị đạo đức cũng chính là định vị cạnh tranh.</strong> Giới phê bình tấn công việc <em>thay thế</em> nghiên cứu <a class="cite" href="#src-9">[9]</a><a class="cite" href="#src-33">[33]</a>, trong khi đối thủ có vốn nhất bán đúng thứ đó <a class="cite" href="#src-2">[2]</a>. Còn NN/g thì cho phép dùng để pilot bộ câu hỏi <a class="cite" href="#src-9">[9]</a>. Câu "chỉ đánh giá kỹ năng người học" vừa là ranh giới đạo đức, vừa là thông điệp tách mình khỏi Synthetic Users.</li>
+<li><strong>Giá và nỗi đau cùng đẩy về B2B2C.</strong> Người học không tự nói "cần feedback" (§3), sản phẩm thay thế B2C gần như miễn phí (§7), còn khóa học và giảng viên thì đã trả tiền cho việc dạy phỏng vấn <a class="cite" href="#src-11">[11]</a>. Người mua có động cơ rõ nhất là người dạy (suy luận, chưa kiểm).</li>
+</ol>
+<h2 id="anh-gia-cac-gia-inh-trong-forged-ideamd">Đánh giá các giả định trong forged-idea.md</h2>
+<table>
+<thead>
+<tr>
+<th>Giả định</th>
+<th>Trạng thái</th>
+<th>Căn cứ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Khác biệt so với ChatGPT: trạng thái cố định và replay chứng minh được</td>
+<td><strong>Ủng hộ một phần</strong>: LLM chỉ dùng prompt rò thông tin ẩn <a class="cite" href="#src-7">[7]</a>; ChatGPT tự dựng là cách thay thế phổ biến <a class="cite" href="#src-20">[20]</a><a class="cite" href="#src-21">[21]</a>. Nhận định "ChatGPT bịa tảng băng sau buổi" chưa được kiểm trực tiếp</td>
+<td><a class="cite" href="#src-7">[7]</a><a class="cite" href="#src-20">[20]</a><a class="cite" href="#src-21">[21]</a></td>
+</tr>
+<tr>
+<td>Replay là bằng chứng khác biệt duy nhất</td>
+<td><strong>Ủng hộ về cạnh tranh</strong> (không đối thủ nào có <a class="cite" href="#src-1">[1]</a>); <strong>chưa kiểm về hiệu quả học</strong> (RCDP chỉ có trong hồi sức, độ chắc chắn rất thấp <a class="cite" href="#src-28">[28]</a>)</td>
+<td><a class="cite" href="#src-1">[1]</a><a class="cite" href="#src-28">[28]</a></td>
+</tr>
+<tr>
+<td>Phản hồi tính từ ledger, có căn cứ</td>
+<td><strong>Ủng hộ</strong>: phản hồi là đòn bẩy <a class="cite" href="#src-26">[26]</a>; thiếu phản hồi thì đứng yên <a class="cite" href="#src-6">[6]</a>. Dạng trích theo lượt cụ thể thì chưa kiểm</td>
+<td><a class="cite" href="#src-6">[6]</a><a class="cite" href="#src-26">[26]</a><a class="cite" href="#src-29">[29]</a></td>
+</tr>
+<tr>
+<td>Tin cậy theo cấu trúc (persona chỉ thấy item đã mở)</td>
+<td><strong>Ủng hộ</strong> bởi bằng chứng rò rỉ <a class="cite" href="#src-7">[7]</a> và lợi ích của grounding <a class="cite" href="#src-8">[8]</a></td>
+<td><a class="cite" href="#src-7">[7]</a><a class="cite" href="#src-8">[8]</a></td>
+</tr>
+<tr>
+<td>OSCE/SP làm trích dẫn uy tín</td>
+<td><strong>Ủng hộ, kèm lưu ý</strong>: SMD 0,74 là cho SP nói chung, không cho cơ chế thông tin ẩn <a class="cite" href="#src-5">[5]</a>. Không nên nói "đã chứng minh"</td>
+<td><a class="cite" href="#src-5">[5]</a><a class="cite" href="#src-27">[27]</a></td>
+</tr>
+<tr>
+<td>"Bổ trợ, không thay thế" con người</td>
+<td><strong>Ủng hộ</strong>: người thật được đánh giá thật hơn <a class="cite" href="#src-8">[8]</a>; NN/g <a class="cite" href="#src-9">[9]</a></td>
+<td><a class="cite" href="#src-8">[8]</a><a class="cite" href="#src-9">[9]</a></td>
+</tr>
+<tr>
+<td>Beachhead: sinh viên HCI/UX năm cuối ở VN</td>
+<td><strong>Chưa kiểm</strong>: không có tiếng nói người học VN; khóa UX ở VN có dạy phỏng vấn <a class="cite" href="#src-11">[11]</a> (có nhu cầu học, chưa rõ nhu cầu luyện thêm)</td>
+<td><a class="cite" href="#src-11">[11]</a></td>
+</tr>
+<tr>
+<td>UX/BA/PM đều first-class</td>
+<td><strong>Chưa kiểm / bị thách thức về nhu cầu</strong>: 0 tiếng nói người học BA; văn viết BA ở VN đổ lỗi cho stakeholder <a class="cite" href="#src-52">[52]</a>; không có simulator BA nào <a class="cite" href="#src-19">[19]</a> (khoảng trống nhưng chưa có cầu)</td>
+<td><a class="cite" href="#src-19">[19]</a><a class="cite" href="#src-51">[51]</a><a class="cite" href="#src-52">[52]</a></td>
+</tr>
+<tr>
+<td>Persona sinh từ câu hỏi nghiên cứu gây neo giả thuyết</td>
+<td><strong>Chưa kiểm</strong>: không có bằng chứng trực tiếp; nền kinh điển còn tranh cãi <a class="cite" href="#src-10">[10]</a><a class="cite" href="#src-34">[34]</a>. Quyết định "cùng lĩnh vực, khác câu hỏi" là thận trọng hợp lý, không nên quảng bá như điều đã có bằng chứng</td>
+<td><a class="cite" href="#src-10">[10]</a><a class="cite" href="#src-34">[34]</a></td>
+</tr>
+<tr>
+<td>AI soạn kịch bản BA/PM, không cần người làm nghề duyệt</td>
+<td><strong>Bị thách thức</strong>: độ thật là điểm yếu đã được đo <a class="cite" href="#src-8">[8]</a><a class="cite" href="#src-9">[9]</a>; mẫu phê duyệt theo ngưỡng tiền chưa có nguồn; danh mục §6 lệch về y tế</td>
+<td><a class="cite" href="#src-8">[8]</a><a class="cite" href="#src-35">[35]</a><a class="cite" href="#src-53">[53]</a></td>
+</tr>
+<tr>
+<td>Không nói mềm với người mới</td>
+<td><strong>Chưa kiểm</strong>: không tìm thấy bằng chứng về giọng điệu phản hồi</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Ai trả tiền: sinh viên VN, gói prep-sprint</td>
+<td><strong>Bị thách thức</strong>: mốc thay thế là 0–150k VND/tháng <a class="cite" href="#src-14">[14]</a>, ADPList 0đ <a class="cite" href="#src-18">[18]</a>; khóa học 2–10 triệu <a class="cite" href="#src-11">[11]</a><a class="cite" href="#src-12">[12]</a><a class="cite" href="#src-13">[13]</a> gợi ý hướng B2B2C</td>
+<td><a class="cite" href="#src-11">[11]</a><a class="cite" href="#src-14">[14]</a><a class="cite" href="#src-18">[18]</a></td>
+</tr>
+<tr>
+<td>Headline "Practice on ours. Walk into yours prepared."</td>
+<td><strong>Tương thích</strong> với ngoại lệ pilot của NN/g <a class="cite" href="#src-9">[9]</a> và ngôn ngữ sợ hãi trước buổi thật của người học <a class="cite" href="#src-50">[50]</a></td>
+<td><a class="cite" href="#src-9">[9]</a><a class="cite" href="#src-50">[50]</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="khuyen-nghi">Khuyến nghị</h2>
+<ol>
+<li><strong>Định vị: "phòng tập phỏng vấn người dùng / stakeholder có phản hồi kèm bằng chứng"</strong>, tách khỏi "synthetic users". Tránh cụm "UX interview practice" vì đã bị gắn với phỏng vấn xin việc <a class="cite" href="#src-22">[22]</a>. Tiếng Việt nên dùng "user interview" hoặc "phỏng vấn người dùng", vì "phỏng vấn" đứng một mình bị hiểu là xin việc (quan sát tìm kiếm, §3). <em>Feeds: brief (định vị), GTM copy.</em> Độ tin: trung bình–cao.</li>
+<li><strong>Đưa phản hồi lên headline phụ, nhưng bằng ngôn ngữ của người học:</strong> "bắt lỗi trước buổi thật" thay vì "feedback" <a class="cite" href="#src-6">[6]</a><a class="cite" href="#src-50">[50]</a>. <em>Feeds: copy ra mắt.</em> Độ tin: trung bình (tiếng nói người học mỏng).</li>
+<li><strong>Giữ nguyên tin cậy theo cấu trúc và đưa tỉ lệ rò (leak/episode) vào eval harness như một chỉ số</strong>, lấy benchmark <a class="cite" href="#src-7">[7]</a> làm mốc so sánh. <em>Feeds: PRD (NFR), eval.</em> Độ tin: cao.</li>
+<li><strong>Không tuyên bố replay "có bằng chứng khoa học".</strong> Trình bày nó là thiết kế lấy cảm hứng từ deliberate practice. OSCE chỉ dùng ở mức "cùng họ phương pháp" <a class="cite" href="#src-5">[5]</a><a class="cite" href="#src-28">[28]</a>. <em>Feeds: copy, pitch.</em> Độ tin: cao.</li>
+<li><strong>Bộ sinh kịch bản BA/PM:</strong> nạp danh mục §6 làm tài liệu grounding. Ưu tiên mẫu 11–16 (phê duyệt) và 1–9 (workaround). Đưa quy tắc danh từ hóa <a class="cite" href="#src-36">[36]</a> vào luật boundary-probe. Đánh dấu mẫu "ngưỡng tiền" là chưa có nguồn. Vẫn nên tìm 1–2 BA thật để kiểm tra nhẹ, vì độ thật là điểm yếu đã được đo <a class="cite" href="#src-8">[8]</a>. <em>Feeds: pipeline sinh kịch bản.</em> Độ tin: trung bình.</li>
+<li><strong>Thử hướng B2B2C song song với B2C:</strong> dùng waitlist đo WTP của sinh viên, đồng thời hỏi 2–3 giảng viên HCI hoặc trung tâm (ví dụ các khóa có buổi user interview <a class="cite" href="#src-11">[11]</a>) về việc dùng làm bài tập. <em>Feeds: câu hỏi mở "ai trả tiền".</em> Độ tin: thấp (suy luận từ mốc giá).</li>
+<li><strong>Giám sát mom-test</strong> như prior art mở mã nguồn: nếu nó được đóng gói thành web app, khác biệt còn lại sẽ là replay, UX/BA và tiếng Việt <a class="cite" href="#src-1">[1]</a>. <em>Feeds: battlecard.</em> Độ tin: trung bình.</li>
+</ol>
+<h2 id="cau-hoi-mo">Câu hỏi mở</h2>
+<ul>
+<li><strong>Người học VN và người học BA có thật sự thấy đau không?</strong> Cần 5–8 phỏng vấn nhanh với sinh viên HCI năm cuối và fresher BA, hoặc thu thập trong group Facebook (công cụ không truy cập được).</li>
+<li><strong>Người học có muốn phản hồi không, hay chỉ muốn bớt sợ?</strong> Chưa có câu nói trực tiếp nào. Cần phỏng vấn hoặc khảo sát, hoặc đo hành vi (tỉ lệ mở màn reveal và replay).</li>
+<li><strong>Tiếng nói trên Reddit</strong> (r/UXResearch, r/businessanalysis): bị chặn ở lượt này. Có thể dùng Draft prompt cho công cụ deep-research của bạn, hoặc browser.</li>
+<li><strong>Giá sẵn lòng trả thực tế ở VN:</strong> chưa có dữ liệu. Waitlist kèm giá thử, và phỏng vấn giảng viên.</li>
+<li><strong>Replay có cải thiện kỹ năng hội thoại không?</strong> Chưa có nghiên cứu. Có thể tự đo bằng A/B trong sản phẩm (tỉ lệ mở item ở buổi sau).</li>
+<li><strong>Mẫu lời nói về ngưỡng tiền phê duyệt:</strong> chưa có nguồn. Tìm trong tài liệu process mining hoặc kiểm toán nội bộ, hoặc hỏi một BA.</li>
+<li>Chưa kiểm được: số liệu chính xác của Cook 2011, giá Second Nature/Exec, giá IDF/Coursera hiện tại, trang giá chính chủ của các trung tâm BA ở VN.</li>
+</ul>
+<h2 id="ban-o-o-cu">Bản đồ độ cũ</h2>
+<p>Tính bằng <code>recon_kit.py staleness</code>. Cửa sổ: tính năng, giá, định vị 3 tháng; cảm nhận người dùng 18 tháng; mô phỏng LLM và phê phán 24 tháng; effect size và mẫu lời nói 60 tháng.</p>
+<table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Lớp</th>
+<th>Ngày nguồn</th>
+<th>Cần kiểm lại</th>
+<th>Đã cũ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a class="cite" href="#src-1">[1]</a> Chưa có sản phẩm nào có đủ thông tin ẩn + lộ theo lượt + replay</td>
+<td>feature</td>
+<td>2026-09</td>
+<td>2026-12-22</td>
+<td>không</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-2">[2]</a><a class="cite" href="#src-3">[3]</a> Giá Synthetic Users, Yoodli</td>
+<td>pricing</td>
+<td>2026-09</td>
+<td>2026-12-22</td>
+<td>không</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-4">[4]</a> Định vị UXPressia</td>
+<td>positioning</td>
+<td>2026-09</td>
+<td>2026-12-22</td>
+<td>không</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-11">[11]</a> Giá khóa học VN</td>
+<td>pricing</td>
+<td>2026-09</td>
+<td>2026-12-22</td>
+<td>không</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-14">[14]</a> Giá ChatGPT tại VN</td>
+<td>pricing</td>
+<td>2026-01</td>
+<td>2026-04-15</td>
+<td><strong>cũ</strong>: kiểm lại trước khi định giá</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-50">[50]</a> Tiếng nói người học PM</td>
+<td>sentiment</td>
+<td>2023-04</td>
+<td>2024-10-30</td>
+<td><strong>cũ</strong>: là tiếng nói người học đọc được đầy đủ duy nhất</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-9">[9]</a> Phê phán của NN/g</td>
+<td>critique</td>
+<td>2024-06</td>
+<td>2026-06-21</td>
+<td><strong>cũ</strong>: kiểm xem NN/g đã cập nhật chưa</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-7">[7]</a><a class="cite" href="#src-8">[8]</a> Bằng chứng mô phỏng LLM</td>
+<td>llm-sim</td>
+<td>2026</td>
+<td>2028-05 / 2028-09</td>
+<td>không</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-5">[5]</a><a class="cite" href="#src-6">[6]</a> Effect size</td>
+<td>effect-size</td>
+<td>2024–2026</td>
+<td>2029–2031</td>
+<td>không</td>
+</tr>
+<tr>
+<td><a class="cite" href="#src-35">[35]</a> Mẫu workaround</td>
+<td>example-pattern</td>
+<td>2025</td>
+<td>2030-01-01</td>
+<td>không</td>
+</tr>
+</tbody>
+</table>
+<p>Mốc kiểm lại sớm nhất: <strong>2024-10-30</strong> (<a class="cite" href="#src-50">[50]</a>, đã quá hạn). Mốc kiểm lại sớm nhất trong tương lai: <strong>2026-12-22</strong> (giá và tính năng đối thủ). Refresh sẽ xử lý các mục này.</p>
+<details id="sources"><summary>Phụ lục nguồn</summary><table class="sources"><tbody><tr id="src-1"><td>[1]</td><td>mom-test: hidden facts, scorecard /75, debrief theo lượt, không có replay</td><td><a href="https://github.com/sreshtalluri/mom-test" target="_blank" rel="noopener">GitHub sreshtalluri/mom-test</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao (đọc 2 lần độc lập)</td></tr><tr id="src-2"><td>[2]</td><td>Synthetic Users từ $12.500/năm, định vị co-pilot</td><td><a href="https://www.syntheticusers.com/pricing" target="_blank" rel="noopener">Synthetic Users</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-3"><td>[3]</td><td>Giá Yoodli cho cá nhân</td><td><a href="https://www.yoodli.ai/pricing" target="_blank" rel="noopener">Yoodli</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-4"><td>[4]</td><td>UXPressia định vị &quot;practice conversations&quot;</td><td><a href="https://uxpressia.com/ai-persona-chat" target="_blank" rel="noopener">UXPressia</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-5"><td>[5]</td><td>SP: SMD 0,74, n=2061</td><td><a href="https://pubmed.ncbi.nlm.nih.gov/39692563/" target="_blank" rel="noopener">Simulation in Healthcare (PubMed)</a></td><td>2024-12</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-6"><td>[6]</td><td>RCT n=94: luyện kèm phản hồi và luyện không phản hồi</td><td><a href="https://arxiv.org/abs/2505.02428" target="_blank" rel="noopener">arXiv 2505.02428 (Louie et al.)</a></td><td>2026-03 (v2)</td><td>2026-09-22</td><td>cao (preprint)</td></tr><tr id="src-7"><td>[7]</td><td>Rò thông tin ẩn ~0,6/episode</td><td><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC13278464/" target="_blank" rel="noopener">Cureus (Harada), PMC</a></td><td>2026-05</td><td>2026-09-22</td><td>trung bình (một benchmark)</td></tr><tr id="src-8"><td>[8]</td><td>Stakeholder RAG so với người đóng vai, n=69</td><td><a href="https://arxiv.org/abs/2609.12576" target="_blank" rel="noopener">Requirements Engineering / arXiv 2609.12576</a></td><td>2026</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-9"><td>[9]</td><td>NN/g phê phán synthetic users; ngoại lệ pilot</td><td><a href="https://www.nngroup.com/articles/synthetic-users/" target="_blank" rel="noopener">Nielsen Norman Group</a></td><td>2024-06-21</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-10"><td>[10]</td><td>Thiên kiến xác nhận trong phỏng vấn (kinh điển)</td><td><a href="http://www.communicationcache.com/uploads/1/0/8/8/10887248/hypothesis-testing_processes_in_social_interaction.pdf" target="_blank" rel="noopener">Snyder &amp; Swann, JPSP (bản in lại)</a></td><td>1978</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-11"><td>[11]</td><td>Capi Demy UX 9,99 triệu VND, có buổi user interview</td><td><a href="https://capidemy.com/course/ux-design" target="_blank" rel="noopener">Capi Demy</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-12"><td>[12]</td><td>ColorME UI 2,2 triệu VND</td><td><a href="https://colorme.vn/course/ui-ux" target="_blank" rel="noopener">ColorME</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-13"><td>[13]</td><td>Keyframe 5,22–5,8 triệu VND</td><td><a href="https://keyframe.vn/khoa-hoc-offline/khoa-hoc-thiet-ke-ux-ui-digital-product-design-39.html" target="_blank" rel="noopener">Keyframe</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-14"><td>[14]</td><td>Giá ChatGPT tại VN (Go 132k, share 150k, Plus 571k)</td><td><a href="https://bestapp.vn/blog/chatgpt-plus-cho-sinh-vien-2026-go-vs-plus-share" target="_blank" rel="noopener">BestApp</a></td><td>2026</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-15"><td>[15]</td><td>PEARL, n=4</td><td><a href="https://onlineinnovationsjournal.com/forthcoming_articles/51770.html" target="_blank" rel="noopener">IJIOE</a></td><td>2024-02-23</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-16"><td>[16]</td><td>Giá Hyperbound (bài review của đối thủ)</td><td><a href="https://www.outdoo.ai/blog/hyperbound-review-and-pricing" target="_blank" rel="noopener">Outdoo</a></td><td>2026</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-17"><td>[17]</td><td>Khóa NN/g User Interviews $1.215</td><td><a href="https://www.nngroup.com/courses/user-interviews/" target="_blank" rel="noopener">Nielsen Norman Group</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-18"><td>[18]</td><td>ADPList miễn phí, 40.000+ mentor</td><td><a href="https://adplist.org/mentors" target="_blank" rel="noopener">ADPList</a></td><td>2026</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-19"><td>[19]</td><td>IIBA: AI đóng vai stakeholder persona</td><td><a href="https://www.iiba.org/business-analysis-blogs/enrich-business-analysis-experience-for-your-stakeholders-using-ai-tools/" target="_blank" rel="noopener">IIBA</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-20"><td>[20]</td><td>Persona ChatGPT cho mock interview</td><td><a href="https://contentsquare.com/guides/user-interviews/ai/" target="_blank" rel="noopener">Contentsquare</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-21"><td>[21]</td><td>Template tự dựng môi trường luyện phỏng vấn</td><td><a href="https://maryma.substack.com/p/build-your-ai-interview-practice" target="_blank" rel="noopener">Substack (maryma)</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-22"><td>[22]</td><td>Trùng tên &quot;UX interview practice&quot; với phỏng vấn xin việc</td><td><a href="https://mockin.work/" target="_blank" rel="noopener">Mockin</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-23"><td>[23]</td><td>Whalen: synthetic users là &quot;chuẩn bị gặp người thật&quot;</td><td><a href="https://www.usertesting.com/resources/podcast/ai-in-ux-research" target="_blank" rel="noopener">UserTesting podcast</a></td><td>2025-10-06</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-24"><td>[24]</td><td>Continuous Interviewing: 5 buổi live</td><td><a href="https://learn.producttalk.org/continuous-interviewing" target="_blank" rel="noopener">Product Talk</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-25"><td>[25]</td><td>Giá khóa BA tại VN (tổng hợp)</td><td><a href="https://som.edu.vn/khoa-hoc-business-analyst/" target="_blank" rel="noopener">SOM</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-26"><td>[26]</td><td>Phản hồi ES 0,44; lặp lại 0,68</td><td><a href="https://pubmed.ncbi.nlm.nih.gov/22938677/" target="_blank" rel="noopener">Medical Teacher (Cook 2013)</a></td><td>2013</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-27"><td>[27]</td><td>Kaplonyi 2017: SP cải thiện giao tiếp</td><td><a href="https://pubmed.ncbi.nlm.nih.gov/28833360/" target="_blank" rel="noopener">Medical Education (PubMed)</a></td><td>2017</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-28"><td>[28]</td><td>RCDP: độ chắc chắn rất thấp, chỉ trong hồi sức</td><td><a href="https://pubmed.ncbi.nlm.nih.gov/38757054/" target="_blank" rel="noopener">Resuscitation Plus</a></td><td>2024</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-29"><td>[29]</td><td>Brügge RCT n=21, phản hồi AI</td><td><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11605890/" target="_blank" rel="noopener">BMC Medical Education</a></td><td>2024</td><td>2026-09-22</td><td>cao (mẫu nhỏ)</td></tr><tr id="src-30"><td>[30]</td><td>Tổng quan 39 nghiên cứu bệnh nhân ảo LLM</td><td><a href="https://medinform.jmir.org/2026/1/e79039" target="_blank" rel="noopener">JMIR Medical Informatics</a></td><td>2026-01-02</td><td>2026-09-22</td><td>trung bình–cao</td></tr><tr id="src-31"><td>[31]</td><td>RCT n=84: bệnh nhân số LLM, +10,5 điểm</td><td><a href="https://www.nature.com/articles/s41746-025-01841-6" target="_blank" rel="noopener">npj Digital Medicine</a></td><td>2025</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-32"><td>[32]</td><td>Loại lỗi elicitation của người mới (một phần chưa kiểm được)</td><td><a href="https://link.springer.com/article/10.1007/s00766-019-00313-0" target="_blank" rel="noopener">Requirements Engineering (Bano et al.)</a></td><td>2019</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-33"><td>[33]</td><td>LLM mô tả sai và làm phẳng nhóm nhân khẩu học</td><td><a href="https://www.nature.com/articles/s42256-025-00986-z" target="_blank" rel="noopener">Nature Machine Intelligence</a></td><td>2025</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-34"><td>[34]</td><td>Không tái lập được Snyder &amp; Swann khi phỏng vấn trực tiếp</td><td><a href="https://bpspsychub.onlinelibrary.wiley.com/doi/abs/10.1111/j.2044-8309.1987.tb00784.x" target="_blank" rel="noopener">BJSP (Pennington)</a></td><td>1987</td><td>2026-09-22</td><td>trung bình–thấp</td></tr><tr id="src-35"><td>[35]</td><td>Trích dẫn workaround nguyên văn (26 phỏng vấn)</td><td><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12282938/" target="_blank" rel="noopener">JMIR, PMC</a></td><td>2025</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-36"><td>[36]</td><td>Danh từ hóa giấu giả định ngầm (GIM)</td><td><a href="https://www.tandfonline.com/doi/full/10.1057/ejis.2010.1" target="_blank" rel="noopener">European Journal of Information Systems</a></td><td>2010</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-37"><td>[37]</td><td>Dấu hiệu fluff kiểu Mom Test; giai thoại dashboard</td><td><a href="https://mtlynch.io/book-reports/the-mom-test/" target="_blank" rel="noopener">mtlynch.io</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-38"><td>[38]</td><td>Truy từng shadow system về khoảng trống cụ thể</td><td><a href="https://www.panorama-consulting.com/how-to-prevent-duplicate-data-entry-by-eliminating-erp-shadow-systems/" target="_blank" rel="noopener">Panorama Consulting</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp–trung bình</td></tr><tr id="src-39"><td>[39]</td><td>Xuất báo cáo từ ERP ra Excel</td><td><a href="https://www.erpvar.com/blog/why-spreadsheet-shadow-systems-creep-in-around-your-erp" target="_blank" rel="noopener">ERPVAR</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-40"><td>[40]</td><td>Thiếu trường nên dùng spreadsheet</td><td><a href="https://www.datamondial.com/en/logistics-shadow-back-office-data-quality/" target="_blank" rel="noopener">Datamondial</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-41"><td>[41]</td><td>Thể loại bài &quot;buổi phỏng vấn đầu tiên hỏng&quot;</td><td><a href="https://medium.com/design-bootcamp/my-first-user-research-was-a-mess-heres-what-i-learned-bb9a39027b3f" target="_blank" rel="noopener">Medium, Bootcamp</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp (snippet)</td></tr><tr id="src-42"><td>[42]</td><td>Lỗi người mới theo giảng viên VN</td><td><a href="https://capidemy.com/capi-news/user-interview-la-gi-huong-dan-phong-van-nguoi-dung-trong-ux-research" target="_blank" rel="noopener">Capidemy</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp–trung bình</td></tr><tr id="src-43"><td>[43]</td><td>HN &quot;trade customer discovery interviews&quot;</td><td><a href="https://news.ycombinator.com/item?id=24634673" target="_blank" rel="noopener">Hacker News</a></td><td>2020-09-30</td><td>2026-09-22</td><td>trung bình (yếu)</td></tr><tr id="src-44"><td>[44]</td><td>GitLab Interview Carousel</td><td><a href="https://handbook.gitlab.com/handbook/product/ux/ux-research/interview-carousel" target="_blank" rel="noopener">GitLab Handbook</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-46"><td>[46]</td><td>&quot;That sounds great, I&#x27;d totally use that&quot;</td><td><a href="https://www.koji.so/blog/mom-test-customer-interviews-2026" target="_blank" rel="noopener">Koji</a></td><td>2026</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-47"><td>[47]</td><td>Yoodli ở trung tâm hướng nghiệp UW</td><td><a href="https://careers.uw.edu/blog/2025/01/08/test-tags/" target="_blank" rel="noopener">UW Career Center</a></td><td>2025-01-08</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-50"><td>[50]</td><td>Người học PM: &quot;terrifying&quot;, &quot;filtered for what I wanted to hear&quot;</td><td><a href="https://financetotech.substack.com/p/how-to-conduct-user-interviews" target="_blank" rel="noopener">Finance to Tech (Substack)</a></td><td>2023-04-30</td><td>2026-09-22</td><td>cao (một người)</td></tr><tr id="src-51"><td>[51]</td><td>Fresher BA khai thác thiếu thông tin là bình thường</td><td><a href="https://viblo.asia/p/fba-2-cach-ba-khai-thac-thong-tin-tu-stakeholder-elicitation-5OXLAYQkLGr" target="_blank" rel="noopener">Viblo</a></td><td>2023-04-02</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-52"><td>[52]</td><td>Khung &quot;khách hàng không diễn đạt được&quot;</td><td><a href="https://ant.ncc.plus/nhung-kho-khan-ma-1-ba-co-the-gap-phai/" target="_blank" rel="noopener">NCC ANT</a></td><td>2025-06-02</td><td>2026-09-22</td><td>trung bình</td></tr><tr id="src-53"><td>[53]</td><td>Trích dẫn nguyên văn về phê duyệt và workaround (NHS, 15 người)</td><td><a href="https://pubmed.ncbi.nlm.nih.gov/34645449/" target="_blank" rel="noopener">BMC Health Services Research (PubMed)</a></td><td>2021</td><td>2026-09-22</td><td>cao</td></tr><tr id="src-54"><td>[54]</td><td>Nhờ quản lý hoặc đồng nghiệp nghe lại để góp ý</td><td><a href="https://dscout.com/people-nerds/tips-master-researcher-participant-interviews" target="_blank" rel="noopener">dscout People Nerds</a></td><td>không ghi ngày</td><td>2026-09-22</td><td>thấp</td></tr><tr id="src-55"><td>[55]</td><td>Dẫn dắt khách hàng tới câu trả lời muốn nghe</td><td><a href="https://news.ycombinator.com/item?id=10875585" target="_blank" rel="noopener">Hacker News</a></td><td>2016-01-10</td><td>2026-09-22</td><td>trung bình</td></tr></tbody></table></details></main></div></body></html>
