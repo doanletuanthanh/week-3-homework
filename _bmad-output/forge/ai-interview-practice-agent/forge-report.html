@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forge Report — AI luyện phỏng vấn</title>
+<style>
+:root{--bg:#f6f1e7;--paper:#fffdf8;--ink:#2b2520;--muted:#6f655b;--line:#e2d8c8;--seal:#9b2226;--seal2:#6d1518;--ok:#2d6a4f;--warn:#b5651d;--kill:#7a7a7a}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1815;--paper:#24201c;--ink:#ece4d8;--muted:#a89c8e;--line:#3a332c;--seal:#c0392b;--seal2:#8e2a20;--ok:#74c69d;--warn:#e0a060;--kill:#9a9a9a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Georgia,"Times New Roman",serif}
+main{max-width:880px;margin:0 auto;padding:32px 16px 64px}
+.paper{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:32px 28px;box-shadow:0 2px 14px rgba(0,0,0,.06)}
+header{display:flex;gap:24px;align-items:center;flex-wrap:wrap;border-bottom:2px double var(--line);padding-bottom:20px;margin-bottom:8px}
+header svg{flex:0 0 150px}
+h1{font-size:1.7rem;margin:0 0 6px;line-height:1.25}
+h2{font-size:1.15rem;margin:30px 0 10px;letter-spacing:.02em;text-transform:uppercase;color:var(--seal)}
+.sub{color:var(--muted);margin:0;font-size:.95rem}
+.headline{font-style:italic;font-size:1.1rem;border-left:4px solid var(--seal);padding:6px 14px;margin:18px 0 0}
+ul{padding-left:20px;margin:6px 0}li{margin:5px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.card b{display:block}
+.tag{font:600 .72rem/1 system-ui,sans-serif;padding:3px 7px;border-radius:10px;letter-spacing:.04em;text-transform:uppercase}
+.must{background:var(--ok);color:#fff}.next{background:var(--warn);color:#fff}.later{background:var(--kill);color:#fff}
+ol.rank{padding-left:24px}
+.kill li::marker{content:"✕  ";color:var(--seal)}
+.risk li::marker{content:"⚠  ";color:var(--warn)}
+.persona{display:flex;gap:10px;align-items:flex-start}
+.persona .ic{font-size:1.5rem;line-height:1}
+.persona q{color:var(--muted);font-style:italic}
+footer{margin-top:28px;color:var(--muted);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<main><div class="paper">
+<header>
+<svg viewBox="0 0 160 160" width="150" height="150" role="img" aria-label="Con dấu HARDENED">
+  <defs><radialGradient id="g" cx="40%" cy="35%"><stop offset="0" stop-color="var(--seal)"/><stop offset="1" stop-color="var(--seal2)"/></radialGradient>
+  <path id="c" d="M80,80 m-52,0 a52,52 0 1,1 104,0 a52,52 0 1,1 -104,0"/></defs>
+  <path fill="url(#g)" d="M80 6c9 0 13 7 21 9s15-2 21 5 3 14 7 21 11 11 11 20-7 13-9 21 2 15-5 21-14 3-21 7-11 11-20 11-13-7-21-9-15 2-21-5-3-14-7-21S6 89 6 80s7-13 9-21-2-15 5-21 14-3 21-7S71 6 80 6z"/>
+  <circle cx="80" cy="80" r="44" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/>
+  <text fill="#fff" fill-opacity=".8" font-family="Georgia,serif" font-size="10" letter-spacing="3"><textPath href="#c" startOffset="0">FORGED · 22 · IX · 2026 · BMAD · FORGE ·</textPath></text>
+  <text x="80" y="76" text-anchor="middle" fill="#fff" font-family="Georgia,serif" font-weight="bold" font-size="17" letter-spacing="1">HARDENED</text>
+  <text x="80" y="96" text-anchor="middle" fill="#fff" fill-opacity=".85" font-family="Georgia,serif" font-size="20">✦</text>
+</svg>
+<div>
+<h1>AI luyện phỏng vấn người dùng: buồng mô phỏng bay</h1>
+<p class="sub">Forge 2026-09-22 · Thanh · Test (6 đòn tấn công) → Improve · Kết quả: <b>HARDENED</b></p>
+<p class="headline">“Practice on ours. Walk into yours prepared.”<br>“Luyện trên kịch bản của chúng tôi. Tự tin bước vào buổi phỏng vấn của bạn.”</p>
+</div>
+</header>
+
+<h2>Kết quả</h2>
+<p>Ý tưởng đứng vững sau 6 đòn tấn công và ra khỏi lò mạnh hơn. Sản phẩm vẫn là tảng băng ẩn + hook ledger, nhưng lời hứa "khác ChatGPT" giờ được <b>chứng minh bằng cấu trúc</b>: cổng mở khóa do agent quyết định, persona không bao giờ thấy nội dung bị khóa, trích dẫn chỉ render từ transcript, và replay-from-here là bằng chứng lõi.</p>
+
+<h2>Quyết định đã khóa</h2>
+<div class="grid">
+<div class="card"><b>Người dùng & GTM</b>UX/BA/PM first-class, vai trò là dữ liệu. Beachhead: SV HCI năm cuối ở VN, 5 buổi phỏng vấn trong 10 ngày.</div>
+<div class="card"><b>Một luật câu hỏi chung</b>confirm-grounded · boundary-probe = tốt; leading/assumption = xấu. Verifier trả turn ID; không có nhãn nào thiếu bằng chứng.</div>
+<div class="card"><b>Cổng mở khóa</b>Áp dụng cả buổi. Follow-up phải bám hook thật; item tin tưởng cần openness vượt ngưỡng.</div>
+<div class="card"><b>Replay = bằng chứng</b>1 khoảnh khắc, khôi phục trạng thái, 3 lượt; thất bại vẫn dạy bằng 1 câu mẫu.</div>
+<div class="card"><b>Tin cậy theo cấu trúc</b>Ẩn thông tin + do-not-assert; trích dẫn theo tham chiếu; feedback tính từ ledger. Độ sâu thay đổi, sự thật thì không.</div>
+<div class="card"><b>Kịch bản</b>Pick (curated, full eval) + Describe (cùng lĩnh vực, khác câu hỏi, eval rút gọn, “lighter check”). Người phỏng vấn tốt trong eval mù tảng băng.</div>
+<div class="card"><b>Định vị</b>Buồng mô phỏng bay. OSCE chỉ là trích dẫn uy tín. Bổ trợ senior, không thay thế.</div>
+<div class="card"><b>Đạo đức</b>Luyện kỹ năng người học, không bao giờ tạo nhận định về người dùng thật. Guide chạy qua cùng bộ phân loại.</div>
+</div>
+
+<h2>MVP xếp hạng</h2>
+<p><span class="tag must">Must-ship</span> đủ demo end-to-end nếu chỉ nửa này xong</p>
+<ol class="rank">
+<li>Schema + kịch bản UX</li><li>Engine (persona ẩn, classifier, ledger, cổng, openness)</li><li>Reveal (đoán trước, trích dẫn theo tham chiếu)</li><li>Replay-from-here</li><li>Deploy, đăng nhập, lưu riêng tư</li><li>Eval harness</li><li>Bộ đếm niêm phong</li><li>Guide tối thiểu + verifier</li><li>Cap chi phí theo ngày</li><li>Plumbing song ngữ (VI mặc định)</li><li>Nút waitlist</li>
+</ol>
+<p><span class="tag next">Next</span> Pipeline CLI → admin dashboard (chỉ khi must-ship xong trước ngày 6) → BA + PM → onboarding + tier → đường Describe → bản EN của thư viện</p>
+<p><span class="tag later">Later</span> Feedback theo tier nâng cao, timeline + tỉ lệ nói, trình soạn trực quan, đưa kịch bản người học vào thư viện</p>
+
+<h2>Đã bác và lý do</h2>
+<ul class="kill">
+<li>Giấu BA/PM sau nhãn beta, vì brief yêu cầu cả ba nên chọn giải scoring thay vì giấu.</li>
+<li>Chấm theo loại câu hỏi đơn thuần hoặc luật riêng từng vai trò, vì cách đó phạt BA giỏi hoặc thưởng câu dẫn dắt.</li>
+<li>Replay “cắt đầu tiên nếu trễ”, vì đó là bằng chứng khác biệt duy nhất.</li>
+<li>Persona sinh thẳng từ câu hỏi nghiên cứu, vì nó gây neo giả thuyết trước fieldwork.</li>
+<li>Tone mềm hơn cho người mới, vì đó là chiều lòng trá hình.</li>
+<li>Workshop nhiều người, “sparring partner”, OSCE làm headline.</li>
+</ul>
+
+<h2>Điểm yếu còn sống sót</h2>
+<ul class="risk">
+<li>BA/PM ship không có người làm nghề thật kiểm tra độ thật (chỉ có tài liệu, AI critic, proxy và link phản hồi).</li>
+<li>Ranh giới giữa “chỉ thêm phạm vi” và “thêm nội dung” là phán đoán LLM, cần edge case VI + EN.</li>
+<li>Khác biệt so với ChatGPT chỉ lộ đầy đủ ở cuối buổi 1.</li>
+<li>Lịch: ước tính must-ship ~12,5/14 ngày; tripwire ngày 6 là rào chắn.</li>
+<li>Eval custom có thể bắt người học chờ vài phút.</li>
+<li>Câu hỏi mở: <b>ai trả tiền</b> (gói prep-sprint · nhà tài trợ · custom trả phí · Panel Rehearsal) và <b>điều gì kéo người học quay lại</b> (lứa mới mỗi kỳ · vòng pre/post-flight · ôn sau 1 tuần · lộ trình đối kháng · custom theo dự án).</li>
+</ul>
+
+<h2>Những người đã thử lửa ý tưởng</h2>
+<div class="grid">
+<div class="persona card"><span class="ic">🎓</span><div><b>Linh</b> SV HCI năm cuối, hoài nghi<br><q>Tôi tự gõ prompt cho ChatGPT trong 30 giây, sao phải đăng ký?</q></div></div>
+<div class="persona card"><span class="ic">🧭</span><div><b>Minh Anh</b> UX research lead, 12 năm<br><q>Cái hại không nằm ở lĩnh vực, mà ở câu hỏi nghiên cứu.</q></div></div>
+<div class="persona card"><span class="ic">📋</span><div><b>John</b> PM<br><q>Ai là người đầu tiên mở app, có buổi phỏng vấn sau 10 ngày? Một cái tên.</q></div></div>
+<div class="persona card"><span class="ic">🎨</span><div><b>Sally</b> UX Designer<br><q>“Cùng chuẩn chất lượng” phải có định nghĩa vận hành.</q></div></div>
+<div class="persona card"><span class="ic">🏗️</span><div><b>Winston</b> Architect<br><q>“Đúng lúc” mà nằm trong prompt như cảm tính thì không test nào ghim được.</q></div></div>
+<div class="persona card"><span class="ic">📊</span><div><b>Mary</b> Analyst<br><q>Khác biệt vô hình thì không phải khác biệt, chỉ là chi phí kỹ thuật.</q></div></div>
+<div class="persona card"><span class="ic">💻</span><div><b>Amelia</b> Dev<br><q>Bộ đếm nhảy 3→4 là người học biết câu nào trúng thưởng.</q></div></div>
+<div class="persona card"><span class="ic">🔒</span><div><b>Vex</b> Security<br><q>Cổng chỉ kiểm soát quyền, không kiểm soát những gì model biết.</q></div></div>
+<div class="persona card"><span class="ic">🚢</span><div><b>Dana</b> Shipper<br><q>Demo 1 vai trò mà replay chạy thắng demo 3 vai trò mà replay hỏng.</q></div></div>
+</div>
+
+<footer>Chi tiết: <code>forged-idea.md</code> · Nhật ký: <code>.memlog.md</code> · _bmad-output/forge/ai-interview-practice-agent/</footer>
+</div></main>
+</body>
+</html>
