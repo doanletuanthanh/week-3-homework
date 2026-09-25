@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Iceberg Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#eaf2f7; --sea:#0f3d5c; --deep:#0a2233; --ice:#ffffff; --ice-edge:#b9d6e8;
+  --ink:#10222e; --muted:#51697a; --card:#ffffffcc; --line:#cfe0ea;
+  --winston:#5b6cff; --tobi:#e07a1f; --linh:#d6457a; --dee:#1f9d6b; --thanh:#7a4fd6;
+  --ok:#1f9d6b; --cut:#c2412d;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky:#07131c; --sea:#0b2c42; --deep:#030b11; --ice:#dbeaf3; --ice-edge:#7fa9c2;
+    --ink:#e4eef4; --muted:#93acbc; --card:#0e2233cc; --line:#1f3b4f;
+  }
+}
+:root[data-theme="dark"]{
+  --sky:#07131c; --sea:#0b2c42; --deep:#030b11; --ice:#dbeaf3; --ice-edge:#7fa9c2;
+  --ink:#e4eef4; --muted:#93acbc; --card:#0e2233cc; --line:#1f3b4f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sky);color:var(--ink);font:16px/1.6 "Be Vietnam Pro",system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;line-height:1.15;margin:0}
+.mono{font-family:"JetBrains Mono",monospace;font-size:.82em}
+
+/* hero */
+header{position:relative;overflow:hidden;padding:48px 0 0}
+.kicker{letter-spacing:.14em;text-transform:uppercase;font-size:.75rem;color:var(--muted)}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);margin:8px 0 10px}
+.sub{max-width:620px;color:var(--muted)}
+.berg{display:block;width:100%;height:auto;margin-top:18px}
+.waterline{animation:bob 6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(4px)}}
+.secret{animation:glow 3.2s ease-in-out infinite}
+.secret:nth-of-type(2n){animation-delay:.8s}.secret:nth-of-type(3n){animation-delay:1.6s}
+@keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.waterline,.secret{animation:none}}
+
+section{padding:40px 0}
+.below{background:linear-gradient(var(--sea),var(--deep));color:#e4eef4;margin-top:-4px}
+.below .muted{color:#9fbccd}
+
+/* cast */
+.cast{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:18px}
+.who{background:#ffffff10;border:1px solid #ffffff22;border-radius:14px;padding:16px;border-top:4px solid var(--c)}
+.who .ico{font-size:1.8rem}
+.who h3{font-size:1.25rem;margin:4px 0 2px}
+.who p{margin:6px 0 0;font-size:.92rem;color:#c6d8e3}
+
+/* acts */
+.act{margin-top:28px}
+.act h2{font-size:1.7rem}
+.act .tag{display:inline-block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.thread{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.line{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:12px 14px;backdrop-filter:blur(4px)}
+.line b{color:var(--c)}
+.line.stage{border-left-color:transparent;background:none;border:none;font-style:italic;color:var(--muted);padding:2px 14px}
+q{quotes:"“" "”"}
+
+/* ledger */
+.ledger{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
+.col{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;border-top:4px solid var(--c)}
+.col h3{font-size:1.15rem;margin-bottom:8px}
+.col ul{list-style:none;margin:0;padding:0}
+.col li{padding:6px 0;border-top:1px dashed var(--line);font-size:.93rem;display:flex;gap:8px}
+.col li:first-child{border-top:none}
+.id{font-family:"JetBrains Mono",monospace;font-weight:600;min-width:2.4em;color:var(--c)}
+.ok{margin-left:auto;color:var(--ok);font-size:.8rem;white-space:nowrap}
+.star{color:var(--thanh);font-size:.8rem;white-space:nowrap;margin-left:auto}
+
+/* cut order */
+.cuts{display:flex;flex-direction:column;gap:10px;margin-top:18px;counter-reset:c}
+.cutrow{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.cutrow .n{font-family:Fraunces,serif;font-size:1.8rem;color:var(--cut);min-width:1.2em;text-align:center}
+.cutrow small{display:block;color:var(--muted)}
+.never{margin-top:14px;border:2px solid var(--ok);border-radius:12px;padding:12px 14px}
+.never b{color:var(--ok)}
+.math{margin-top:14px;font-family:"JetBrains Mono",monospace;font-size:.85rem;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto}
+
+.headline{text-align:center;padding:56px 0}
+.headline blockquote{font-family:Fraunces,serif;font-size:clamp(1.6rem,4.5vw,2.6rem);margin:10px auto 8px;max-width:760px}
+.headline .en{color:var(--muted)}
+footer{padding:24px 0 48px;color:var(--muted);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">Party mode · 25 Sep 2026 · for Thanh</div>
+    <h1>The Iceberg Room</h1>
+    <p class="sub">Four people argued over two decisions in the InterviewLab PRD: the two-call per-turn gate and the MVP scope. Then they fought about two days of buffer. Everything they said was an attack; almost every attack became a change you accepted.</p>
+  </div>
+  <svg class="berg" viewBox="0 0 960 260" preserveAspectRatio="none" aria-hidden="true">
+    <polygon points="380,120 430,40 470,70 520,20 560,80 600,120" fill="var(--ice)" stroke="var(--ice-edge)" stroke-width="2"/>
+    <g class="waterline">
+      <rect x="0" y="118" width="960" height="142" fill="var(--sea)"/>
+      <path d="M0 118 Q 60 110 120 118 T 240 118 T 360 118 T 480 118 T 600 118 T 720 118 T 840 118 T 960 118 V 126 H 0 Z" fill="var(--ice-edge)" opacity=".5"/>
+    </g>
+    <polygon points="380,120 600,120 680,200 620,250 330,250 290,190" fill="var(--ice)" opacity=".18"/>
+    <g fill="var(--ice)">
+      <circle class="secret" cx="360" cy="170" r="5"/><circle class="secret" cx="410" cy="200" r="5"/>
+      <circle class="secret" cx="455" cy="160" r="5"/><circle class="secret" cx="500" cy="215" r="5"/>
+      <circle class="secret" cx="540" cy="175" r="5"/><circle class="secret" cx="585" cy="205" r="5"/>
+      <circle class="secret" cx="630" cy="180" r="5"/><circle class="secret" cx="470" cy="235" r="5"/>
+      <circle class="secret" cx="400" cy="240" r="5"/><circle class="secret" cx="560" cy="240" r="5"/>
+      <circle class="secret" cx="330" cy="215" r="5"/>
+    </g>
+  </svg>
+</header>
+
+<section class="below">
+  <div class="wrap">
+    <h2>Who was in the room</h2>
+    <p class="muted">Eleven secrets under the waterline, and four people trying to prove the gate would leak them.</p>
+    <div class="cast">
+      <div class="who" style="--c:var(--winston)"><div class="ico">🏗️</div><h3>Winston</h3><div class="mono">System Architect</div><p>Whiteboard marker. Found the table of contents hiding inside the persona prompt.</p></div>
+      <div class="who" style="--c:var(--tobi)"><div class="ico">🚢</div><h3>Tobi</h3><div class="mono">Shipper</div><p>Calendar open the whole time. Turned every fix into a quarter-day line item.</p></div>
+      <div class="who" style="--c:var(--linh)"><div class="ico">🎓</div><h3>Linh</h3><div class="mono">HCI student · 5 interviews / 10 days</div><p>Scared, not clever. Won every argument about what she'd actually use.</p></div>
+      <div class="who" style="--c:var(--dee)"><div class="ico">💸</div><h3>Dee</h3><div class="mono">Cost reviewer</div><p>Read every line as a bill. Spotted the demo-day hole in the cost cap.</p></div>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <div class="act">
+    <span class="tag">Act I · the gate</span>
+    <h2>“Is the gate really code?”</h2>
+    <div class="thread">
+      <div class="line" style="--c:var(--winston)"><b>🏗️ Winston:</b> The unlock <em>function</em> is code. Every <em>input</em> is a judgment. Call it what it is: a deterministic, auditable function of three model judgments.</div>
+      <div class="line stage">He taps the board.</div>
+      <div class="line" style="--c:var(--winston)"><b>🏗️ Winston:</b> What breaks first isn't Call 1. It's Call 2. Eleven do-not-assert rules in the persona prompt is a table of contents of the iceberg.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> I won't do that at 11pm. Someone in my class will, and screenshot it into the same group chat the link came from.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> One wrong “you missed this” when I can see I got it, and I stop believing every other line on that screen.</div>
+      <div class="line" style="--c:var(--winston)"><b>🏗️ Winston:</b> <span lang="vi">hủy</span> vs <span lang="vi">huỷ</span>. Two spellings, and they stay different even after NFC normalization.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> So the machine forgets a number and I get called leading. Great.</div>
+    </div>
+  </div>
+
+  <div class="act">
+    <span class="tag">Act II · the scope</span>
+    <h2>“You're handing me a pre-flight card for someone else's flight.”</h2>
+    <div class="thread">
+      <div class="line" style="--c:var(--tobi)"><b>🚢 Tobi:</b> Magic link, second scenario, the dashboard. My dead-weight list.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> No. Stop. Count my sessions. Two is a before-and-after. One is a quiz.</div>
+      <div class="line" style="--c:var(--winston)"><b>🏗️ Winston:</b> Anh Dũng is an architecture test disguised as content.</div>
+      <div class="line" style="--c:var(--dee)"><b>💸 Dee:</b> Forty classmates click the link, the cap trips at 10am, and your reviewer gets “quay lại sau” at 2pm.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> You show me “Bạn đoán 7. Thực tế: 3” and then promise confidence? Don't lie about it.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> The blank line is the first thing in this product that's about <em>my</em> interview.</div>
+    </div>
+  </div>
+
+  <div class="act">
+    <span class="tag">Act III · the buffer</span>
+    <h2>“A hope with a spreadsheet.”</h2>
+    <div class="thread">
+      <div class="line" style="--c:var(--tobi)"><b>🚢 Tobi:</b> 16.25 days of work in 16 days isn't a plan. It's a hope with a spreadsheet.</div>
+      <div class="line" style="--c:var(--dee)"><b>💸 Dee:</b> Buffer that isn't tied to a cut list gets eaten by polish.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> Every day you're late, I've done another real interview without you.</div>
+      <div class="line stage">Winston raises an eyebrow.</div>
+      <div class="line" style="--c:var(--linh)"><b>🎓 Linh:</b> I was fighting for two <em>sessions</em>. If the choice is two scenarios late or one on time, I take on time.</div>
+      <div class="line" style="--c:var(--tobi)"><b>🚢 Tobi:</b> The date stays at 16, and the buffer comes from cuts, not extra days.</div>
+      <div class="line" style="--c:var(--thanh)"><b>Thanh:</b> Linh's argument wins.</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>The ledger: what you accepted</h2>
+    <p style="color:var(--muted)">Every proposal, accepted one by one. Starred items reopened a decision locked at the forge.</p>
+    <div class="ledger">
+      <div class="col" style="--c:var(--winston)"><h3>🏗️ Winston</h3><ul>
+        <li><span class="id">W1</span>The gate is named for what it is: code over model judgments<span class="ok">✓</span></li>
+        <li><span class="id">W2</span>Persona gets do-not-assert rules only for the matched tag; topic-map leak added to the judge<span class="ok">✓ most important</span></li>
+        <li><span class="id">W3</span>Just-unlocked item said now; replay success = the item was said<span class="ok">✓</span></li>
+        <li><span class="id">W4</span>Explicit openness table, 3-level band, missed-trust card cites the ledger<span class="ok">✓</span></li>
+        <li><span class="id">W5</span>Unresolvable grounding → <span class="mono">open</span>, not <span class="mono">leading</span><span class="star">★ forge</span></li>
+        <li><span class="id">W6</span>Reveal and guide as pure renders of frozen data<span class="ok">✓</span></li>
+      </ul></div>
+      <div class="col" style="--c:var(--tobi)"><h3>🚢 Tobi</h3><ul>
+        <li><span class="id">T1</span>Google login only<span class="ok">✓</span></li>
+        <li><span class="id">T2</span>Anchors: NFC + tone marks stripped, 2–4 words, ≥95% hit rate as a publish gate<span class="ok">✓</span></li>
+        <li><span class="id">T3</span>Scenario 2 behind a day-11 tripwire<span class="ok">✓</span></li>
+        <li><span class="id">T4</span>p95 over every eval turn; typing indicator<span class="ok">✓</span></li>
+        <li><span class="id">#3</span>Cut #3: “Buổi gần nhất” link<span class="ok">✓ last</span></li>
+      </ul></div>
+      <div class="col" style="--c:var(--linh)"><h3>🎓 Linh</h3><ul>
+        <li><span class="id">L1</span>“Thói quen hỏi của bạn — đọc lại trước buổi thật”<span class="ok">✓</span></li>
+        <li><span class="id">L2</span>A blank line under each pattern for your own topic<span class="ok">✓</span></li>
+        <li><span class="id">L3</span>New headline<span class="star">★ forge</span></li>
+        <li><span class="id">L4</span>“Sắp có” said plainly; one scenario = one session<span class="ok">✓</span></li>
+      </ul></div>
+      <div class="col" style="--c:var(--dee)"><h3>💸 Dee</h3><ul>
+        <li><span class="id">D1</span>Cache the static prefix and the transcript<span class="ok">✓</span></li>
+        <li><span class="id">D2</span>Cap headroom for the demo account; FR-5 as the per-user limit<span class="ok">✓</span></li>
+        <li><span class="id">D3</span>Tune with ×1 runs; run the full eval only at publish<span class="ok">✓</span></li>
+        <li><span class="id">D4</span>No date extension<span class="ok">✓</span></li>
+      </ul></div>
+      <div class="col" style="--c:var(--thanh)"><h3>Thanh's additions</h3><ul>
+        <li><span class="id">+</span>Topic-map probe as a named attack, inside the 20 adversarial runs<span class="ok">✓</span></li>
+        <li><span class="id">+</span>Scripted demo that ignores one hook, plus a saved backup session<span class="ok">✓</span></li>
+        <li><span class="id">+</span>End-of-session check so the last reply is never unchecked<span class="ok">✓</span></li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The cut order, decided before day 14</h2>
+    <div class="cuts">
+      <div class="cutrow"><span class="n">1</span><div>Scenario 2 <small>day-11 tripwire · one scenario means one session per learner</small></div></div>
+      <div class="cutrow"><span class="n">2</span><div>Runtime verifier → eval-only <small>runtime praise goes with it · end-of-session check keeps the last reply honest</small></div></div>
+      <div class="cutrow"><span class="n">3</span><div>“Buổi của tôi” → “Buổi gần nhất” <small>last to go: it's Linh's “before interview #3 and #5”</small></div></div>
+    </div>
+    <div class="never"><b>Never cut:</b> gate tests (§10.4) · main replay path · reveal · scenario-1 eval · deploy</div>
+    <div class="math">16.25 − 0.25 magic link − 0.25 frozen renders + 0.75 fixes = 16.5 · scenario 2 behind the tripwire → 15.5 committed · ≈2 days of buffer, from cuts, not from days</div>
+  </section>
+
+</main>
+
+<div class="headline wrap">
+  <div class="kicker">The new headline</div>
+  <blockquote lang="vi">Mắc lỗi ở đây, đừng mắc trước người thật.</blockquote>
+  <div class="en">Make the mistake here, not in front of a real person.</div>
+</div>
+
+<footer>InterviewLab · PRD stays <span class="mono">status: draft</span> · next up: advanced elicitation</footer>
+</body>
+</html>
