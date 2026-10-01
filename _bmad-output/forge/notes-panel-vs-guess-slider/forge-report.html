@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forge: Ghi chú và hai con số</title>
+<style>
+:root{--bg:#f7f3ea;--ink:#2a2420;--muted:#6b6158;--card:#fffdf8;--line:#e3d9c6;--seal:#8f1d1d;--ok:#2f6b3a;--no:#9a3b2f}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1916;--ink:#eee6da;--muted:#a89c8e;--card:#26221e;--line:#3b342d;--seal:#c0463e;--ok:#7fbf8a;--no:#e08a7c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Georgia,"Times New Roman",serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+header{display:flex;gap:24px;align-items:center;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:20px}
+header h1{margin:0;font-size:1.7rem;line-height:1.25}
+header p{margin:6px 0 0;color:var(--muted)}
+.seal{flex:0 0 150px}
+h2{font-size:1.15rem;margin:32px 0 10px;border-left:4px solid var(--seal);padding-left:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin:10px 0}
+ul{margin:6px 0;padding-left:20px}li{margin:4px 0}
+.kill li::marker{content:"✕  ";color:var(--no)}
+.lock li::marker{content:"✓  ";color:var(--ok)}
+.personas{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.p{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.p b{display:block}.p i{color:var(--muted);font-size:.92rem}
+code{font-family:Consolas,monospace;font-size:.9em;background:var(--line);padding:0 4px;border-radius:3px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+footer{margin-top:40px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<header>
+<svg class="seal" viewBox="0 0 200 200" role="img" aria-label="Con dấu HARDENED">
+ <defs><path id="c" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0"/></defs>
+ <path fill="#8f1d1d" d="M100 8l14 12 18-5 8 17 19 2 1 19 16 10-6 18 11 15-14 13 3 19-18 6-4 18-19-1-10 16-17-9-17 9-10-16-19 1-4-18-18-6 3-19-14-13 11-15-6-18 16-10 1-19 19-2 8-17 18 5z"/>
+ <circle cx="100" cy="100" r="80" fill="none" stroke="#f3d9c9" stroke-width="2" opacity=".7"/>
+ <circle cx="100" cy="100" r="56" fill="none" stroke="#f3d9c9" stroke-width="1.5" opacity=".7"/>
+ <text fill="#f3d9c9" font-size="13" letter-spacing="3" font-family="Georgia"><textPath href="#c">INTERVIEWLAB · FORGE · 2026-10-01 ·</textPath></text>
+ <text x="100" y="107" text-anchor="middle" fill="#fff4ea" font-size="20" font-weight="bold" font-family="Georgia" letter-spacing="1">HARDENED</text>
+</svg>
+<div>
+<h1>Ghi chú trong buổi và hai con số</h1>
+<p>Đề xuất của reviewer: thay thanh trượt đoán bằng panel ghi chú và LLM so ghi chú với tảng băng. Kết quả: giữ khoảnh khắc cam kết, thêm lớp ghi chú cộng thêm, và thay toàn bộ lớp so chuỗi bằng phán đoán có kỷ luật.</p>
+</div>
+</header>
+
+<h2>Kết quả</h2>
+<div class="two">
+ <div class="card"><b>KHAI THÁC</b> (chat, kỹ năng hỏi)<br>Item chị Thu thật sự đã kể. SM-6 = số đoán so với con số này, nguyên nghĩa.</div>
+ <div class="card"><b>NHẬN BIẾT</b> (canvas, kỹ năng nghe)<br>Item quan trọng người học ghi lại, trên số item đã lộ ra trong transcript. Chỉ số mới SM-8.</div>
+</div>
+<div class="card">Câu trả lời trung thực cho reviewer: <i>con số đoán vẫn trần; nội dung chuyển từ con số sang màn reveal.</i> Người không ghi chú nhận đúng màn reveal hiện tại.</div>
+
+<h2>Đã khóa</h2>
+<ul class="lock">
+<li>Cam kết: một câu, một số trước reveal: "Bạn nghĩ chị Thu đã kể cho bạn bao nhiêu trong 11 điều?"</li>
+<li>Canvas một khối: desktop cố định cạnh chat; mobile bong bóng ✎ trượt lên 60%. Tự lưu, sửa tự do, đóng băng ở "Kết thúc buổi"; chỉ bản cuối được chấm.</li>
+<li>Bốn kết quả: item đã kể (cả hai số) · item chưa xác nhận (chỉ NHẬN BIẾT, có dòng tên) · fact bề mặt (không nhãn) · chưa từng được nói (gắn tên, phiên bản ghi chú của <code>leading</code>).</li>
+<li>Dòng chẩn đoán một câu ngay trên nút replay. Canvas rỗng: "Không có ghi chú trong buổi này", không bao giờ là 0.</li>
+<li>Chống gợi ý: canvas không vào context call nào trong buổi; không gì đọc nó trước khi kết thúc; không điền sẵn, không đếm.</li>
+<li>Ranh giới: LLM quyết định nghĩa; code quyết định tham chiếu, số học, trạng thái, ranh giới context. Không lời nào được chấm bởi chính call đã viết ra nó.</li>
+<li>Trích dẫn cắt theo token range đánh số; code chỉ đánh chỉ số, không bao giờ tìm chuỗi.</li>
+<li>Cụm neo thay bằng verdict trễ một lượt trong Call 1 (0 call thêm), lưu gắn với lượt được chấm.</li>
+<li>Nhận xét và guide do LLM viết, output có cấu trúc, qua verifier, mọi câu "Hãy hỏi" qua classifier.</li>
+</ul>
+
+<h2>Đã bác và lý do</h2>
+<ul class="kill">
+<li>Đánh dấu sao ghi chú: việc nặng đúng lúc mệt nhất, bắt người học làm việc của agent.</li>
+<li>Một điểm gộp: che mất "nghe nhưng không hỏi tiếp", đúng trường hợp của Linh.</li>
+<li>Tính suy luận chưa xác nhận là khai thác: thưởng đúng lỗi giả định.</li>
+<li>Gắn nhãn ghi chú fact bề mặt: phạt việc ghi chép bình thường.</li>
+<li>Panel ẩn trên mobile, drawer gập, nút ghi chú điền sẵn lời persona.</li>
+<li>Character offset: LLM đếm sai trên chữ tiếng Việt có dấu.</li>
+<li>Cụm neo chuỗi và chuẩn hóa dấu: vá lỗi, không sửa gốc.</li>
+</ul>
+
+<h2>Điểm yếu còn sống sót</h2>
+<div class="card"><ul>
+<li>Các judge cùng họ model nên lỗi tương quan; ghi ở §10, theo dõi bất đồng theo loại claim.</li>
+<li>NFR-1 phải viết lại: lượt replay 3 call, reveal 3 call tuần tự (che bằng màn đoán).</li>
+<li>Không đo thời điểm: không tách "nhận ra lúc đó" với "nhận ra khi đọc lại" trong cùng canvas.</li>
+<li>Mobile: notepad che composer; chưa biết có ai dùng. Chỉ số: tỉ lệ canvas không rỗng, xem lại nếu &lt;30% sau 30 người học.</li>
+<li>Ba mặc định chốt lúc harden chờ Thanh xác nhận (span "chưa từng được nói", item chưa từng lộ ra, bỏ "Y ghi chú").</li>
+</ul></div>
+
+<h2>Những người đã thử thách ý tưởng</h2>
+<div class="personas">
+<div class="p"><b>😤 Grumbal · The Adversary</b><i>"Thanh trượt là cú chốt của sản phẩm. Bỏ nó thì SM-6 đi đâu?"</i></div>
+<div class="p"><b>🎨 Sally · UX Designer</b><i>"Đừng thêm panel. Biến chẩn đoán thành một câu trên nút replay."</i></div>
+<div class="p"><b>🏗️ Winston · Architect</b><i>"Cụm neo là chỗ duy nhất code giả vờ hiểu nghĩa. Bỏ nó, khóa cổng sạch hơn."</i></div>
+<div class="p"><b>🔒 Vex · Security</b><i>"Dùng call bạn đã có. Và ghi lại: các judge cùng họ, lỗi tương quan."</i></div>
+<div class="p"><b>🧠 Dr. Hạnh · Metacognition (tạo mới)</b><i>"Ghi chú không phải dự đoán. Vắng mặt không phải điểm 0."</i></div>
+<div class="p"><b>🧑‍🏫 Minh · Trợ giảng (tạo mới)</b><i>"'Hãy hỏi' do máy viết sớm muộn cũng là câu dẫn dắt."</i></div>
+<div class="p"><b>📱 Tú · Sinh viên HCI (tạo mới)</b><i>"Link đến qua group chat. Nửa lớp mở trên điện thoại."</i></div>
+</div>
+
+<footer>Nguồn: <code>.memlog.md</code> và <code>forged-idea.md</code> cùng thư mục. Đầu vào để sửa PRD InterviewLab (prd-week-3-project-2026-09-24).</footer>
+</main>
+</body>
+</html>
