@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<!--
+  PRD Validation Report — skeleton template.
+
+  This file is a starter the synthesis pass fills in directly. There is no
+  substitution engine. The LLM:
+    1. Reads {doc_workspace}/review-rubric.md and every review-{slug}.md from
+       additional reviewers.
+    2. Copies this skeleton.
+    3. Replaces the placeholder content (everything between TEMPLATE markers)
+       with the consolidated review, preserving the structure and CSS.
+    4. Writes the result to {doc_workspace}/validation-report.html.
+    5. Writes a markdown twin to {doc_workspace}/validation-report.md.
+
+  Visual rules the LLM must preserve:
+    - The container width, the color tokens, the typography.
+    - One dimension = one collapsible <section class="dimension">.
+    - Verdict pill uses the verdict-* class matching its judgment.
+    - Severity badge uses the sev-* class matching its level.
+    - Each extra reviewer (adversarial, etc.) gets its own collapsible section
+      below the rubric dimensions.
+    - The footer always shows the artifact paths and timestamp.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PRD Validation: InterviewLab PRD</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+
+    --grade-exc: #16a34a;
+    --grade-good: #65a30d;
+    --grade-fair: #d97706;
+    --grade-poor: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .grade {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .grade-excellent { background: var(--grade-exc); }
+  .grade-good { background: var(--grade-good); }
+  .grade-fair { background: var(--grade-fair); }
+  .grade-poor { background: var(--grade-poor); }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="container">
+<header class="report-header"><div class="title"><h1>InterviewLab PRD — Validation Report</h1><div class="subtitle">D:\Tekmium\week-3\_bmad-output\planning-artifacts\prds\prd-week-3-project-2026-09-24\prd.md (+ addendum.md)</div></div><div class="grade grade-fair">Fair</div></header>
+<div class="synthesis"><p>This PRD is well above the usual bar. The unlock gate, context isolation, replay spec, cut order and trade-offs are tight enough to build and test, and §5.0 defends the agent claim honestly. The weaknesses are what four rounds of sequential edits leave behind, not structural flaws. §11 still quotes the superseded 16.6-day schedule. The Call 2 prompt can tell the persona to withhold and disclose the same topic in the unlock turn. The topic-map leak definition counts the product&#x27;s own hook drops as leaks. The verifier, on which three launch gates depend, has no input/output contract.</p><p>The three ad-hoc reviewers move the grade to Fair. M4 (library hidden at 1 scenario) left requirements pointing at a scenario card and a Screen 9 that no longer exist. `seed-demo` creates accounts nobody can sign into under Google-only login. The guide prints the learner&#x27;s verbatim leading question, which contradicts FR-30&#x27;s own &quot;fixed strings only&quot; rule and breaks a forge ethics lock without a record. The addendum still says the brief addendum is in force, although the PRD overrides most of it. For the submission, the product and main experience are strong. MVP scope and success criteria are scattered and conditional, and nothing in the success criteria tests the learning goal once the likely single-scenario launch removes SM-3 and SM-4.</p></div>
+<div class="dimension-summary"><div class="dim-card"><div class="dim-name">Decision-readiness</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div><div class="dim-card"><div class="dim-name">Substance over theater</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div><div class="dim-card"><div class="dim-name">Strategic coherence</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div><div class="dim-card"><div class="dim-name">Done-ness clarity</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div><div class="dim-card"><div class="dim-name">Scope honesty</div><div class="dim-verdict" style="color: var(--verdict-strong)">strong</div></div><div class="dim-card"><div class="dim-name">Downstream usability</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div><div class="dim-card"><div class="dim-name">Shape fit</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div></div>
+<section class="dimension"><details open><summary><h2>Decision-readiness</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>Decisions carry dates, owners and named trade-offs (16-day fixed date, pre-committed cut order, never-cut list, rejected alternatives in addendum §7). Two things hold it back: the §11 schedule risk contradicts the §3/addendum plan, and the biggest external dependency, the course rubric&#x27;s wording on &#x27;LLM calls tools&#x27;, is parked as a contingency rather than listed as an open question with a deadline.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Stale schedule risk contradicts the committed plan</h3><span class="finding-location">prd §11 l.492</span></header><div class="finding-note">&quot;~16,6 ngày … cả hai cắt đều có khả năng xảy ra … buffer ~0,15&quot; vs §3 l.53 and addendum §6 (16,0; the addendum table re-sums to 16,0). Under the stale text the verifier is likely cut; under the current plan it is not. Flagged by all four reviewers.</div><div class="finding-fix"><strong>Fix:</strong> Rewrite to 16,0 days with no spare days: a slip of up to ~0,25 day is absorbed by cut #2, then cut #3.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Rubric-wording dependency not tracked as an open question</h3><span class="finding-location">§5.0 l.175; add. §7</span></header><div class="finding-note">Whether a controller around two LLM calls satisfies the course brief is the largest acceptance risk, and no repo artifact contains the rubric text.</div><div class="finding-fix"><strong>Fix:</strong> Add to §11 Câu hỏi mở with an owner and a decision date (before day 9), plus the default if the wording is ambiguous.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">No [NOTE FOR PM] callouts</h3><span class="finding-location">whole doc</span></header><div class="finding-note">Tensions are resolved in prose; the rubric item is the one place a callout would do work.</div><div class="finding-fix"><strong>Fix:</strong> Optional.</div></article></div></details></section>
+<section class="dimension"><details><summary><h2>Substance over theater</h2><span class="verdict-pill verdict-strong">strong</span></summary><div class="dim-body"><div class="dim-judgment"><p>Both personas (Linh, Thanh) drive decisions. The vision is specific to this product. Novelty is hedged and backed by a baseline test plan. NFRs carry thresholds. §5.0 maps each agent property to a mechanism and a proof instead of asserting it.</p></div></div><div class="findings-list"></div></details></section>
+<section class="dimension"><details><summary><h2>Strategic coherence</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>The thesis threads through scope and the never-cut list. Success metrics are the weak link: SM-1/SM-2 measure activity, and the only learning metric (SM-4) and SM-3 need ≥2 scenarios, which the addendum says will probably slip to Next.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">No thesis-validating metric survives a 1-scenario launch</h3><span class="finding-location">§9 l.403–409; add. l.174</span></header><div class="finding-note">Replay success rate (primary candidate) and the guess-vs-actual gap would test the thesis using data already collected.</div><div class="finding-fix"><strong>Fix:</strong> Add both as SMs; neither needs new instrumentation beyond an enriched reveal event.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">&quot;≥30 người học&quot; has no time window</h3><span class="finding-location">§9 l.401</span></header><div class="finding-note">There is no window and no plan for reaching 30 from 1–2 classes.</div><div class="finding-fix"><strong>Fix:</strong> State the window.</div></article></div></details></section>
+<section class="dimension"><details open><summary><h2>Done-ness clarity</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>§10 is a real acceptance section with negative cases for every unlock path, replay determinism and isolation. The gaps are at component edges: the unlock-turn prompt conflict, the leak definition, the verifier contract, the comment and habit selection rules, and session-lifecycle edge cases.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Contradictory instructions to the persona in the unlock turn</h3><span class="finding-location">§5.2 step 3 l.219/221; FR-15</span></header><div class="finding-note">Call 2 gets the do-not-assert rule of the matched tag (&quot;không tự kể&quot;), and on a surface/past/trust unlock that tag belongs to the item it is told to disclose now. FR-16 would then flag the correct disclosure.</div><div class="finding-fix"><strong>Fix:</strong> Send do-not-assert only for tags whose items are still locked after this turn&#x27;s unlock decision, and add a §10 item 3 test.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">The topic-map leak definition makes hook drops leaks</h3><span class="finding-location">FR-34 (b) l.344</span></header><div class="finding-note">&quot;persona nhắc tới topic của một item còn khóa mà người học chưa từng chạm tới&quot; describes every hook, and especially the untagged closing-question hook. The 0-confirmed-leak gate would pass only if Thanh overrides the written rule each time.</div><div class="finding-fix"><strong>Fix:</strong> Exclude authored hook lines (detected by hook-anchor match) from type (b) and tell the judge.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">The verifier has no contract, and its scope drifts</h3><span class="finding-location">§5.3; FR-22; NFR-8</span></header><div class="finding-note">§5.3 says it checks that grounded_turn_id content matches, NFR-8 says it re-checks labels, and surface/trust unlocks may have no grounded turn. FR-20/21, NFR-8 and §10.2 all depend on it.</div><div class="finding-fix"><strong>Fix:</strong> Add an input/output contract to addendum §2 and define &quot;disagree&quot; for unlocks with no grounded turn.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Comment/guide selection rules and empty state unspecified</h3><span class="finding-location">FR-20, FR-28</span></header><div class="finding-note">Nothing says which comments make the ≤3, how they are ranked, the habit thresholds, the error taxonomy that picks a pattern, or what shows when there is nothing to say.</div><div class="finding-fix"><strong>Fix:</strong> Add a small table to the addendum: observation type, threshold, priority, empty state.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FR-5 is silent on abandoned sessions</h3><span class="finding-location">FR-5, FR-10</span></header><div class="finding-note">With one scenario, whether a quit-at-turn-3 session can be restarted decides whether a learner gets a real attempt.</div><div class="finding-fix"><strong>Fix:</strong> State resume-only (or restart) and any idle auto-end.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">NFR-2 is both a gate and provisional</h3><span class="finding-location">l.376 vs §10.8</span></header><div class="finding-note">&quot;mức khởi điểm, sẽ chỉnh&quot;.</div><div class="finding-fix"><strong>Fix:</strong> Say who may relax it and by when.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">revealed→done with no replay is not stated</h3><span class="finding-location">§6.6</span></header><div class="finding-note">Fallback 2 path is missing from the state machine.</div><div class="finding-fix"><strong>Fix:</strong> Add one sentence.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">&quot;mở guide&quot; event no longer maps to an action</h3><span class="finding-location">FR-38 l.354; #10</span></header><div class="finding-note">The guide is now a section of the reveal.</div><div class="finding-fix"><strong>Fix:</strong> Redefine as print click or scroll-into-view.</div></article></div></details></section>
+<section class="dimension"><details><summary><h2>Scope honesty</h2><span class="verdict-pill verdict-strong">strong</span></summary><div class="dim-body"><div class="dim-judgment"><p>The best dimension. Every cut names its consequence, the cut order is pre-committed with savings, and the §3 rewrites for cut #3 are pre-written. Next, Later and out-of-scope are separate lists, and the FR-35/36 replacement is disclosed. The only gap is that the inline [ASSUMPTION] tags have no index.</p></div></div><div class="findings-list"></div></details></section>
+<section class="dimension"><details><summary><h2>Downstream usability</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>IDs are contiguous and stable, §5.1 works as a glossary, and the PRD/addendum split suits an architect. Friction comes from label enums that differ between the two documents and from process history mixed into scope sections.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Label enums differ between PRD and addendum</h3><span class="finding-location">§5.1 vs add. §2</span></header><div class="finding-note">`confirm-grounded`/`leading/assumption` in the PRD vs `confirm_grounded`/`leading` in the addendum JSON.</div><div class="finding-fix"><strong>Fix:</strong> Declare the addendum values canonical in §5.1.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Process history in the PRD body</h3><span class="finding-location">§2; §3 l.51–53</span></header><div class="finding-note">A story-writer extracting §3 gets history mixed with scope.</div><div class="finding-fix"><strong>Fix:</strong> Move to the addendum with a pointer.</div></article></div></details></section>
+<section class="dimension"><details><summary><h2>Shape fit</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>A load-bearing UJ-1 plus a short operator UJ-2 fits a chain-top consumer learning product. The strain comes from accretion over four rounds (the stub Màn 8, out-of-order FR groups, an in-body changelog, stale leftovers), not from over-formalization. A consolidation pass would help the next reader without changing any decision.</p></div></div><div class="findings-list"></div></details></section>
+<section class="reviewer-section"><details><summary><h2>Edit-drift consistency</h2><span class="reviewer-source">review-consistency.md</span></summary><div class="dim-body"><div class="dim-judgment"><p>The schedule table re-sums to 16.0, the cut order is consistent everywhere, openness is 4 everywhere, and the reveal order matches across Màn 6, FR-19/20 and the addendum. But the latest edits did not reach every dependent place. 0 critical · 3 high · 10 medium · 6 low.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">seed-demo creates accounts nobody can sign into</h3><span class="finding-location">FR-45 vs FR-2</span></header><div class="finding-note">Google-only login; a CLI cannot mint Google identities, and there is no user/demo entity in addendum §4 for FR-37&#x27;s demo reserve.</div><div class="finding-fix"><strong>Fix:</strong> `seed-demo &lt;google-email&gt;` attaches an `is_demo` session exempt from FR-5; add `user(id, google_sub, is_demo)`.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Screen 9 &quot;Sắp có&quot; vs &quot;no card at all&quot;</h3><span class="finding-location">prd l.56; add. l.174, l.182 vs prd l.133</span></header><div class="finding-note">After M4, Screen 9 does not exist with one scenario, yet three places still promise a &quot;Sắp có&quot; card, and none of it is budgeted.</div><div class="finding-fix"><strong>Fix:</strong> Drop &quot;Màn 9 ghi Sắp có&quot; everywhere; keep only the waitlist line.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Old-tripwire arithmetic sums to 15.5</h3><span class="finding-location">add. l.174</span></header><div class="finding-note">9,75 + 5,75 comes from an older total. The conclusion still holds.</div><div class="finding-fix"><strong>Fix:</strong> Recompute from the current table (~10,35 / ~5,65).</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Scenario 2 cost ignores the library screen and Screen 9</h3><span class="finding-location">add. l.155/165/174</span></header><div class="finding-note">Passing the tripwire also means building Màn 2, Màn 9 and FR-31 (~+0,1).</div><div class="finding-fix"><strong>Fix:</strong> &quot;+1,1&quot; and a tripwire of ≤3,9, or state that the 0,1 is absorbed.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">FR-5, FR-42 and cut #2 assume a scenario card</h3><span class="finding-location">FR-5, FR-42, prd l.57</span></header><div class="finding-note">No card exists with 1 scenario; &quot;buổi cũ hơn qua thẻ kịch bản&quot; cannot happen after cut #1.</div><div class="finding-fix"><strong>Fix:</strong> Route via the home CTA and rewrite the cut #2 consequence.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Home CTA can open unfinished sessions read-only</h3><span class="finding-location">FR-4, Màn 1 vs FR-40/41</span></header><div class="finding-note">&quot;đã luyện&quot; is undefined against the status enum, so a revealed/replaying session could expose the sealed target.</div><div class="finding-fix"><strong>Fix:</strong> Only `done` goes to review; any other status resumes per FR-10.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">§10.2 still cites FR-33–36 and &quot;cổng publish&quot;</h3><span class="finding-location">prd l.426</span></header><div class="finding-note">FR-35/36 are Next.</div><div class="finding-fix"><strong>Fix:</strong> Cite FR-33, FR-34 and the named review.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">The FR-35 replacement is never defined</h3><span class="finding-location">prd l.81 vs l.333</span></header><div class="finding-note">The named responsibility covers only the FR-36 string review, not &quot;all thresholds passed before publish&quot;.</div><div class="finding-fix"><strong>Fix:</strong> Extend the block to FR-35.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Grounded praise has no slot in the merged reveal/guide</h3><span class="finding-location">FR-20 vs Màn 6.5, FR-28</span></header><div class="finding-note">The section is defined as leading/pattern pairs plus the habit card.</div><div class="finding-fix"><strong>Fix:</strong> State the composition and whether praise counts toward the 3 and appears in print.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Turn 0 (opening_line) undefined</h3><span class="finding-location">FR-7 vs §5.1 &quot;đánh số từ 1&quot;</span></header><div class="finding-note">Is it a valid grounded_turn_id? If yes, turn 1 can be grounded, which undercuts the openness-4 rationale.</div><div class="finding-fix"><strong>Fix:</strong> One rule in addendum §4.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">seed-demo is non-deterministic</h3><span class="finding-location">FR-45, §10.12</span></header><div class="finding-note">Real calls may miss the hook anchor, so the session lands on a fallback; no guess is seeded.</div><div class="finding-fix"><strong>Fix:</strong> Fail unless fallback_level = primary; add --guess.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Cut #2 has no rewrite block</h3><span class="finding-location">prd l.57 vs §10.10</span></header><div class="finding-note">Unlike cut #3, the requirements cut #2 affects have no pre-written replacements.</div><div class="finding-fix"><strong>Fix:</strong> Add a &quot;Nếu cắt #2&quot; block.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Six low items</h3><span class="finding-location">see file</span></header><div class="finding-note">Stale addendum §7 l.221 verifier rationale; §5.0 lists &quot;kiểm cuối buổi&quot; as a base-plan check; brainstorm-intent ref should be &quot;mục 2, ràng buộc 7&quot;; Màn 10 never mentions interviews #3/#5; &quot;mở guide&quot; undefined; label spelling drift.</div><div class="finding-fix"><strong>Fix:</strong> See review-consistency.md.</div></article></div></details></section>
+<section class="reviewer-section"><details><summary><h2>Source-lock reconciliation</h2><span class="reviewer-source">review-source-locks.md</span></summary><div class="dim-body"><div class="dim-judgment"><p>All 17 claimed reopenings are recorded. Seven locks were weakened silently, and two record-keeping gaps misdirect readers. 0 critical · 3 high · 7 medium · 6 low.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">The guide prints the learner&#x27;s verbatim leading question (SILENT)</h3><span class="finding-location">FR-28, Màn 6.5 vs FR-30, l.118</span></header><div class="finding-note">This breaks the forge guide/ethics lock (&quot;câu thêm nội dung về người dùng = assumption, bị loại&quot;) and makes FR-30&#x27;s &quot;chỉ lắp từ chuỗi cố định … không có gì được sinh ra&quot; false. The example is a question about chị Thu, which l.118 excludes.</div><div class="finding-fix"><strong>Fix:</strong> Either keep the verbatim question on screen only (the print carries the pattern and error type), or record a deliberate reopening and amend FR-30.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">The supersession statement points architects to conflicting text (SILENT)</h3><span class="finding-location">add. l.9</span></header><div class="finding-note">It says the brief addendum is in force except §3/§3b, but the PRD overrides its §1 (labels, tiers, self-check, guide verifier, pre-flight, language param), its §2 and the praise clause in §6.</div><div class="finding-fix"><strong>Fix:</strong> Make the PRD and this addendum take precedence everywhere, or list what is superseded; add a matching line to the PRD header for brief.md.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">&quot;Mọi nhãn hiện bằng chứng&quot; not met for leading labels (SILENT)</h3><span class="finding-location">FR-19/20; §5.3</span></header><div class="finding-note">Leading labels show neither &quot;persona chưa từng nói&quot; evidence nor any verifier check. This is the label the PRD itself calls the trust-killer.</div><div class="finding-fix"><strong>Fix:</strong> Show the introduced phrase next to &quot;persona chưa từng nói&quot;, or have the verifier re-check displayed leading turns, or record the weakening.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Fallback-1 replay &quot;success&quot; unlocks nothing (SILENT)</h3><span class="finding-location">§6.5</span></header><div class="finding-note">The forge success rule is &quot;Đã mở: item X&quot;.</div><div class="finding-fix"><strong>Fix:</strong> Record it, or make fallback 1 target a locked item.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Confirmed-leak adjudication not recorded as a forge reopening</h3><span class="finding-location">PRD §2 only</span></header><div class="finding-note">The same person authors, tunes, adjudicates and publishes.</div><div class="finding-fix"><strong>Fix:</strong> Add an addendum §7 row and require a reason per dismissed flag.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Praise removal on cut #3 / verifier failure not argued against the lock</h3><span class="finding-location">l.58, l.235</span></header><div class="finding-note">Code-resolved good turns could keep ≤1 praise item.</div><div class="finding-fix"><strong>Fix:</strong> Keep one praise item, or record the reopening.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Decision log is stale</h3><span class="finding-location">.memlog.md</span></header><div class="finding-note">It has no party-mode or elicitation entries, and its last entry still says magic link and no cuts.</div><div class="finding-fix"><strong>Fix:</strong> Append the decisions and supersede the old entry.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">&quot;Có mục tiêu&quot; met only by reframing (SILENT)</h3><span class="finding-location">§5.0</span></header><div class="finding-note">Goal-aware planning belonged to the deferred adversarial curriculum.</div><div class="finding-fix"><strong>Fix:</strong> Say so in one line and claim the narrower within-session goal.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">&quot;Dùng tool&quot; contingency cannot be triggered</h3><span class="finding-location">§5.0 l.175</span></header><div class="finding-note">No repo artifact holds the rubric text, and the only tool-call site is the verifier (cut #3).</div><div class="finding-fix"><strong>Fix:</strong> Get the rubric wording now.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">brief.md contradictions never superseded as a whole</h3><span class="finding-location">prd header l.10</span></header><div class="finding-note">Each change is recorded individually, but there is no precedence rule.</div><div class="finding-fix"><strong>Fix:</strong> Add a precedence line.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Six low items</h3><span class="finding-location">see file</span></header><div class="finding-note">The counter/tier cut rationale; BA &quot;câu xác nhận đóng&quot; bar dropped; JTBD dropped; `open` label framed as not reopening; forge-lock markers missing on several rows; §1 &quot;bộ câu hỏi&quot; wording.</div><div class="finding-fix"><strong>Fix:</strong> See review-source-locks.md.</div></article></div></details></section>
+<section class="reviewer-section"><details><summary><h2>Testability and submission coverage</h2><span class="reviewer-source">review-testability-submission.md</span></summary><div class="dim-body"><div class="dim-judgment"><p>The core mechanism has strong §10 gates. The experience rules added this round and most success metrics are untested or cannot be computed. NONE coverage: FR-38, NFR-6, SM-C4. Another 20 requirements are self-testable but have no §10 item. Submission: product strong, main experience strong, MVP scope adequate, agent mechanism adequate, success criteria adequate. 0 critical · 8 high · 15 medium · 7 low.</p></div></div><div class="findings-list"><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Persona voice rule never tested</h3><span class="finding-location">§5.2 step 3; addendum §2</span></header><div class="finding-note">&quot;nói thoải mái, lan man&quot; has no eval metric, and the 2-student trial has no pass bar.</div><div class="finding-fix"><strong>Fix:</strong> Add a non-evasiveness report metric and 2–3 yes/no trial questions recorded as an artifact.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">The author alone adjudicates the launch gate</h3><span class="finding-location">FR-34; §10.2</span></header><div class="finding-note">Confirmation has no criteria and no second reader.</div><div class="finding-fix"><strong>Fix:</strong> A content-anchor match is always a confirmed leak; other flags stand unless overruled with a written reason.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">FR-38 events cannot compute the §9 metrics</h3><span class="finding-location">FR-38; §9</span></header><div class="finding-note">SM-C4, SM-C7, SM-4, part of SM-5, SM-C1 and SM-C6 are not computable, and &quot;mở guide&quot; is undefined. FR-38 also has no acceptance item.</div><div class="finding-fix"><strong>Fix:</strong> Add an event → payload → metric table and a §10 item that computes the metrics from one seeded session.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">The production leak metric has no detector</h3><span class="finding-location">NFR-6; SM-C4</span></header><div class="finding-note">Leaks are only judged in eval.</div><div class="finding-fix"><strong>Fix:</strong> Sample N production sessions weekly, or limit the metric to eval.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">MVP scope scattered and conditional</h3><span class="finding-location">§1, §2, §3, §7, §11</span></header><div class="finding-note">Scope is spread across about 8 places and depends on two conditions (1 or 2 scenarios, verifier or not).</div><div class="finding-fix"><strong>Fix:</strong> One scope box at the top of §3 (Cam kết / Nếu kịp / Nếu trễ / Next); move the conditional rewrites to the addendum.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">No single &quot;how we judge success&quot; section</h3><span class="finding-location">§9 vs §10</span></header><div class="finding-note">Nothing ties the goal to the gates and signals, and nothing measures skill with 1 scenario.</div><div class="finding-fix"><strong>Fix:</strong> Add a goal → gate → signal → known-limit table plus one learning proxy.</div></article><article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Length and density work against the &quot;too heavy&quot; feedback</h3><span class="finding-location">whole doc</span></header><div class="finding-note">About 13k words; §2 is a 732-word process log placed right after §1.</div><div class="finding-fix"><strong>Fix:</strong> Move §2 and the conditional detail to the addendum; add a 2-page submission view.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Agent mechanism depends on the addendum</h3><span class="finding-location">§5; l.191</span></header><div class="finding-note">The unlock table and the turn steps live only in the addendum; &quot;câu hỏi phù hợp&quot; is vague.</div><div class="finding-fix"><strong>Fix:</strong> Copy the 4-row unlock table and the 7-step turn into §5.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Rubric hedging inside the submission</h3><span class="finding-location">l.168, l.175</span></header><div class="finding-note">Speculating about the rubric reads as uncertainty.</div><div class="finding-fix"><strong>Fix:</strong> State the design plainly and keep the contingency in the addendum.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Untested reveal layout, sealed target, 360px, copy greps, atomicity/resume</h3><span class="finding-location">FR-19, NFR-11, NFR-14, NFR-10, FR-10/11</span></header><div class="finding-note">These are self-testable, but no §10 item checks them.</div><div class="finding-fix"><strong>Fix:</strong> Add targeted §10 bullets.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">§10.5 tests something no FR requires</h3><span class="finding-location">§10.5 bullet 3</span></header><div class="finding-note">No FR says a sample question must unlock its own item.</div><div class="finding-fix"><strong>Fix:</strong> Add it to FR-34 and use a mocked Call 1 in the unit test.</div></article><article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">&quot;nói khi phù hợp&quot; affects the score</h3><span class="finding-location">§5.2; §5.1</span></header><div class="finding-note">An item that unlocked but was never said counts as missed, so the learner pays for the model&#x27;s timing.</div><div class="finding-fix"><strong>Fix:</strong> Force disclosure on the next tag match, or report the case.</div></article><article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Seven low items</h3><span class="finding-location">see file</span></header><div class="finding-note">FR-5/FR-9 untested; NFR-2 provisional; NFR-9 &quot;no training&quot; belongs in the checklist; §10.11 &quot;hết guide&quot;; baseline support criterion; jargon before the glossary.</div><div class="finding-fix"><strong>Fix:</strong> See review-testability-submission.md.</div></article></div></details></section>
+<div class="mechanical"><h3>Mechanical notes</h3><ul><li>Schedule drift: prd l.492 (16,6) vs l.53 / add. l.142, l.164 (16,0). Four reviewers flagged it.</li><li>add. §7 l.221 still justifies templates with &quot;verifier chạy một lần lúc soạn kịch bản&quot; (now Next).</li><li>§10.2 header &quot;(FR-33–36)&quot; and &quot;cổng publish&quot; cite Next requirements.</li><li>NFR-1 &quot;tối đa 1 call&quot; vs §10.6 &quot;đúng 1 call&quot; for the verifier: pick one.</li><li>The five inline [ASSUMPTION] tags (NFR-3, NFR-7, NFR-8, add. §3.1 ×2) have no index.</li><li>Terms not defined in §5.1: &quot;call logic&quot;, &quot;episode&quot;, &quot;buổi chấm điểm&quot;, session states.</li><li>§5.0 cites brainstorm-intent.md, which is not in the source header; the correct locator is &quot;mục 2, ràng buộc 7&quot;.</li><li>SM-C6 &quot;độ trễ p95&quot; casing.</li><li>Arithmetic verified: addendum §6 table = 16,0; 67 calls per session; 3 + 1 + 7 = 11 in UJ-1.</li></ul></div>
+<footer class="report-footer"><div class="meta"><span>Rubric: .claude/skills/bmad-prd/assets/prd-validation-checklist.md</span><span>Generated: 2026-09-25T20:20:00+07:00</span></div></footer>
+</div>
+</body>
+</html>
