@@ -3,6 +3,7 @@ import { InterviewChat } from "@/components/interview/interview-chat";
 import { PersonaAvatar } from "@/components/persona-avatar";
 import { getDb } from "@/db/client";
 import { getSession, listTurns } from "@/db/repo/sessions";
+import { personaCard } from "@/scenario/persona-card";
 import { requireAckedUser } from "@/server/auth";
 import { isUuid } from "@/server/uuid";
 
@@ -19,21 +20,20 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
   if (!found) notFound();
   const turns = await listTurns(db, user.id, id);
 
-  const { persona } = found.scenario.content;
-  const personaName = persona.displayName.split(",")[0];
+  const persona = personaCard(found.scenario.content);
 
   return (
     <main className="container interview">
       <div className="interview-who">
         <PersonaAvatar size={48} />
         <div>
-          <h1 className="label-lg">{persona.displayName}</h1>
+          <h1 className="label-lg">{persona.name}</h1>
           <p className="body-sm c-variant">{persona.tagline}</p>
         </div>
       </div>
       <InterviewChat
         sessionId={id}
-        personaName={personaName}
+        personaName={persona.displayNameCapitalized}
         initialTurns={turns.map((turn) => ({
           index: turn.index,
           learnerText: turn.learnerText,

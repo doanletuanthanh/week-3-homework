@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { Scenario } from "@/scenario/schema";
 
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
@@ -33,14 +34,21 @@ export const topics = pgTable("topic", {
   createdAt,
 });
 
-/** What the skeleton needs from a scenario. Phase 2 replaces this with the full validated schema. */
-export type ScenarioContent = {
-  persona: { displayName: string; tagline: string; identity: string };
-  researchGoal: string;
-  openingLine: string;
-  surfaceFacts: string[];
-};
+export const SCENARIO_STATUSES = [
+  "draft",
+  "evaluating",
+  "eval_failed",
+  "ready_for_review",
+  "published",
+  "unpublished",
+  "archived",
+  "taken_down",
+] as const;
 
+/**
+ * One version of a persona. A new import is a new row; a row's content is never rewritten, so a
+ * published version stays what it was when it was published.
+ */
 export const scenarios = pgTable(
   "scenario",
   {
@@ -51,8 +59,17 @@ export const scenarios = pgTable(
       .notNull()
       .references(() => topics.id),
     version: integer("version").notNull(),
-    status: text("status", { enum: ["draft", "published"] }).notNull().default("draft"),
-    content: jsonb("content").$type<ScenarioContent>().notNull(),
+    status: text("status", { enum: SCENARIO_STATUSES }).notNull().default("draft"),
+    origin: text("origin", { enum: ["authored", "generated"] }).notNull().default("authored"),
+    /** Published through the interim CLI gate; cleared once the full gate has passed. */
+    interimGate: boolean("interim_gate").notNull().default(false),
+    // Copies of fields inside `content`, so lists do not have to read the sealed JSON.
+    displayName: text("display_name").notNull(),
+    avatarKey: text("avatar_key"),
+    tagline: text("tagline").notNull(),
+    language: text("language").notNull(),
+    /** The validated scenario file. Holds the sealed items: never send it to the browser whole. */
+    content: jsonb("content").$type<Scenario>().notNull(),
     createdAt,
   },
   (table) => [unique("scenario_persona_version_key").on(table.personaId, table.version)],

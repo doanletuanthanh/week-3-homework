@@ -1,17 +1,21 @@
 import { sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getDb } from "@/db/client";
-import { seedSkeletonPersona } from "@/db/seed-skeleton";
 import type { AppUser } from "@/server/auth";
 import { resolveUser } from "@/server/auth";
+import { importScenarioFile } from "../../cli/commands/import-scenario";
 
-/** Empties every app table and re-inserts the one persona, so each test starts from the same state. */
+export const PERSONA_ID = "chi-thu";
+export const PERSONA_FILE = "scenarios/ux-chi-tieu/chi-thu.json";
+
+/** Empties every app table and imports the one persona from its file, so each test starts from the same state. */
 export async function resetDatabase(): Promise<void> {
   const db = getDb();
   await db.execute(
     sql`TRUNCATE "turn", "session", "pending_action", "llm_call", "daily_spend", "scenario", "topic", "user" CASCADE`,
   );
-  await seedSkeletonPersona(db);
+  const imported = await importScenarioFile(db, PERSONA_FILE);
+  if (!imported.ok) throw new Error(`${PERSONA_FILE} does not pass validate`);
 }
 
 /** Token claims as Supabase issues them for a Google sign-in. */

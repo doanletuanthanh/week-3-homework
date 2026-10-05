@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx scripts/seed-skeleton.ts",
+    "il": "tsx cli/index.ts",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop"
   },

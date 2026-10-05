@@ -4,6 +4,7 @@ import { ArrowRightIcon, CheckIcon, ChevronRightIcon, CrossIcon, GoogleIcon, Loc
 import { PersonaAvatar } from "@/components/persona-avatar";
 import { getDb } from "@/db/client";
 import { findSessionForPersona, getScenarioByPersona } from "@/db/repo/sessions";
+import { personaCard } from "@/scenario/persona-card";
 import { startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
 
@@ -16,9 +17,7 @@ export default async function PrepPage({ params }: { params: Promise<{ personaId
   const found = await getScenarioByPersona(db, personaId);
   if (!found) notFound();
 
-  const { persona, researchGoal } = found.scenario.content;
-  // The short form of address used in running text, e.g. "Chị Thu" from "Chị Thu, 26 tuổi".
-  const shortName = persona.displayName.split(",")[0];
+  const persona = personaCard(found.scenario.content);
   const user = await getUser();
   const session = user && !user.isDemo ? await findSessionForPersona(db, user.id, personaId) : null;
 
@@ -31,7 +30,7 @@ export default async function PrepPage({ params }: { params: Promise<{ personaId
         <ChevronRightIcon size={14} className="c-outline" />
         <span className="c-variant">{found.topic.title}</span>
         <ChevronRightIcon size={14} className="c-outline" />
-        <span aria-current="page">{shortName}</span>
+        <span aria-current="page">{persona.displayNameCapitalized}</span>
       </nav>
 
       <div className="prep-grid">
@@ -40,27 +39,27 @@ export default async function PrepPage({ params }: { params: Promise<{ personaId
             <div className="prep-who">
               <PersonaAvatar size={72} />
               <div>
-                <h1 className="headline-lg">{persona.displayName}</h1>
+                <h1 className="headline-lg">{persona.name}</h1>
                 <p className="body-md c-variant">{persona.tagline}</p>
               </div>
             </div>
             <div className="ctx prep-goal">
               <span className="ctx-k">Câu hỏi nghiên cứu</span>
-              <p className="headline-md">{researchGoal}</p>
+              <p className="headline-md">{persona.researchGoal}</p>
             </div>
             <div className="prep-attrs">
               <div className="attr">
                 <span className="attr-k">Niêm phong</span>
                 <span className="attr-v c-tertiary">
                   <LockIcon size={16} />
-                  Đang giữ những điều chưa nói
+                  Đang giữ {persona.itemCount} điều chưa nói
                 </span>
               </div>
               <div className="attr">
                 <span className="attr-k">Câu hỏi của bạn</span>
                 <span className="attr-v">
                   <CrossIcon size={16} className="c-outline" />
-                  {shortName} sẽ không bàn về câu hỏi nghiên cứu của bạn.
+                  {persona.displayNameCapitalized} sẽ không bàn về câu hỏi nghiên cứu của bạn.
                 </span>
               </div>
             </div>
@@ -68,7 +67,7 @@ export default async function PrepPage({ params }: { params: Promise<{ personaId
           <div className="actionbar prep-warning">
             <WarningIcon className="c-variant" />
             <p className="body-sm c-variant">
-              Nếu đồ án của bạn cũng về chủ đề này: {shortName} là nhân vật hư cấu, điều {shortName} kể không phải
+              Nếu đồ án của bạn cũng về chủ đề này: {persona.displayName} là nhân vật hư cấu, điều {persona.displayName} kể không phải
               insight cho đề tài của bạn.
             </p>
           </div>
@@ -89,7 +88,9 @@ export default async function PrepPage({ params }: { params: Promise<{ personaId
                 <CheckIcon size={12} strokeWidth={3} />
               </span>
               <div>
-                <p className="label-lg">{shortName} chỉ nói ra những điều đang giữ nếu bạn hỏi đúng cách.</p>
+                <p className="label-lg">
+                  {persona.displayNameCapitalized} chỉ nói ra những điều đang giữ nếu bạn hỏi đúng cách.
+                </p>
                 <p className="body-sm c-variant">
                   Một điều là một trải nghiệm, thói quen hay cảm nhận chưa kể, không phải tên hay tuổi.
                 </p>

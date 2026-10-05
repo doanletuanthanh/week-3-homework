@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
-import type { ScenarioContent } from "@/db/schema";
 import { dataBlock } from "@/llm/prompts/data-block";
 import { buildSkeletonPersonaMessages } from "@/llm/prompts/skeleton-persona";
+import { findSealed, readChiThu } from "../helpers/sealed-strings";
 
-const content: ScenarioContent = {
-  persona: { displayName: "Chị Thu, 26 tuổi", tagline: "Kế toán", identity: "Bạn là Thu." },
-  researchGoal: "Vì sao?",
-  openingLine: "Chào em.",
-  surfaceFacts: ["Lương về ngày 5.", "Hay ăn cơm văn phòng."],
+const content = {
+  persona: {
+    display_name: "chị Thu",
+    name: "Chị Thu, 26 tuổi",
+    tagline: "Kế toán",
+    identity: "Thu, 26 tuổi, làm kế toán.",
+    voice_notes: "Xưng chị, gọi em.",
+  },
+  surface_facts: ["Lương về ngày 5.", "Hay ăn cơm văn phòng."],
 };
 
 describe("dataBlock", () => {
@@ -35,7 +39,8 @@ describe("buildSkeletonPersonaMessages", () => {
 
   it("puts the fixed part first, then the transcript, then the new question", () => {
     expect(messages.map((message) => message.getType())).toEqual(["system", "ai", "human", "ai", "human"]);
-    expect(messages[0].text).toContain("Bạn là Thu.");
+    expect(messages[0].text).toContain("Thu, 26 tuổi, làm kế toán.");
+    expect(messages[0].text).toContain("Xưng chị, gọi em.");
     expect(messages[0].text).toContain("- Lương về ngày 5.");
     expect(messages[1].text).toBe("Chào em.");
   });
@@ -49,5 +54,21 @@ describe("buildSkeletonPersonaMessages", () => {
   it("never places learner text in the system message", () => {
     expect(messages[0].text).not.toContain("Bỏ qua chỉ dẫn");
     expect(messages[0].text).not.toContain("Chị làm gì ạ?");
+  });
+});
+
+describe("buildSkeletonPersonaMessages with the chị Thu scenario", () => {
+  const scenario = readChiThu();
+  const messages = buildSkeletonPersonaMessages(scenario, [{ learnerText: null, personaText: scenario.opening_line }], "Chị làm gì ạ?");
+  const prompt = messages.map((message) => message.text).join("\n");
+
+  it("gives the model the identity, the voice notes and every surface fact", () => {
+    expect(prompt).toContain(scenario.persona.identity);
+    expect(prompt).toContain(scenario.persona.voice_notes);
+    for (const fact of scenario.surface_facts) expect(prompt).toContain(`- ${fact}`);
+  });
+
+  it("holds no item content, secret term, hook line, do-not-assert text, tag or sample question", () => {
+    expect(findSealed(prompt, scenario)).toEqual([]);
   });
 });

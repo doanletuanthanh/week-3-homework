@@ -55,7 +55,7 @@ export async function createSession(
       .onConflictDoNothing()
       .returning();
     if (!session) return null;
-    await tx.insert(turns).values({ sessionId: session.id, index: 0, personaText: scenario.content.openingLine });
+    await tx.insert(turns).values({ sessionId: session.id, index: 0, personaText: scenario.content.opening_line });
     return session;
   });
   if (created) return created;

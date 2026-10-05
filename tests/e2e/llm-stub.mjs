@@ -1,9 +1,11 @@
 // Stands in for the OpenAI API during end-to-end tests. The app is unchanged: it reaches this
 // server because OPENAI_BASE_URL points here. A question containing "[stub:fail]" gets HTTP 500.
+// GET /requests returns every request body received so far, so tests can read what the app sent.
 import { createServer } from "node:http";
 
 const PORT = Number(process.env.LLM_STUB_PORT ?? 4010);
 const usage = { input: 420, output: 18 };
+const received = [];
 
 /** Text of every user message, whichever of the two OpenAI request shapes was used. */
 function userTexts(body) {
@@ -56,12 +58,17 @@ function response(model, text) {
 
 createServer(async (request, reply) => {
   if (request.method === "GET") {
+    if (request.url === "/requests") {
+      reply.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(received));
+      return;
+    }
     reply.writeHead(200).end("ok");
     return;
   }
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
   const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  received.push(body);
   const questions = userTexts(body);
   const last = questions.at(-1) ?? "";
 
