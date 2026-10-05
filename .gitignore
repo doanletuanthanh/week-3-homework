@@ -26,3 +26,20 @@ desktop.ini
 .idea/
 *.swp
 *.log
+
+# Node / Next.js
+node_modules/
+/.next/
+/out/
+/coverage
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Playwright
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+
+# Agent working memory (machine-local)
+.claude/agent-memory/

@@ -1,0 +1,52 @@
+{
+  "name": "interviewlab",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:int": "vitest run --project int",
+    "test:e2e": "playwright test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx scripts/seed-skeleton.ts",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.2.14",
+    "@langchain/google": "^0.2.9",
+    "@langchain/openai": "^1.6.2",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.2",
+    "drizzle-orm": "^0.45.3",
+    "langsmith": "^0.10.8",
+    "next": "16.3.8",
+    "postgres": "^3.4.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^18.0.5",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "supabase": "^2.119.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  },
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=22"
+  }
+}
