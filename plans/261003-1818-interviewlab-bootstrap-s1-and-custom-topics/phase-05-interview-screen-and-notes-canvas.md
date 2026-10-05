@@ -23,6 +23,7 @@ Màn 3 with all its states and Màn 4 as designed: chat, turn counter, seal coun
 - [ ] `/sessions/[id]` renders the screen for the session's current state, never the last screen visited.
 - [ ] Nothing about labels, openness, hooks or opened items is rendered or present in any response.
 - [ ] Canvas: one free-text block, ≤ 5,000 characters, silent autosave, editable while the persona is typing, restored after closing the tab, frozen at end.
+- [ ] The persona reply appears as it is streamed (user decision 2026-10-05). The typing indicator shows until the first token; a stream that ends in an error removes the partial reply, keeps the question in the composer and shows the standard error line.
 - [ ] Question box: ≤ 500 characters; desktop Enter sends and Shift+Enter breaks the line; mobile uses the send button; empty cannot be sent.
 - [ ] "Kết thúc buổi" asks for confirmation, is disabled while a turn is being written, and freezes the canvas including text still being typed.
 - [ ] Usable from 360 px; the mobile notepad keeps at least the persona's last message visible and hides the composer while open.

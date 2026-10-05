@@ -31,6 +31,8 @@ The per-turn controller from PRD §8.2: Call 1 (analysis + verdict on the previo
 - [ ] Immutable snapshot after each turn; the only later change is the verdict part of snapshot t, written in turn t+1's transaction.
 - [ ] Daily cost cap blocks new sessions only; demo reserve honoured.
 - [ ] `trace <session>` prints every FR-44 field from stored data, no LLM call, and logs the access.
+- [ ] Call 2 is streamed to the browser (user decision 2026-10-05, see plan deviations). The turn is committed only after the stream ends; a stream that fails midway releases the claim, writes no turn and ends with an error event. A technical retry of Call 2 is allowed only before its first token is sent.
+- [ ] Call 2's voice rules follow addendum §2.2 (talks freely, may ramble about surface facts and daily life); the skeleton's "1 to 3 sentences" rule is dropped. Harmless everyday detail may be improvised; nothing about money or expense tracking beyond what the call was given.
 
 ## Architecture
 

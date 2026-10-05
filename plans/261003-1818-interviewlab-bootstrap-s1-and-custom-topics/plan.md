@@ -34,7 +34,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | # | Phase | Status | Depends on | Effort |
 |---|-------|--------|------------|--------|
 | 1 | [Walking skeleton](./phase-01-start.md) | In progress: code and local tests done; deploy and latency open | — | 2d |
-| 2 | [Scenario schema, validate, first persona](./phase-02-scenario-schema-validate-and-first-persona.md) | Pending | 1 | 2.5d |
+| 2 | [Scenario schema, validate, first persona](./phase-02-scenario-schema-validate-and-first-persona.md) | In review: code and tests done; persona content awaits user review | 1 | 2.5d |
 | 3 | [Turn engine](./phase-03-turn-engine.md) | Pending | 2 | 5d |
 | 4 | [Eval harness and operator CLI](./phase-04-eval-harness-and-operator-cli.md) | Pending | 3 | 5d |
 | 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | Pending | 3 | 2.5d |
@@ -53,6 +53,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 - **Unpublished personas are playable by every learner** (user decision 2026-10-03). The publish gate (FR-35) is built and reports, but only blocks play when the `require_published` config row is turned on.
 - **Anonymous quota counters survive account deletion** (user decision 2026-10-03): one row keyed by a keyed hash of the Google account, holding counters only. The data notice says so. This narrows FR-66 "toàn bộ dữ liệu".
 - **LangSmith receives full prompts and replies in production** (user decision 2026-10-03). The data notice names the tracing service as a recipient; traces are not removed by account deletion and expire with LangSmith retention (14 days on the free plan).
+- **The persona reply is streamed** (user decision 2026-10-05; the PRD addendum §7 deferred streaming). Only Call 2 streams, after Call 1 and the unlock decision are done. A stream that fails midway writes no turn and the browser drops the partial text. Nothing is retracted for content: locked item content never enters Call 2 (invariant 2), so a stream cannot leak what the call was not given. Invariant 6 holds: the stream carries persona text, then the turn count or an error state.
 
 ## User tasks the build cannot do
 

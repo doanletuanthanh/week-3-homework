@@ -1,6 +1,6 @@
 ---
 title: "Phase 2: Scenario schema validate and first persona"
-status: todo
+status: in-review
 phase: 2
 priority: P1
 effort: "2.5d"
@@ -19,10 +19,10 @@ The scenario file format, the `validate` command that enforces FR-33, the CLI sh
 
 ## Requirements
 
-- [ ] One Zod schema is the single definition of a scenario; the engine, CLI, generator (phase 9) and DB import all use it.
-- [ ] `validate` reports every violation with a path and a Vietnamese-readable message, exit code 1 on any.
+- [x] One Zod schema is the single definition of a scenario; the engine, CLI, generator (phase 9) and DB import all use it.
+- [x] `validate` reports every violation with a path and a Vietnamese-readable message, exit code 1 on any.
 - [ ] Persona "chị Thu": research goal "Vì sao người trẻ bắt đầu rồi bỏ việc theo dõi chi tiêu?", ≥ 12 surface facts, 11 items covering all four paths, reviewed by the user.
-- [ ] `import` writes a new draft version; published versions are immutable; `persona_id` is stable across versions.
+- [x] `import` writes a new draft version; published versions are immutable; `persona_id` is stable across versions.
 
 ## Architecture
 
@@ -75,18 +75,36 @@ CLI: `cli/index.ts` with subcommands, run as `pnpm il <command>`. Every command 
 
 ## Todo
 
-- [ ] Schema and types
-- [ ] Validate rules + tests
-- [ ] CLI shell, `validate`, `import`
-- [ ] Chị Thu drafted, validated, user-reviewed, imported
+- [x] Schema and types
+- [x] Validate rules + tests
+- [x] CLI shell, `validate`, `import`
+- [x] Chị Thu drafted, validated, imported into the local database
+- [ ] Chị Thu content reviewed by the user (then import into the deployed database)
 
 ## Success criteria
 
-- [ ] `pnpm il validate scenarios/ux-chi-tieu/chi-thu.json` exits 0.
-- [ ] Each FR-33 rule has a failing fixture that produces exactly its error code.
-- [ ] Importing twice creates version 2 and leaves version 1 untouched.
+- [x] `pnpm il validate scenarios/ux-chi-tieu/chi-thu.json` exits 0.
+- [x] Each FR-33 rule has a failing fixture that produces exactly its error code.
+- [x] Importing twice creates version 2 and leaves version 1 untouched.
 
 ## Risk assessment
 
 - **Persona content is product quality, not code.** A flat persona makes the whole loop dull. Mitigation: user review in step 5; tuning continues in phase 4 against eval results.
 - **`secret_terms` matching is lexical**, so a paraphrase in a hook line can still hint at content. Mitigation: the leak judge in phase 4 covers meaning; this rule only catches the obvious cases.
+
+## Implementation notes (2026-10-05)
+
+Done in code; open only for the user's review of the persona content. Verified: typecheck, lint, 183 unit, 59 integration, 48 Playwright tests. Review: `plans/reports/code-reviewer-261005-1142-phase-02-scenario-schema-validate.md` (no critical finding; both high and all medium code findings fixed).
+
+Differences from the text above:
+
+- `persona.display_name` is the form of address ("chị Thu"); `persona.name` is the card heading ("Chị Thu, 26 tuổi").
+- The file's `version` is replaced by `import` with the next version of the persona in the database. `import` never updates a row, which is what keeps a published version unchanged.
+- "≥ 2 items on past_story or trust" has no code of its own: requiring all four paths already gives it. "Reachable in ≤ 20 good turns" reduces to `threshold > openness_start`, because the schema caps a threshold at 10.
+- Rule 2 also covers `research_goal`, `habit_card_label` and every `persona` string: the screens and the persona call see them. Added rules: unique item ids, unique do-not-assert ids, a trust threshold only on trust items.
+- `import <file>` reads `topic.json` from the same folder and writes topic and version in one transaction.
+- Migration `0002` deletes the phase 1 skeleton scenario row and the sessions played on it (their `llm_call` rows stay). `db:seed` is gone: after `pnpm db:migrate`, run `pnpm il import scenarios/ux-chi-tieu/chi-thu.json`.
+- `src/components/persona-avatar.tsx` already existed; `avatar_key` is stored but the component still draws the one portrait.
+- No new environment variable. The CLI uses `DATABASE_URL_DIRECT`, or `DATABASE_URL` when that is not set.
+
+Left open by the review, by choice: two different personas of one topic imported at the same moment could both pass the shared-tag rule (operator-only); `topic.json` title and summary are not checked for secret terms; hook lines of `weekly-batch`, `work-fatigue` and `small-spend` restate part of their content, which the phase 4 leak judge may flag.
