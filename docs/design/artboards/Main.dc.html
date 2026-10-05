@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>InterviewLab · Luyện phỏng vấn người dùng</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/fda92f6d4d7e006306fc94f28db4d22d">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>body{margin:0}
+.mini-line{display:block;height:7px;border-radius:999px;background:var(--surface-container-highest)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 2700px; background: var(--surface); display: flex; flex-direction: column; overflow: hidden">
+
+<header class="hdr"><div class="container"><div class="hdr-l"><a class="logo" href="#" aria-label="InterviewLab, về trang chủ"><span class="logo-mark" style="width: 32px; height: 32px; border-radius: 8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 9.5 12 4l3 5.5z" fill="currentColor"/><path d="M2.5 11.5h19"/><path d="M5.5 14h13l-3.5 6.5h-6z"/></svg></span><span class="logo-word">InterviewLab</span></a><span class="vsep"></span><span class="hdr-badge">UX · BA · PM</span></div><nav class="nav" aria-label="Chính"><a href="#">Thư viện</a></nav><div class="hdr-r"><a class="btn btn-surface btn-md" href="#">Đăng nhập</a></div></div></header>
+
+<section style="position: relative; padding: 80px 0 104px">
+<div style="position: absolute; top: 40px; left: 380px; width: 680px; height: 340px; border-radius: 50%; background: rgba(144,213,179,.2); filter: blur(120px); pointer-events: none"></div>
+<div class="container" style="position: relative; display: flex; flex-direction: column; align-items: center; text-align: center">
+<span class="badge" style="margin-bottom: 24px"><span class="dot"></span><span class="t">Phòng tập phỏng vấn người dùng và stakeholder</span></span>
+<h1 style="font: 500 60px/68px var(--serif); letter-spacing: -0.025em; margin-bottom: 20px">Luyện phỏng vấn người dùng.<br><span class="italic c-primary">Xem chính xác bạn đã bỏ lỡ điều gì.</span></h1>
+<p class="body-lg c-variant" style="margin-bottom: 40px">Mắc lỗi ở đây, đừng mắc trước người thật.</p>
+<div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px">
+<a class="btn btn-primary btn-lg" href="#">Vào thư viện<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+<a class="btn btn-surface btn-lg" href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: #006c49; flex: none"><path d="M12 3.5l1.8 5 5 1.8-5 1.8-1.8 5-1.8-5-5-1.8 5-1.8z"/><path d="M18.5 16v4M16.5 18h4"/></svg>Tạo chủ đề của bạn</a>
+</div>
+<p class="body-sm c-outline" style="display: flex; align-items: center; justify-content: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="12" cy="12" r="8.5"/><path d="M12 12h5.5a5.5 5.5 0 1 1-1.7-4"/></svg>Đăng nhập Google khi bắt đầu</p>
+
+<div class="window" style="width: 1024px; margin-top: 64px; text-align: left">
+<div class="window-bar">
+<div style="display: flex; align-items: center; gap: 12px"><span class="wdots"><i></i><i></i><i></i></span><span class="code" style="color: rgba(64,73,67,.8); padding-left: 8px">buổi mẫu · chị thu · kết quả</span></div>
+<span class="pill pill-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M12 3.5 21 8.5 12 13.5 3 8.5z"/><path d="M3 13l9 5 9-5"/></svg>Tảng băng lộ diện</span>
+</div>
+<div style="display: grid; grid-template-columns: 380px minmax(0, 1fr)">
+<div style="padding: 28px; background: var(--surface-container-low); display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: center; gap: 12px"><svg class="avatar" width="48" height="48" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#DCCFBD"/><path d="M19 33c0-10.5 5.8-18 13-18s13 7.5 13 18v15H19z" fill="#2A1E1A"/><path d="M11 64c1.8-11 9.5-16.5 21-16.5S51.2 53 53 64z" fill="#F3EEE4"/><rect x="27.5" y="39" width="9" height="10" rx="3" fill="#C68E6E"/><ellipse cx="32" cy="31" rx="9.5" ry="11" fill="#DDA384"/><path d="M22.4 30c.3-8 4.7-13 9.6-13s9.3 5 9.6 13c-3.4-3.2-7-5.6-10.6-5.6-2.4 2.6-5.4 4.6-8.6 5.6z" fill="#2A1E1A"/></svg><div><h4 class="label-lg">Chị Thu, 26 tuổi</h4><p class="body-sm c-variant">Chi tiêu hằng ngày của người trẻ đi làm</p></div></div>
+<div><p class="headline-md">Bạn đoán 7.</p><p class="headline-md italic c-primary">Chị Thu đã kể: 3 trên 11.</p></div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div class="bar h8" style="gap: 2px"><i class="f-secondary" style="width: 27.3%"></i><i class="f-tertiary" style="width: 9.1%"></i><i class="f-muted" style="flex: 1"></i></div>
+<div class="label-sm" style="display: flex; gap: 16px"><span class="c-secondary">3 Đã kể</span><span class="c-tertiary">1 Giữ lại</span><span class="c-amber">7 Bỏ lỡ</span></div>
+</div>
+<div class="rail-card" style="display: flex; align-items: center; gap: 12px"><span class="icon-circle" style="background: var(--primary-fixed); color: var(--on-primary-fixed)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M6 3.5h9l3.5 3.5v13.5H6z"/><path d="M15 3.5V7h3.5M9 11h6M9 14.5h6M9 18h3.5"/></svg></span><p class="body-sm"><strong class="label-md">Nhận biết: 4</strong> điều quan trọng trong ghi chú của bạn.</p></div>
+</div>
+<div style="padding: 32px; display: flex; flex-direction: column; justify-content: center; gap: 20px">
+<div><span class="eyebrow" style="color: var(--amber); margin-bottom: 6px">Bỏ lỡ · Hỏi tiếp chi tiết</span><p class="headline-sm">Tự đặt hạn mức bằng cách rút tiền mặt đầu tuần</p></div>
+<div class="msg"><div class="msg-meta"><span class="who who-p"><i></i>Chị Thu</span><span class="time">lượt 11</span></div><div class="bubble-p">Tuần nào cũng vậy, chị có <mark>cách riêng để không tiêu quá tay</mark>.</div></div>
+<div class="msg"><div class="msg-meta"><span class="who who-me"><i></i>Bạn hỏi ngay sau</span><span class="time">lượt 12</span></div><div class="bubble-me">Vậy chị có hay mua sắm online không ạ?</div></div>
+<div class="signal" style="justify-content: flex-start"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: #006c49; flex: none"><path d="M9.5 18h5M10.5 21h3"/><path d="M12 3.2a5.8 5.8 0 0 0-3.4 10.5c.6.5 1 1.2 1 2V16h4.8v-.3c0-.8.4-1.5 1-2A5.8 5.8 0 0 0 12 3.2z"/></svg><p class="body-sm">Chị ấy vừa nhắc tới một cách xoay xở. Bạn chuyển chủ đề.</p></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="band" style="padding: 104px 0">
+<div class="container">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 40px">
+<div><span class="eyebrow" style="margin-bottom: 8px">Thư viện</span><h2 class="headline-lg">Chọn một chủ đề, rồi chọn một persona</h2></div>
+<a href="#" class="btn btn-surface btn-md">Xem cả thư viện<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+
+<a class="card tcard" href="#">
+<div class="tbody">
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="tt tt-ux" style="width: 48px; height: 48px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H17v3"/><rect x="4" y="8" width="16" height="11" rx="2.5"/><path d="M15.5 13.5h1.5"/></svg></span><span class="pill pill-green">UX</span></div>
+<div><h3 class="headline-md" style="font-size: 22px; line-height: 28px; margin-bottom: 6px">Chi tiêu hằng ngày của người trẻ đi làm</h3><p class="body-md c-variant">Người mới đi làm tiêu, ghi và xoay xở tiền tới cuối tháng ra sao.</p></div>
+</div>
+<div class="tfoot"><div style="display: flex; align-items: center; gap: 10px"><span class="avstack"><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#DCCFBD"/><path d="M19 33c0-10.5 5.8-18 13-18s13 7.5 13 18v15H19z" fill="#2A1E1A"/><path d="M11 64c1.8-11 9.5-16.5 21-16.5S51.2 53 53 64z" fill="#F3EEE4"/><rect x="27.5" y="39" width="9" height="10" rx="3" fill="#C68E6E"/><ellipse cx="32" cy="31" rx="9.5" ry="11" fill="#DDA384"/><path d="M22.4 30c.3-8 4.7-13 9.6-13s9.3 5 9.6 13c-3.4-3.2-7-5.6-10.6-5.6-2.4 2.6-5.4 4.6-8.6 5.6z" fill="#2A1E1A"/></svg><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#CFD8E3"/><path d="M9 64c1.8-11 10.5-16.5 23-16.5S53.2 53 55 64z" fill="#2F4A6B"/><path d="M26.5 48 32 55l5.5-7z" fill="#EEF1F5"/><rect x="27.5" y="38.5" width="9" height="10.5" rx="3" fill="#9C6B4E"/><ellipse cx="32" cy="30" rx="9.8" ry="11" fill="#B47A58"/><path d="M22.1 28.5c-.4-8 4-13.5 9.9-13.5s10.4 5.5 9.9 13.5c-1.6-3-3.6-5-6.2-5.8-3 1.8-7.4 2.8-11.4 2.3-.9 1-1.8 2.2-2.2 3.5z" fill="#1E1A18"/><rect x="24.6" y="28" width="6.4" height="4.8" rx="2" fill="none" stroke="#1E1A18" stroke-width="1.2"/><rect x="33" y="28" width="6.4" height="4.8" rx="2" fill="none" stroke="#1E1A18" stroke-width="1.2"/><path d="M31 30.2h2" stroke="#1E1A18" stroke-width="1.2"/></svg><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E6DDF2"/><path d="M20 33c0-10.5 5.4-17.5 12-17.5s12 7 12 17.5v6H20z" fill="#3A2621"/><path d="M11 64c1.8-11 9.5-16.5 21-16.5S51.2 53 53 64z" fill="#6E4F8F"/><rect x="27.5" y="39" width="9" height="10" rx="3" fill="#CF9A7B"/><ellipse cx="32" cy="31" rx="9.4" ry="10.8" fill="#E3AE8E"/><path d="M22.2 30.5c.2-8.2 4.8-13.5 10-13.5 4.6 0 8.8 4 9.6 10.5-4.5-.5-9-2.6-12.2-6-1.8 3.8-4.4 6.8-7.4 9z" fill="#3A2621"/></svg></span><span class="label-md c-variant">3 persona</span></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: #00402b; flex: none"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="card tcard" href="#">
+<div class="tbody">
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="tt tt-ba" style="width: 48px; height: 48px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M6 3.5h8.5L18 7v13.5H6z"/><path d="M14.5 3.5V7H18"/><path d="M9 13.5l2 2 4-4"/></svg></span><span class="pill pill-tertiary">BA</span></div>
+<div><h3 class="headline-md" style="font-size: 22px; line-height: 28px; margin-bottom: 6px">Phê duyệt và ngoại lệ trong mua sắm nội bộ</h3><p class="body-md c-variant">Đề nghị mua hàng đi qua những ai, và chuyện gì xảy ra khi không theo quy trình.</p></div>
+</div>
+<div class="tfoot"><div style="display: flex; align-items: center; gap: 10px"><span class="avstack"><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#D8E4DC"/><circle cx="32" cy="15" r="5.2" fill="#2A1E1A"/><path d="M10 64c1.8-11 10-16.5 22-16.5S52.2 53 54 64z" fill="#3D5A50"/><path d="M27 48l5 7 5-7z" fill="#F4F1EA"/><rect x="27.5" y="39" width="9" height="10" rx="3" fill="#B98163"/><ellipse cx="32" cy="31" rx="9.5" ry="11" fill="#C99273"/><path d="M22.6 29.5c.3-7.5 4.6-12.3 9.4-12.3s9.1 4.8 9.4 12.3c-2.4-3.6-5.6-5.8-9.4-5.8s-7 2.2-9.4 5.8z" fill="#2A1E1A"/></svg><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E1E6F0"/><path d="M9 64c1.8-11 10.5-16.5 23-16.5S53.2 53 55 64z" fill="#E9EEF5"/><path d="M26.8 48 32 55l5.2-7z" fill="#5B7BA6"/><rect x="27.5" y="38.5" width="9" height="10.5" rx="3" fill="#B98163"/><ellipse cx="32" cy="30.5" rx="9.6" ry="11" fill="#C99273"/><path d="M22.8 27c.4-6.6 4.4-10.8 9.2-10.8s8.8 4.2 9.2 10.8c-2.4-2-5.6-3.1-9.2-3.1s-6.8 1.1-9.2 3.1z" fill="#1F1A17"/></svg></span><span class="label-md c-variant">2 persona</span></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: #00402b; flex: none"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+<a class="card tcard" href="#">
+<div class="tbody">
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="tt tt-pm" style="width: 48px; height: 48px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M7 12h10"/><rect x="3.5" y="8" width="3.5" height="8" rx="1"/><rect x="17" y="8" width="3.5" height="8" rx="1"/><path d="M2 10.5v3M22 10.5v3"/></svg></span><span class="pill pill-pm">PM</span></div>
+<div><h3 class="headline-md" style="font-size: 22px; line-height: 28px; margin-bottom: 6px">Gia hạn gói tập ở phòng gym</h3><p class="body-md c-variant">Vì sao hội viên gia hạn, hay lặng lẽ bỏ gói sau tháng đầu.</p></div>
+</div>
+<div class="tfoot"><div style="display: flex; align-items: center; gap: 10px"><span class="avstack"><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#D7E6F2"/><path d="M9 64c1.8-11 10.5-16.5 23-16.5S53.2 53 55 64z" fill="#1F2A44"/><rect x="27.5" y="38.5" width="9" height="10.5" rx="3" fill="#A87556"/><ellipse cx="32" cy="30.5" rx="9.6" ry="11" fill="#C08A68"/><path d="M22 27.5c0-7.5 4.4-12.5 10-12.5s10 5 10 12.5c-2-2.2-4.6-3.6-7.4-3.9-2.8.9-6.4 1.2-9.8.6-1.1 1-2.1 2.1-2.8 3.3z" fill="#1E1A18"/><rect x="24.6" y="28" width="6.4" height="4.8" rx="2" fill="none" stroke="#1E1A18" stroke-width="1.2"/><rect x="33" y="28" width="6.4" height="4.8" rx="2" fill="none" stroke="#1E1A18" stroke-width="1.2"/><path d="M31 30.2h2" stroke="#1E1A18" stroke-width="1.2"/></svg><svg class="avatar" width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#FBE3E8"/><path d="M19 33c0-10.5 5.8-18 13-18s13 7.5 13 18v15H19z" fill="#2A1E1A"/><path d="M11 64c1.8-11 9.5-16.5 21-16.5S51.2 53 53 64z" fill="#B4536F"/><rect x="27.5" y="38.5" width="9" height="10.5" rx="3" fill="#D9A27F"/><ellipse cx="32" cy="30.5" rx="9.6" ry="11" fill="#E8B597"/><path d="M22.6 29.5c.3-7.5 4.6-12.3 9.4-12.3s9.1 4.8 9.4 12.3c-2.4-3.6-5.6-5.8-9.4-5.8s-7 2.2-9.4 5.8z" fill="#2A1E1A"/></svg></span><span class="label-md c-variant">2 persona</span></div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: #00402b; flex: none"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+</a>
+
+</div>
+</div>
+</section>
+
+<section style="padding: 104px 0">
+<div class="container">
+<div style="max-width: 768px; margin: 0 auto 56px; text-align: center">
+<span class="eyebrow" style="margin-bottom: 8px">Một buổi luyện</span>
+<h2 class="headline-lg">Hỏi, nghe, rồi thấy mình lỡ ở đâu</h2>
+</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px">
+
+<div class="card step">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px"><span class="step-num">01</span><span class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></span></div>
+<h3 class="label-lg" style="margin-bottom: 8px">Chọn chủ đề và persona</h3>
+<p class="body-sm c-variant" style="margin-bottom: 24px">Mỗi persona giữ 8–12 điều chưa nói, chỉ kể khi bạn hỏi đúng cách.</p>
+<div class="widget">
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="avstack"><svg class="avatar" width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#DCCFBD"/><path d="M19 33c0-10.5 5.8-18 13-18s13 7.5 13 18v15H19z" fill="#2A1E1A"/><path d="M11 64c1.8-11 9.5-16.5 21-16.5S51.2 53 53 64z" fill="#F3EEE4"/><rect x="27.5" y="39" width="9" height="10" rx="3" fill="#C68E6E"/><ellipse cx="32" cy="31" rx="9.5" ry="11" fill="#DDA384"/><path d="M22.4 30c.3-8 4.7-13 9.6-13s9.3 5 9.6 13c-3.4-3.2-7-5.6-10.6-5.6-2.4 2.6-5.4 4.6-8.6 5.6z" fill="#2A1E1A"/></svg><svg class="avatar" width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#CFD8E3"/><path d="M9 64c1.8-11 10.5-16.5 23-16.5S53.2 53 55 64z" fill="#2F4A6B"/><path d="M26.5 48 32 55l5.5-7z" fill="#EEF1F5"/><rect x="27.5" y="38.5" width="9" height="10.5" rx="3" fill="#9C6B4E"/><ellipse cx="32" cy="30" rx="9.8" ry="11" fill="#B47A58"/><path d="M22.1 28.5c-.4-8 4-13.5 9.9-13.5s10.4 5.5 9.9 13.5c-1.6-3-3.6-5-6.2-5.8-3 1.8-7.4 2.8-11.4 2.3-.9 1-1.8 2.2-2.2 3.5z" fill="#1E1A18"/><rect x="24.6" y="28" width="6.4" height="4.8" rx="2" fill="none" stroke="#1E1A18" stroke-width="1.2"/><rect x="33" y="28" width="6.4" height="4.8" rx="2" fill="none" stroke="#1E1A18" stroke-width="1.2"/><path d="M31 30.2h2" stroke="#1E1A18" stroke-width="1.2"/></svg><svg class="avatar" width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#E6DDF2"/><path d="M20 33c0-10.5 5.4-17.5 12-17.5s12 7 12 17.5v6H20z" fill="#3A2621"/><path d="M11 64c1.8-11 9.5-16.5 21-16.5S51.2 53 53 64z" fill="#6E4F8F"/><rect x="27.5" y="39" width="9" height="10" rx="3" fill="#CF9A7B"/><ellipse cx="32" cy="31" rx="9.4" ry="10.8" fill="#E3AE8E"/><path d="M22.2 30.5c.2-8.2 4.8-13.5 10-13.5 4.6 0 8.8 4 9.6 10.5-4.5-.5-9-2.6-12.2-6-1.8 3.8-4.4 6.8-7.4 9z" fill="#3A2621"/></svg></span><span class="pill pill-tertiary"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>11 điều</span></div>
+<span class="code c-outline" style="font-size: 11px; text-align: center; padding-top: 4px">Đang giữ từ lượt đầu</span>
+</div>
+</div>
+
+<div class="card step">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px"><span class="step-num">02</span><span class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M4.5 5h15v10.5H9L4.5 19.5z"/></svg></span></div>
+<h3 class="label-lg" style="margin-bottom: 8px">Phỏng vấn người dùng, kèm ghi chú</h3>
+<p class="body-sm c-variant" style="margin-bottom: 24px">Chat như gặp người thật. Ghi lại điều bạn thấy quan trọng.</p>
+<div class="widget" style="display: grid; grid-template-columns: 1fr 72px; gap: 8px">
+<div style="display: flex; flex-direction: column; gap: 6px; justify-content: center"><span class="mini-line" style="width: 80%"></span><span class="mini-line" style="width: 55%; margin-left: auto; background: rgba(0,64,43,.35)"></span><span class="mini-line" style="width: 70%"></span></div>
+<div style="background: #fff; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 5px; box-shadow: var(--shadow-sm)"><span class="mini-line" style="height: 5px; width: 90%"></span><span class="mini-line" style="height: 5px; width: 60%"></span><span class="mini-line" style="height: 5px; width: 75%"></span></div>
+</div>
+</div>
+
+<div class="card step">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px"><span class="step-num">03</span><span class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M12 3.5 21 8.5 12 13.5 3 8.5z"/><path d="M3 13l9 5 9-5"/></svg></span></div>
+<h3 class="label-lg" style="margin-bottom: 8px">Đoán, rồi xem tảng băng</h3>
+<p class="body-sm c-variant" style="margin-bottom: 24px">Mỗi điều kèm đúng lượt trong transcript và trong ghi chú của bạn.</p>
+<div class="widget">
+<div style="display: flex; align-items: center; justify-content: space-between" class="label-sm"><span class="c-secondary">Đã kể 3/11</span><span class="c-primary">Nhận biết 4</span></div>
+<div class="bar h8" style="gap: 2px"><i class="f-secondary" style="width: 27.3%"></i><i class="f-tertiary" style="width: 9.1%"></i><i class="f-muted" style="flex: 1"></i></div>
+</div>
+</div>
+
+<div class="card step">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px"><span class="step-num">04</span><span class="icon-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/></svg></span></div>
+<h3 class="label-lg" style="margin-bottom: 8px">Luyện lại khoảnh khắc bị lỡ</h3>
+<p class="body-sm c-variant" style="margin-bottom: 24px">Quay về đúng lượt bạn bỏ qua một chi tiết. Bạn có 3 lượt để hỏi lại.</p>
+<div class="widget" style="gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between"><span class="label-sm c-primary" style="display: flex; align-items: center; gap: 4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/><path d="M12 8.5V12l2.5 1.5"/></svg>Lượt 06</span><span class="label-sm" style="padding: 4px 8px; border-radius: 4px; background: var(--primary-container); color: #fff">Hỏi lại từ đây</span></div>
+<div class="seg"><i class="on"></i><i></i><i></i></div>
+</div>
+</div>
+
+</div>
+</div>
+</section>
+
+<section style="padding: 0 0 104px">
+<div class="container">
+<div class="card-lg" style="max-width: 960px; margin: 0 auto; padding: 56px 64px; display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 48px; align-items: center">
+<div>
+<span class="eyebrow" style="margin-bottom: 12px">Tạo chủ đề của bạn</span>
+<h2 class="headline-lg" style="margin-bottom: 12px">Không thấy chủ đề bạn cần?</h2>
+<p class="body-md c-variant" style="max-width: 520px; margin-bottom: 28px">Gõ một chủ đề. InterviewLab tạo một nhân vật hư cấu để bạn luyện. Kịch bản tự tạo chỉ qua kiểm tra nhẹ.</p>
+<div style="display: flex; align-items: center; gap: 16px">
+<a class="btn btn-primary btn-lg" href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M12 3.5l1.8 5 5 1.8-5 1.8-1.8 5-1.8-5-5-1.8 5-1.8z"/><path d="M18.5 16v4M16.5 18h4"/></svg>Tạo chủ đề của bạn</a>
+<a class="btn btn-tonal btn-lg" href="#">Vào thư viện</a>
+</div>
+</div>
+<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true">
+<rect x="10" y="20" width="200" height="150" rx="14" fill="#F2F3FF"/>
+<rect x="30" y="42" width="160" height="34" rx="8" fill="#fff" stroke="#BFC9C1" stroke-width="1.5"/>
+<path d="M44 59h86" stroke="#707973" stroke-width="2" stroke-linecap="round"/>
+<path d="M138 52v14" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+<path d="M110 92v14" stroke="#BFC9C1" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="110" cy="132" r="22" fill="#E1E0FF"/>
+<text x="110" y="141" text-anchor="middle" font-family="Newsreader, Georgia, serif" font-size="24" fill="#1B13B0">H</text>
+<path d="M150 116l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#0D593F"/>
+</svg>
+</div>
+</div>
+</section>
+
+<footer class="ftr" style="margin-top: auto"><div class="container"><div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: #006c49; flex: none"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg><p class="body-sm"><strong class="label-md" style="color: var(--on-surface)">Dữ liệu của bạn:</strong> quản trị viên InterviewLab xem được buổi luyện để kiểm tra chất lượng. Bạn xóa được tài khoản và toàn bộ dữ liệu trong Buổi của tôi.</p></div><div style="display: flex; align-items: center; gap: 24px; flex: none; white-space: nowrap"><span class="body-sm">© 2026 InterviewLab</span><span class="code" style="padding: 2px 8px; border-radius: 4px; background: var(--surface-container)">v0.2.0</span></div></div></footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2700}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
+

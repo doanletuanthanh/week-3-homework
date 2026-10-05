@@ -1,0 +1,541 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "C10Custom.dc.html": {
+      "h": 780,
+      "title": "C10 · Chủ đề tự tạo và hạn mức",
+      "w": 1440,
+      "x": 4560,
+      "y": 18220
+    },
+    "C1Access.dc.html": {
+      "h": 780,
+      "title": "C1 · Truy cập",
+      "w": 1440,
+      "x": 0,
+      "y": 16820
+    },
+    "C2Topics.dc.html": {
+      "h": 800,
+      "title": "C2 · Chủ đề",
+      "w": 1440,
+      "x": 1520,
+      "y": 16820
+    },
+    "C3TopicDetail.dc.html": {
+      "h": 760,
+      "title": "C3 · Chi tiết chủ đề",
+      "w": 1440,
+      "x": 3040,
+      "y": 16820
+    },
+    "C4Editor.dc.html": {
+      "h": 900,
+      "title": "C4 · Soạn persona",
+      "w": 1440,
+      "x": 4560,
+      "y": 16820
+    },
+    "C5Eval.dc.html": {
+      "h": 980,
+      "title": "C5 · Eval",
+      "w": 1440,
+      "x": 6080,
+      "y": 16820
+    },
+    "C6Adjudicate.dc.html": {
+      "h": 800,
+      "title": "C6 · Phân xử rò rỉ",
+      "w": 1440,
+      "x": 7600,
+      "y": 16820
+    },
+    "C7Strings.dc.html": {
+      "h": 760,
+      "title": "C7 · Duyệt chuỗi",
+      "w": 1440,
+      "x": 0,
+      "y": 18220
+    },
+    "C8Publish.dc.html": {
+      "h": 720,
+      "title": "C8 · Publish",
+      "w": 1440,
+      "x": 1520,
+      "y": 18220
+    },
+    "C9Sessions.dc.html": {
+      "h": 960,
+      "title": "C9 · Buổi học + trace",
+      "w": 1440,
+      "x": 3040,
+      "y": 18220
+    },
+    "CapReached.dc.html": {
+      "h": 820,
+      "title": "Màn 3 · hết chỗ hôm nay",
+      "w": 1440,
+      "x": 4560,
+      "y": 3120
+    },
+    "CustomStates.dc.html": {
+      "h": 980,
+      "title": "Màn 10 · hạn mức và lỗi",
+      "w": 1440,
+      "x": 1520,
+      "y": 14000
+    },
+    "CustomTopic.dc.html": {
+      "h": 1000,
+      "title": "Màn 10 · Tạo chủ đề của bạn",
+      "w": 1440,
+      "x": 0,
+      "y": 14000
+    },
+    "DeleteAccount.dc.html": {
+      "h": 1000,
+      "title": "Màn 9 · xóa tài khoản",
+      "w": 1440,
+      "x": 3040,
+      "y": 11860
+    },
+    "FailedEval.dc.html": {
+      "h": 900,
+      "title": "Màn 11 · Chưa qua kiểm tra",
+      "w": 1440,
+      "x": 4560,
+      "y": 14000
+    },
+    "Generating.dc.html": {
+      "h": 900,
+      "title": "Màn 11 · Đang chuẩn bị",
+      "w": 1440,
+      "x": 3040,
+      "y": 14000
+    },
+    "Guess.dc.html": {
+      "h": 900,
+      "title": "Màn 5 · Đoán (chưa chọn)",
+      "w": 1440,
+      "x": 3980,
+      "y": 4540
+    },
+    "GuidePrint.dc.html": {
+      "h": 1123,
+      "paper": "a4",
+      "title": "Màn 6 · Mang về · bản in A4",
+      "w": 794,
+      "x": 8070,
+      "y": 5920
+    },
+    "Interview.dc.html": {
+      "h": 960,
+      "title": "Màn 4 · Phỏng vấn kèm ghi chú",
+      "w": 1440,
+      "x": 0,
+      "y": 4540
+    },
+    "InterviewEnd.dc.html": {
+      "h": 960,
+      "title": "Màn 4 · kết thúc, đóng băng ghi chú",
+      "w": 1440,
+      "x": 1520,
+      "y": 4540
+    },
+    "InterviewMobile.dc.html": {
+      "h": 844,
+      "title": "Màn 4 · mobile · gửi lỗi",
+      "w": 390,
+      "x": 3040,
+      "y": 4540
+    },
+    "InterviewMobileNotes.dc.html": {
+      "h": 844,
+      "title": "Màn 4 · mobile · ghi chú mở",
+      "w": 390,
+      "x": 3510,
+      "y": 4540
+    },
+    "Library.dc.html": {
+      "h": 1540,
+      "title": "Màn 2 · Thư viện (đã đăng nhập)",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "LibraryGuest.dc.html": {
+      "h": 1180,
+      "title": "Màn 2 · Thư viện · khách, chip Khác",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 2700,
+      "title": "Màn 1 · Trang chủ (khách)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Method.dc.html": {
+      "h": 2240,
+      "title": "Màn 12 · Phương pháp (404 tới khi research xong)",
+      "w": 1440,
+      "x": 6080,
+      "y": 0
+    },
+    "Notice.dc.html": {
+      "h": 1000,
+      "title": "Màn 0 · Thông báo dữ liệu",
+      "w": 1440,
+      "x": 3040,
+      "y": 3120
+    },
+    "Prep.dc.html": {
+      "h": 820,
+      "title": "Màn 3 · Chuẩn bị (khách)",
+      "w": 1440,
+      "x": 0,
+      "y": 3120
+    },
+    "PrepCustom.dc.html": {
+      "h": 880,
+      "title": "Màn 3 · Chuẩn bị · chủ đề tự tạo",
+      "w": 1440,
+      "x": 6080,
+      "y": 14000
+    },
+    "PrepSignIn.dc.html": {
+      "h": 820,
+      "title": "Màn 3 · đăng nhập lỗi",
+      "w": 1440,
+      "x": 1520,
+      "y": 3120
+    },
+    "Replay.dc.html": {
+      "h": 960,
+      "title": "Màn 7 · Luyện lại · bắt đầu",
+      "w": 1440,
+      "x": 0,
+      "y": 10000
+    },
+    "ReplayFail.dc.html": {
+      "h": 960,
+      "title": "Màn 7 · hết 3 lượt",
+      "w": 1440,
+      "x": 3040,
+      "y": 10000
+    },
+    "ReplayStates.dc.html": {
+      "h": 1440,
+      "title": "Màn 7 · trạng thái khác",
+      "w": 1440,
+      "x": 4560,
+      "y": 10000
+    },
+    "ReplaySuccess.dc.html": {
+      "h": 960,
+      "title": "Màn 7 · mở được",
+      "w": 1440,
+      "x": 1520,
+      "y": 10000
+    },
+    "Reveal.dc.html": {
+      "h": 3660,
+      "title": "Màn 6 · đề xuất luyện lại",
+      "w": 1440,
+      "x": 1520,
+      "y": 5920
+    },
+    "RevealComputing.dc.html": {
+      "h": 880,
+      "title": "Màn 6 · đang tính",
+      "w": 1440,
+      "x": 0,
+      "y": 5920
+    },
+    "RevealCustom.dc.html": {
+      "h": 2400,
+      "title": "Màn 6 · chủ đề tự tạo",
+      "w": 1440,
+      "x": 7600,
+      "y": 14000
+    },
+    "RevealDrawer.dc.html": {
+      "h": 1000,
+      "title": "Màn 6 · transcript buổi chính",
+      "w": 1440,
+      "x": 3040,
+      "y": 5920
+    },
+    "RevealMobile.dc.html": {
+      "h": 2140,
+      "title": "Màn 6 · mobile",
+      "w": 390,
+      "x": 6080,
+      "y": 5920
+    },
+    "RevealStates.dc.html": {
+      "h": 1920,
+      "title": "Màn 6 · trạng thái khác",
+      "w": 1440,
+      "x": 6550,
+      "y": 5920
+    },
+    "Review.dc.html": {
+      "h": 2860,
+      "title": "Màn 6 · đã xong = bản xem lại",
+      "w": 1440,
+      "x": 4560,
+      "y": 5920
+    },
+    "Sessions.dc.html": {
+      "h": 1060,
+      "title": "Màn 9 · Buổi của tôi",
+      "w": 1440,
+      "x": 0,
+      "y": 11860
+    },
+    "SessionsEmpty.dc.html": {
+      "h": 900,
+      "title": "Màn 9 · trống",
+      "w": 1440,
+      "x": 1520,
+      "y": 11860
+    },
+    "SystemStates.dc.html": {
+      "h": 1720,
+      "title": "Luật chung · tải, lỗi, header",
+      "w": 1440,
+      "x": 6080,
+      "y": 11860
+    },
+    "Topic.dc.html": {
+      "h": 1000,
+      "title": "Màn 2b · Chủ đề",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "Withdrawn.dc.html": {
+      "h": 1000,
+      "title": "Buổi đã dừng · nhân vật đã gỡ",
+      "w": 1440,
+      "x": 4560,
+      "y": 11860
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-28T03:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "d0": {
+      "fill": "teal",
+      "maxH": 600,
+      "text": "Hệ màu và chữ\n\nLấy 1:1 từ tailwind.config trong DESIGN.md (Verdant Clarity); theme.css dùng đúng tên token.\nNewsreader: tiêu đề · Plus Jakarta Sans: giao diện · JetBrains Mono: số lượt, giờ, mã.\n\nNghĩa màu: xanh secondary = đã kể · indigo tertiary = niêm phong, mở khóa · amber = bỏ lỡ, chưa xác nhận, đang dở · đỏ error = dẫn dắt, chưa từng được nói. Màu luôn đi kèm nhãn chữ.\nVai trò: UX xanh lá · BA indigo · PM xanh dương. Chủ đề tự tạo: ô be và nhãn 'Kiểm tra nhẹ'.",
+      "w": 460,
+      "x": 7640,
+      "y": 1000
+    },
+    "d1": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\ntopic: id, kind = curated | custom, role = ux | ba | pm | null, title, summary, display_order, owner_user_id?, status = draft | published | archived\n\nscenario (persona): id, persona_id, topic_id, version, status, display_name, avatar_key?, tagline, research_goal, item_count\n\nuser.role_filter: lưu khi chọn chip (khách: lưu trên trình duyệt); mỗi lần chọn ghi event.\n\nThẻ chủ đề: 'Đã luyện k/n' = persona có buổi done / persona đã publish.\nNút trên thẻ persona suy ra từ buổi theo persona_id (bảng trạng thái §7).\nThẻ chủ đề tự tạo: trạng thái lấy từ buổi chơi được, chưa có thì từ lần thử mới nhất.\n\nMàn 12: route trả 404 và footer không có link tới khi research học thuật xong.",
+      "w": 460,
+      "x": 7640,
+      "y": 0
+    },
+    "d2": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\nuser: google_sub, email, visibility_ack_version, visibility_ack_at\nMàn 0 hiện khi chưa đồng ý phiên bản hiện tại, trước mọi trang ghi dữ liệu (cả link thẳng). 'Tôi hiểu' lưu đồng ý rồi chạy tiếp đúng hành động đã bấm.\n\nBấm Bắt đầu (curated): tạo session, status = interviewing, lượt 0 = opening_line.\nFR-5: một buổi cho mỗi persona_id (tài khoản demo được miễn).\nconfig.session_cap_usd chạm cap → chặn buổi mới; reset 00:00 giờ Việt Nam.",
+      "w": 460,
+      "x": 6120,
+      "y": 3120
+    },
+    "d3": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\nturn: session_id, branch_id, index (0–30), learner_text, persona_text, created_at, latency_ms\nAPI lượt chỉ trả: persona_text, số lượt, lỗi. Không nhãn, openness, hook hay item.\n\nsession.canvas_text: tự lưu im lặng, tối đa 5.000 ký tự, không vào call nào trong buổi.\nKết thúc buổi (bấm hoặc hết lượt 30): ended_at, canvas_frozen_at; 3 call reveal chạy ngay.\nsession.guess: không có giá trị mặc định, không vào LLM call nào.\n\nLượt lỗi: không ghi turn, câu hỏi giữ trong ô.",
+      "w": 460,
+      "x": 5540,
+      "y": 4540
+    },
+    "d4": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này (reveal_json, đóng băng)\n\nChế độ Màn 6: revealed + reveal_ready_at trống = đang tính · revealed = đề xuất luyện lại · done = đã xong (cũng là bản xem lại).\n\ncounts: guess, told (KHAI THÁC), recognized (NHẬN BIẾT đầy đủ, lưu riêng), total\nitems[]: id, content, path, state = told | missed | held, told_turn, sample_question, hook_turn, next_turn, trust_turns[]\ncanvas_matches[]: range [s,e], kind = told | unconfirmed | unrevealed | never_said, item_id?, string_key (FR-48a)\nreplay_offer: level = primary | fallback1 | none, fork_after_turn, diagnosis_key\nclaims[]: kind = praise | comment | habit, text, cited_turns, canvas_range?, suggested_question?, sealed\n\nNiêm phong: nội dung, câu hỏi mẫu, hook_id, range canvas và claim của item mục tiêu không gửi về trình duyệt tới khi replay kết thúc; NHẬN BIẾT đang hiện không tính item đó.",
+      "w": 460,
+      "x": 8984,
+      "y": 5920
+    },
+    "d5": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\nbranch: id, session_id, kind = replay, fork_after_turn, target_item_id?, fallback_level, result = success | partial | fail | stopped | skipped\nturn (branch replay): tối đa 3 lượt; mỗi lượt Call 1 + Call 2 + judge replay.\n\nKết thúc theo mọi cách → session.status = done, mở niêm phong.\nKhông ghi đè transcript, ledger, canvas hay số của buổi chính.",
+      "w": 460,
+      "x": 6120,
+      "y": 10000
+    },
+    "d6": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\nDanh sách (mới nhất trước, 20 mỗi lần): display_name hoặc topic_text (generating / failed_eval), topic.title, started_at, status.\nSố 'Kể k/N · Nhận biết m' chỉ có trong payload của buổi done.\nwithdrawn_reason: persona bị gỡ kèm dừng (C8) hoặc kịch bản tự tạo bị gỡ (C10).\n\nFR-66: một transaction xóa user, session, turn, snapshot, branch, generation_attempt, topic và scenario tự tạo, event, waitlist, realism_feedback; giữ log truy cập nhưng bỏ id. Khóa khi có buổi generating.\n\n/buoi/[id] render theo status; buổi của người khác hay không tồn tại đều là 'Không tìm thấy buổi này.'",
+      "w": 460,
+      "x": 7640,
+      "y": 11860
+    },
+    "d7": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\ngeneration_attempt: user_id, topic_id?, session_id?, topic_text, focus, moderation_decision, reason_code?, outcome = refused | running | passed | failed | system_error, cost_reserved_usd, cost_actual_usd\nfocus = follow_up | past_story | trust | no_leading | general; văn bản 'luyện điều gì' chỉ vào call phân loại (focus_raw).\n\nHạn mức: 3 lần thử/ngày (không tính refused, system_error) · 6 lần trượt trọn đời · 1 kịch bản chơi được miễn phí · 1 lần thử đang chạy · ≤20% ngân sách ngày.\nQua kiểm duyệt → topic(kind = custom) + session generating → interviewing hoặc failed_eval (failure_reason). Quá 10 phút → system_error, không tính lần thử.",
+      "w": 460,
+      "x": 9160,
+      "y": 14000
+    },
+    "d8": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\nADMIN_EMAILS (env): allowlist, ngoài danh sách → 403.\nscenario.status = draft | evaluating | eval_failed | ready_for_review | published | unpublished | archived | taken_down; interim_gate cho persona qua cổng tạm.\n\neval_run: profile = quick | full | reduced, status = queued | running | failed | done, report_json, cost_estimate_usd, cost_actual_usd, reader_notes[{reader_type, initials, note}]\nleak_flag + adjudication(flag_id, admin_email, verdict, reason): cờ đóng khi hai admin khác nhau ghi cùng phán quyết; phán quyết người kia ẩn tới khi mình ghi.",
+      "w": 460,
+      "x": 9160,
+      "y": 16820
+    },
+    "d9": {
+      "fill": "green",
+      "maxH": 900,
+      "text": "Dữ liệu cho nhóm này\n\nstring_approval: scope = persona | product, string_key, text, fr36_result, editor_email, approver_email, decision, note. Người duyệt khác người sửa.\nPublish chỉ bật khi validate, ngưỡng FR-35, cờ, chuỗi và FR-36 đều xanh. Gỡ: giữ buổi đang dở trên phiên bản cũ, hoặc chuyển withdrawn.\n\nadmin_access_log: admin_email, channel = console | cli, session_id?, topic_id?, user_id?, action, at (mỗi lần mở dữ liệu người học).\nconfig: session_cap_usd, demo_reserve_usd, generation_budget_usd, per_account_pct, custom_path_enabled. Công tắc tắt: sau 30 yêu cầu, qua <50% hoặc >12 USD mỗi kịch bản chơi được.",
+      "w": 460,
+      "x": 6120,
+      "y": 18220
+    },
+    "t1": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "Trang chủ, thư viện, chủ đề",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Chuẩn bị và đăng nhập",
+      "w": 240,
+      "x": 0,
+      "y": 2820
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 5420,
+      "text": "Phỏng vấn kèm ghi chú, rồi đoán",
+      "w": 240,
+      "x": 0,
+      "y": 4240
+    },
+    "t4": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Tảng băng lộ diện và Mang về",
+      "w": 240,
+      "x": 0,
+      "y": 5620
+    },
+    "t5": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Luyện lại khoảnh khắc bị lỡ",
+      "w": 240,
+      "x": 0,
+      "y": 9700
+    },
+    "t6": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "Buổi của tôi",
+      "w": 240,
+      "x": 0,
+      "y": 11560
+    },
+    "t7": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Tạo chủ đề của bạn",
+      "w": 240,
+      "x": 0,
+      "y": 13700
+    },
+    "t8": {
+      "kind": "title1",
+      "maxW": 8000,
+      "text": "Review Console · soạn, eval, phân xử",
+      "w": 240,
+      "x": 0,
+      "y": 16520
+    },
+    "t9": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Review Console · chuỗi, publish, vận hành",
+      "w": 240,
+      "x": 0,
+      "y": 17920
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Library.dc.html",
+    "LibraryGuest.dc.html",
+    "Topic.dc.html",
+    "Method.dc.html",
+    "Prep.dc.html",
+    "PrepSignIn.dc.html",
+    "Notice.dc.html",
+    "CapReached.dc.html",
+    "Interview.dc.html",
+    "InterviewEnd.dc.html",
+    "InterviewMobile.dc.html",
+    "InterviewMobileNotes.dc.html",
+    "Guess.dc.html",
+    "RevealComputing.dc.html",
+    "Reveal.dc.html",
+    "RevealDrawer.dc.html",
+    "Review.dc.html",
+    "RevealMobile.dc.html",
+    "RevealStates.dc.html",
+    "GuidePrint.dc.html",
+    "Replay.dc.html",
+    "ReplaySuccess.dc.html",
+    "ReplayFail.dc.html",
+    "ReplayStates.dc.html",
+    "Sessions.dc.html",
+    "SessionsEmpty.dc.html",
+    "DeleteAccount.dc.html",
+    "Withdrawn.dc.html",
+    "SystemStates.dc.html",
+    "CustomTopic.dc.html",
+    "CustomStates.dc.html",
+    "Generating.dc.html",
+    "FailedEval.dc.html",
+    "PrepCustom.dc.html",
+    "RevealCustom.dc.html",
+    "C1Access.dc.html",
+    "C2Topics.dc.html",
+    "C3TopicDetail.dc.html",
+    "C4Editor.dc.html",
+    "C5Eval.dc.html",
+    "C6Adjudicate.dc.html",
+    "C7Strings.dc.html",
+    "C8Publish.dc.html",
+    "C9Sessions.dc.html",
+    "C10Custom.dc.html"
+  ],
+  "pages": [],
+  "title": "InterviewLab MVP"
+}
