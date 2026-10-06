@@ -36,7 +36,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 1 | [Walking skeleton](./phase-01-start.md) | In progress: code and local tests done; deploy and latency open | — | 2d |
 | 2 | [Scenario schema, validate, first persona](./phase-02-scenario-schema-validate-and-first-persona.md) | In review: code and tests done; persona content awaits user review | 1 | 2.5d |
 | 3 | [Turn engine](./phase-03-turn-engine.md) | In review: code and tests done; run with real models open | 2 | 5d |
-| 4 | [Eval harness and operator CLI](./phase-04-eval-harness-and-operator-cli.md) | Pending | 3 | 5d |
+| 4 | [Eval harness and operator CLI](./phase-04-eval-harness-and-operator-cli.md) | In review: code and tests done, quick eval recorded; full run, second adjudicator and hand-labelled sets open | 3 | 5d |
 | 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | Pending | 3 | 2.5d |
 | 6 | [Reveal pipeline and screen](./phase-06-reveal-pipeline-and-screen.md) | Pending | 5 | 6d |
 | 7 | [Replay](./phase-07-replay.md) | Pending | 6 | 2.5d |
@@ -78,6 +78,8 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 3. Gemini free-tier rate limits are not published; 7 parallel reduced-eval runs may need a paid key even in dev.
 4. Should an unpublished persona carry a visible label for learners? None is planned; the PRD has a label only for generated scenarios.
 5. LangSmith free plan is 5,000 traces/month and one session is up to ~70 traces. Sampling or a paid plan is needed beyond ~70 sessions a month.
+6. Where real eval runs, rulings and string approvals live: the integration and Playwright tests empty the local database the CLI writes them to (phase 4 notes).
+7. A good simulated run opens 36 % of chị Thu's items against the 50–75 % target, and the persona invents far more detail than its prompt allows (phase 4 notes).
 
 ## Red Team Review
 

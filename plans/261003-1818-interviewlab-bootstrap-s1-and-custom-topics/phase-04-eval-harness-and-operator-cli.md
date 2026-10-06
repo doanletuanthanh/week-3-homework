@@ -1,6 +1,6 @@
 ---
 title: "Phase 4: Eval harness and operator CLI"
-status: todo
+status: in-review
 phase: 4
 priority: P1
 effort: "5d"
@@ -64,21 +64,21 @@ Publish and play: by user decision learners can play unpublished personas while 
 
 ## Todo
 
-- [ ] In-memory store + episode runner
-- [ ] Interviewer profiles + 20 attacks
-- [ ] Leak judge, baseline, report
-- [ ] `eval` command
-- [ ] `adjudicate`, `approve-strings`, `check-strings`
-- [ ] `publish` / `unpublish` with interim gate
-- [ ] Judgement harness + starter sets
-- [ ] Quick eval on chị Thu recorded
+- [x] In-memory store + episode runner
+- [x] Interviewer profiles + 20 attacks
+- [x] Leak judge, baseline, report
+- [x] `eval` command
+- [x] `adjudicate`, `approve-strings`, `check-strings`
+- [x] `publish` / `unpublish` with interim gate
+- [x] Judgement harness + starter sets
+- [x] Quick eval on chị Thu recorded
 
 ## Success criteria
 
-- [ ] `publish` refuses with a precise list when any gate input is missing; unit tests cover each refusal reason and the all-green case.
-- [ ] A quick run cannot be used for publish (test).
-- [ ] Isolation assertion from phase 3 runs inside every eval episode and fails the run on violation (§12.2 item 3 "every turn of eval").
-- [ ] `judgement-eval` prints each NFR-7 rate and exits 1 below a hard gate.
+- [x] `publish` refuses with a precise list when any gate input is missing; unit tests cover each refusal reason and the all-green case.
+- [x] A quick run cannot be used for publish (test).
+- [x] Isolation assertion from phase 3 runs inside every eval episode and fails the run on violation (§12.2 item 3 "every turn of eval").
+- [x] `judgement-eval` prints each NFR-7 rate and exits 1 below a hard gate.
 
 ## Risk assessment
 
@@ -87,3 +87,47 @@ Publish and play: by user decision learners can play unpublished personas while 
 - **Hand-labelled sets are not built here.** Starter sets prove the harness, not the gates. NFR-7 stays red until the user labels ≥ 100 items per set.
 - **Two adjudicators are required by the gate.** With one admin the persona cannot reach `published`; it stays playable as a draft while `require_published` is false.
 - **Judges share model families with what they judge.** Mitigation: leak judge and end judge run on the other provider than the persona.
+
+## Implementation notes (2026-10-06)
+
+Done in code. Open, all on the user: the first full run (cost decision), a second adjudicator, hand-labelled sets of 100 or more cases, and where real eval data should live (see "Left open"). Verified: typecheck, lint, 426 unit, 177 integration, 66 Playwright tests. Review by the code-reviewer agent: no critical finding; five medium findings fixed, the high one is the open decision below.
+
+Quick eval on chị Thu with real models (30 turns, good ×1, bad ×1; persona and Call 1 on `gemini-3.8-flash`, turn judge and simulated learner on `gemini-3.5-flash-lite`, leak judge on `gemini-3.5-flash`):
+
+| Run | Good opens | Bad opens | Hook transmission | Leak flags (not adjudicated) | Cost |
+|---|---|---|---|---|---|
+| 1 | 3 | 0 | 5/5 | 36 | 0.67 USD |
+| 2, after tuning the simulated learner and the secret-term match | 4 | 0 | 7/7 | 4 | 0.66 USD |
+
+Step 9's bar (good at least twice bad, and at least 3) is met. What the runs show beyond it:
+
+- Calibration is below target: the good run opens 36 % of the items against 50–75 %. In run 2 three hooks were dropped (`work-fatigue`, `paid-app`, `small-spend`) and the simulated learner picked none of them up, so no follow-up item opened except `shame`. Either the simulated learner follows hooks too rarely or the hooks are too faint; one run of each profile cannot tell which. More tuning costs about 0.7 USD a run.
+- The persona embellishes far beyond its facts (a long invented scene of crying under a blanket, a named motorbike, invented amounts). The persona prompt forbids invented feelings and numbers; `gemini-3.8-flash` at low effort does not hold to it. This is a phase 3 prompt matter that the eval exposed.
+- The 4 remaining flags are secret-term matches: "Excel" said while telling the open item `last-attempt`, plus "trà sữa", "khoe" and "bảng tính" in invented detail. The leak judge itself raised none.
+
+Differences from the text above:
+
+- Commands: `check-strings` and `approve-strings` live in `cli/commands/strings.ts`, `publish` and `unpublish` in `publish.ts`. `approve-strings <persona|product> [list] | approve <key...>|--all | return <key> "<note>"`; `adjudicate list <persona> | show <flag> | <flag> leak|not-leak "<reason>"`; `eval <persona> [--profile quick|full] [--turns N] [--concurrency N] [--yes] [--trace]` and `eval --resume <run>`; `judgement-eval <file> [--kind ...] [--scenario <file>]`.
+- New optional environment variables, CLI only: `LLM_EVAL_INTERVIEWER`, `LLM_EVAL_LEAK_JUDGE`, `LLM_STRING_CHECK`, `GOOGLE_API_KEY_BATCH`, `OPENAI_API_KEY_BATCH`. The app starts without them. The baseline persona runs on `LLM_PERSONA`.
+- Tables: `eval_run` (with `turns` and `failure_reason`), `eval_episode` (one row per finished episode, which is what makes a run resumable), `leak_flag`, `adjudication`, `string_approval` (one row per string text, by hash, holding the FR-36 result and the decision). Migrations `0004` and `0005`.
+- The publish gate cannot pass before phase 6: verifier disagreement is reported as not met, as required. The green path is tested with a seeded report.
+- A confirmed leak blocks only in adversarial episodes (PRD §12.2 item 2 as written); every flag, in any episode, must still be closed by two admins.
+- A ruling can be changed until two admins agree (PRD C6); a closed flag is final. Disagreement counts as a confirmed leak while it lasts.
+- `unpublish` pulls every playable version of the persona, drafts included, because drafts are playable while `require_published` is off. Without that the command could do nothing before phase 6.
+- A run that failed on isolation is marked `failure_reason = isolation` and cannot be resumed. Two `eval` commands cannot play the same run (advisory lock).
+- Leak flags come from the leak judge and from an exact-word match of secret terms (diacritics count, first occurrence per item and term only). Baseline flags are counted in the report and not stored as `leak_flag`. The baseline is judged with every item locked, so its count is an upper bound.
+- The isolation check in eval looks at what the engine hands to a call, with the conversation taken out: a simulated learner may type a word that is a secret term.
+- `judgement-eval` exit codes: 1 when a hard gate is missed, 2 when every rate passes but the set has fewer than 100 cases, 0 otherwise. `label-classifier` scores the label after the code check; `turn-verdict` runs the turn judge prompt only (the same verdict rules inside Call 1 are not scored separately).
+- The starter sets (18 cases each) were written by the build, not hand-labelled by a person. They prove the harness and nothing about NFR-7.
+- FR-36 for a sample question runs the production Call 1 right after the item's hook line; the claim check is a separate small call (`STRING_CHECK`).
+- No BA/PM persona criteria: the scenario schema has no persona type yet (S4).
+- `publish` stores no gate record beyond the scenario status and `interim_gate`.
+
+Left open:
+
+- **Integration and Playwright tests empty the local database, which is also where `pnpm il eval` stores runs, rulings and approvals.** Running the tests after a full run deletes 20–40 USD of evidence. Needs a decision: a separate test database, or real runs against the hosted project only.
+- A rate-limit retry repeats the whole turn step, so the question is asked and paid for again.
+- `cost_actual_usd` sums stored episodes only; the cost of a failed episode is in `llm_call` (by `attempt_id`) and not in the report.
+- The leak judge reads per-turn metadata and conversation text in one data block. Code only ever drops flags from its output.
+- `reduced` profile, `queued` status and `reader_notes` exist for phases 9 and S3 and have no user yet.
+- No test proves which API key a batch client is built with.
