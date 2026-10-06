@@ -2,7 +2,7 @@ import { awaitAllCallbacks } from "@langchain/core/callbacks/promises";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { AIMessage, AIMessageChunk, BaseMessage } from "@langchain/core/messages";
 import type { z } from "zod";
-import { getEnv } from "@/config/env";
+import { roleSpecFromEnv } from "@/config/env";
 import { LLM_ATTEMPT_TIMEOUT_MS, LLM_MAX_RETRIES } from "@/config/limits";
 import { getDb } from "@/db/client";
 import { recordLlmCall, type LlmCallRecord } from "@/db/repo/llm-calls";
@@ -46,11 +46,13 @@ export type CallModelDeps = {
   attemptTimeoutMs: number;
 };
 
+// The plain handle, not a transaction: the row stays even if the caller's work rolls back.
+export const recordCallToDb: CallModelDeps["recordCall"] = (record) => recordLlmCall(getDb(), record);
+
 const defaultDeps: CallModelDeps = {
-  roleSpec: (role) => getEnv()[`LLM_${role}`],
-  createModel: createChatModel,
-  // The plain handle, not a transaction: the row stays even if the caller's work rolls back.
-  recordCall: (record) => recordLlmCall(getDb(), record),
+  roleSpec: roleSpecFromEnv,
+  createModel: (spec) => createChatModel(spec),
+  recordCall: recordCallToDb,
   attemptTimeoutMs: LLM_ATTEMPT_TIMEOUT_MS,
 };
 

@@ -6,22 +6,10 @@ import type { EngineState } from "@/engine/types";
 import { buildAnalysisMessages } from "@/llm/prompts/analysis";
 import { buildPersonaMessages } from "@/llm/prompts/persona";
 import { buildTurnJudgeMessages } from "@/llm/prompts/turn-judge";
-import type { ScenarioItem } from "@/scenario/schema";
-import { containsTerm } from "@/scenario/text-normalize";
+import { sealedParts } from "@/eval/isolation";
 import { THIRTY_TURN_SCRIPT, a, chiThu, engineSession, unlockedIds } from "../helpers/engine-fixtures";
 
 const text = (messages: BaseMessage[]) => messages.map((message) => message.text).join("\n");
-
-/** Everything of an item that only the engine may release: content, key phrases and its ids. */
-function sealedParts(item: ScenarioItem, prompt: string): string[] {
-  return [
-    ...(prompt.includes(item.content) ? [`content of ${item.id}`] : []),
-    ...item.secret_terms.filter((term) => containsTerm(prompt, term)).map((term) => `secret term "${term}" of ${item.id}`),
-    ...(prompt.includes(item.id) ? [`id ${item.id}`] : []),
-    ...(prompt.includes(item.do_not_assert.id) ? [`do-not-assert id ${item.do_not_assert.id}`] : []),
-    ...(prompt.includes(item.sample_question) ? [`sample question of ${item.id}`] : []),
-  ];
-}
 
 const lockedItems = (state: EngineState) => chiThu.items.filter((item) => !unlockedIds(state).includes(item.id));
 

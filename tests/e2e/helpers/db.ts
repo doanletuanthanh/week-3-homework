@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { config, events, llmCalls, pendingActions, sessions, snapshots, turns, users } from "@/db/schema";
+import { config, evalRuns, events, llmCalls, pendingActions, scenarios, sessions, snapshots, stringApprovals, turns, users } from "@/db/schema";
 import { LOCAL_DATABASE_URL } from "../../helpers/local-stack";
 
 process.env.DATABASE_URL = LOCAL_DATABASE_URL;
@@ -40,5 +40,12 @@ export const db = {
   /** Turns the publish gate on for one test; `clearConfig` puts every setting back to its default. */
   requirePublished: () => getDb().insert(config).values({ key: "require_published", value: true, updatedBy: "e2e" }),
   clearConfig: () => getDb().delete(config),
+  scenarioOf: async (personaId: string) => (await getDb().select().from(scenarios).where(eq(scenarios.personaId, personaId)))[0],
+  /** Puts the persona back to an unevaluated draft: no run, flag, ruling, string check or approval. */
+  resetPublishState: async () => {
+    await getDb().delete(evalRuns);
+    await getDb().delete(stringApprovals);
+    await getDb().update(scenarios).set({ status: "draft", interimGate: false });
+  },
   endSession: (sessionId: string) => getDb().update(sessions).set({ endedAt: sql`now()` }).where(eq(sessions.id, sessionId)),
 };

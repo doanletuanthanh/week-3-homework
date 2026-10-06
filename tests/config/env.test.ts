@@ -94,4 +94,28 @@ describe("parseEnv", () => {
     const allOpenAi = { ...valid, LLM_ANALYSIS: "openai:gpt-6-luna:low", LLM_PERSONA: "openai:gpt-6-luna:low", LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low" };
     expect(() => parseEnv({ ...allOpenAi, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).not.toThrow();
   });
+
+  it("does not require the roles only the operator CLI calls, nor the batch keys", () => {
+    const env = parseEnv(valid);
+    expect(env.LLM_EVAL_INTERVIEWER).toBeUndefined();
+    expect(env.LLM_EVAL_LEAK_JUDGE).toBeUndefined();
+    expect(env.LLM_STRING_CHECK).toBeUndefined();
+    expect(env.GOOGLE_API_KEY_BATCH).toBeUndefined();
+    expect(parseEnv({ ...valid, GOOGLE_API_KEY_BATCH: " " }).GOOGLE_API_KEY_BATCH).toBeUndefined();
+    // Left blank in an env file, like a blank key: not set, and the app still starts.
+    expect(parseEnv({ ...valid, LLM_STRING_CHECK: "", LLM_EVAL_INTERVIEWER: "  " }).LLM_STRING_CHECK).toBeUndefined();
+  });
+
+  it("checks a CLI role like any other once it is set: format, price and provider key", () => {
+    const env = parseEnv({ ...valid, LLM_EVAL_INTERVIEWER: "google:gemini-3.5-flash:medium", GOOGLE_API_KEY_BATCH: "g-batch" });
+    expect(env.LLM_EVAL_INTERVIEWER).toEqual({ provider: "google", model: "gemini-3.5-flash", effort: "medium" });
+    expect(env.GOOGLE_API_KEY_BATCH).toBe("g-batch");
+    expect(() => parseEnv({ ...valid, LLM_EVAL_LEAK_JUDGE: "google:gemini-unknown:low" })).toThrow(/LLM_EVAL_LEAK_JUDGE: no price configured/);
+    expect(() => parseEnv({ ...valid, LLM_STRING_CHECK: "gemini" })).toThrow(/LLM_STRING_CHECK: expected "provider:model:effort"/);
+    expect(() => parseEnv({ ...valid, LLM_EVAL_LEAK_JUDGE: "openai:gpt-6-luna:low" })).toThrow(
+      /OPENAI_API_KEY: required because LLM_EVAL_LEAK_JUDGE uses provider "openai"/,
+    );
+    // The batch key is an extra, not a substitute: the provider's own key is still required.
+    expect(() => parseEnv({ ...valid, LLM_EVAL_LEAK_JUDGE: "openai:gpt-6-luna:low", OPENAI_API_KEY_BATCH: "o-batch" })).toThrow(/OPENAI_API_KEY/);
+  });
 });

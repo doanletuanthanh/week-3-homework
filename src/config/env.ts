@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseRoleSpec, ROLES } from "@/llm/roles";
+import { parseRoleSpec, ROLES, type Role, type RoleSpec } from "@/llm/roles";
 import { hasPrice } from "@/llm/pricing";
 
 /** Comma-separated emails, lower-cased so every comparison is case-insensitive. */
@@ -34,6 +34,9 @@ const roleSpec = z.string().transform((raw, ctx) => {
   }
 });
 
+/** A role only the operator CLI calls. An empty value (`LLM_X=` in an env file) counts as not set. */
+const optionalRoleSpec = z.preprocess((value) => (typeof value === "string" && value.trim() === "" ? undefined : value), roleSpec.optional());
+
 const envSchema = z
   .object({
     NEXT_PUBLIC_SUPABASE_URL: z.url(),
@@ -44,8 +47,15 @@ const envSchema = z
     LLM_ANALYSIS: roleSpec,
     LLM_PERSONA: roleSpec,
     LLM_REPLAY_JUDGE: roleSpec,
+    // CLI-only roles: needed by the commands that call them, not by the app.
+    LLM_EVAL_INTERVIEWER: optionalRoleSpec,
+    LLM_EVAL_LEAK_JUDGE: optionalRoleSpec,
+    LLM_STRING_CHECK: optionalRoleSpec,
     GOOGLE_API_KEY: optionalKey,
     OPENAI_API_KEY: optionalKey,
+    // Separate keys for evaluation, so batch load cannot rate-limit live turns.
+    GOOGLE_API_KEY_BATCH: optionalKey,
+    OPENAI_API_KEY_BATCH: optionalKey,
     LANGSMITH_TRACING: z.string().optional(),
     LANGSMITH_API_KEY: optionalKey,
   })
@@ -62,7 +72,7 @@ const envSchema = z
 
     const keyByProvider = { google: "GOOGLE_API_KEY", openai: "OPENAI_API_KEY" } as const;
     for (const provider of ["google", "openai"] as const) {
-      const users = ROLES.filter((role) => env[`LLM_${role}`].provider === provider).map((role) => `LLM_${role}`);
+      const users = ROLES.filter((role) => env[`LLM_${role}`]?.provider === provider).map((role) => `LLM_${role}`);
       if (users.length > 0 && !env[keyByProvider[provider]]) {
         ctx.addIssue({
           code: "custom",
@@ -99,4 +109,11 @@ let cached: Env | undefined;
 export function getEnv(): Env {
   cached ??= parseEnv(process.env);
   return cached;
+}
+
+/** The model a role runs on. A CLI-only role that was left unset fails here, with the variable to set. */
+export function roleSpecFromEnv(role: Role): RoleSpec {
+  const spec = getEnv()[`LLM_${role}`];
+  if (!spec) throw new Error(`LLM_${role} is not set (expected "provider:model:effort" in .env.local)`);
+  return spec;
 }

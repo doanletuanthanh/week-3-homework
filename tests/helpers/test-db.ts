@@ -13,7 +13,7 @@ export const PERSONA_FILE = "scenarios/ux-chi-tieu/chi-thu.json";
 export async function resetDatabase(): Promise<void> {
   const db = getDb();
   await db.execute(
-    sql`TRUNCATE "turn", "snapshot", "branch", "event", "session", "pending_action", "llm_call", "daily_spend", "config", "admin_access_log", "scenario", "topic", "user" CASCADE`,
+    sql`TRUNCATE "turn", "snapshot", "branch", "event", "session", "pending_action", "llm_call", "daily_spend", "config", "admin_access_log", "string_approval", "scenario", "topic", "user" CASCADE`,
   );
   const imported = await importScenarioFile(db, PERSONA_FILE);
   if (!imported.ok) throw new Error(`${PERSONA_FILE} does not pass validate`);

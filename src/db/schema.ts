@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { TurnDecision } from "@/engine/plan-turn";
 import type { HookEntry, RawAnalysis, UnlockedItem, Verdict } from "@/engine/types";
+import type { EpisodeResult, EvalReport, LeakKind } from "@/eval/types";
 import type { Scenario } from "@/scenario/schema";
 
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
@@ -284,3 +285,112 @@ export const adminAccessLog = pgTable("admin_access_log", {
   action: text("action").notNull(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** A note a practising BA or PM left after reading the transcripts of a run. */
+export type ReaderNote = { reader_type: string; initials: string; note: string };
+
+/** One evaluation of one scenario version. Only a `full` run that is `done` can satisfy the publish gate. */
+export const evalRuns = pgTable(
+  "eval_run",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scenarioId: uuid("scenario_id")
+      .notNull()
+      .references(() => scenarios.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    profile: text("profile", { enum: ["quick", "full", "reduced"] }).notNull(),
+    status: text("status", { enum: ["queued", "running", "failed", "done"] }).notNull().default("running"),
+    /** Learner turns per episode. */
+    turns: integer("turns").notNull(),
+    reportJson: jsonb("report_json").$type<EvalReport>(),
+    costEstimateUsd: numeric("cost_estimate_usd", { precision: 14, scale: 9, mode: "number" }).notNull(),
+    costActualUsd: numeric("cost_actual_usd", { precision: 14, scale: 9, mode: "number" }).notNull().default(0),
+    readerNotes: jsonb("reader_notes").$type<ReaderNote[]>().notNull().default([]),
+    /** Why a `failed` run stopped. `isolation` is a defect in the engine: such a run is never resumed. */
+    failureReason: text("failure_reason", { enum: ["isolation", "model"] }),
+    createdAt,
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (table) => [index("eval_run_scenario_idx").on(table.scenarioId)],
+);
+
+/**
+ * A finished episode of a run, written as soon as it ends, so a run that stops halfway (rate
+ * limit, closed terminal) is resumed without paying for these again.
+ */
+export const evalEpisodes = pgTable(
+  "eval_episode",
+  {
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => evalRuns.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    resultJson: jsonb("result_json").$type<EpisodeResult>().notNull(),
+    createdAt,
+  },
+  (table) => [primaryKey({ columns: [table.runId, table.key] })],
+);
+
+/** A possible leak the judge or the secret-term match found in an episode of the engine. */
+export const leakFlags = pgTable(
+  "leak_flag",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    evalRunId: uuid("eval_run_id")
+      .notNull()
+      .references(() => evalRuns.id, { onDelete: "cascade" }),
+    episode: text("episode").notNull(),
+    turn: integer("turn").notNull(),
+    itemId: text("item_id").notNull(),
+    kind: text("kind").$type<LeakKind>().notNull(),
+    excerpt: text("excerpt").notNull(),
+    allowedHooks: jsonb("allowed_hooks").$type<string[]>().notNull(),
+    judgeReason: text("judge_reason").notNull(),
+    createdAt,
+  },
+  (table) => [index("leak_flag_run_idx").on(table.evalRunId)],
+);
+
+export const ADJUDICATION_VERDICTS = ["leak", "not_leak"] as const;
+
+/** One admin's ruling on a flag. An admin rules once per flag. */
+export const adjudications = pgTable(
+  "adjudication",
+  {
+    flagId: uuid("flag_id")
+      .notNull()
+      .references(() => leakFlags.id, { onDelete: "cascade" }),
+    adminEmail: text("admin_email").notNull(),
+    verdict: text("verdict", { enum: ADJUDICATION_VERDICTS }).notNull(),
+    reason: text("reason").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.flagId, table.adminEmail] })],
+);
+
+/** Outcome of the automatic check of one fixed string (FR-36). */
+export type StringCheckResult = { ok: boolean; problems: string[] };
+
+/**
+ * The check and the human decision for one fixed string, keyed by a hash of its text: a string
+ * that is edited has no row, so it is neither checked nor approved until both are done again.
+ */
+export const stringApprovals = pgTable(
+  "string_approval",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scope: text("scope", { enum: ["persona", "product"] }).notNull(),
+    /** Empty for product strings. */
+    personaId: text("persona_id").notNull().default(""),
+    stringKey: text("string_key").notNull(),
+    text: text("text").notNull(),
+    textHash: text("text_hash").notNull(),
+    fr36Result: jsonb("fr36_result").$type<StringCheckResult>().notNull(),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+    decision: text("decision", { enum: ["approved", "returned"] }),
+    approverEmail: text("approver_email"),
+    note: text("note"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (table) => [unique("string_approval_text_key").on(table.scope, table.personaId, table.stringKey, table.textHash)],
+);

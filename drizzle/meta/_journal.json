@@ -29,6 +29,20 @@
       "when": 1791190700694,
       "tag": "0003_turn-engine",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791287626840,
+      "tag": "0004_eval-and-publish-gate",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791290068018,
+      "tag": "0005_eval-run-failure-reason",
+      "breakpoints": true
     }
   ]
 }

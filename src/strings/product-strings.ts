@@ -30,3 +30,17 @@ export const PERSONA_BEING_UPDATED = "Nhân vật này đang được cập nh�
 
 export const FOOTER_DATA_NOTE =
   "quản trị viên InterviewLab xem được buổi luyện để kiểm tra chất lượng. Bạn xóa được tài khoản và toàn bộ dữ liệu trong Buổi của tôi.";
+
+/**
+ * Every product-level fixed string by key, for the fixed-string check and its approval
+ * (`il check-strings product`, `il approve-strings product`). A string added above must be added
+ * here, or it ships unchecked.
+ */
+export function productStrings(): { key: string; text: string }[] {
+  return [
+    ...Object.entries(DATA_NOTICE).map(([name, text]) => ({ key: `data_notice.${name}`, text })),
+    { key: "session_cap_reached", text: SESSION_CAP_REACHED },
+    { key: "persona_being_updated", text: PERSONA_BEING_UPDATED },
+    { key: "footer_data_note", text: FOOTER_DATA_NOTE },
+  ];
+}
