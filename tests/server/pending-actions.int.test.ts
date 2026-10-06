@@ -63,3 +63,14 @@ describe("pending action", () => {
     expect(await consumePendingAction(getDb(), { token: randomUUID(), userId: learner.id })).toBeNull();
   });
 });
+
+describe("pending action clean-up", () => {
+  it("clears expired pending actions whenever a new one is stored", async () => {
+    const stale = await createPendingAction(getDb(), { userId: null, payload });
+    await getDb().update(pendingActions).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(pendingActions.id, stale));
+
+    const fresh = await createPendingAction(getDb(), { userId: null, payload });
+
+    expect((await getDb().select().from(pendingActions)).map((row) => row.id)).toEqual([fresh]);
+  });
+});

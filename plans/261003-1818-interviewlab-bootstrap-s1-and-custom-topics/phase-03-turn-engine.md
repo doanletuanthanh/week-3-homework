@@ -1,6 +1,6 @@
 ---
 title: "Phase 3: Turn engine"
-status: todo
+status: in-review
 phase: 3
 priority: P1
 effort: "5d"
@@ -20,19 +20,19 @@ The per-turn controller from PRD §8.2: Call 1 (analysis + verdict on the previo
 
 ## Requirements
 
-- [ ] Exactly 2 logical LLM calls per main turn; technical retries logged separately.
-- [ ] Call 1 output is checked by code in the order of addendum §2.1 before any rule runs.
-- [ ] Unlock rules per path run on snapshot t−1 after the verdict for turn t−1 is applied; at most 1 item per turn, highest weight wins.
-- [ ] A turn is written completely or not at all; a failed LLM call writes no turn data and does not count. Its cost is still recorded (`llm_call`, phase 1).
-- [ ] At most one turn per session is in flight; a second request is rejected before any model call.
-- [ ] Resending a turn whose response was lost returns the stored reply, not an error.
+- [x] Exactly 2 logical LLM calls per main turn; technical retries logged separately.
+- [x] Call 1 output is checked by code in the order of addendum §2.1 before any rule runs.
+- [x] Unlock rules per path run on snapshot t−1 after the verdict for turn t−1 is applied; at most 1 item per turn, highest weight wins.
+- [x] A turn is written completely or not at all; a failed LLM call writes no turn data and does not count. Its cost is still recorded (`llm_call`, phase 1).
+- [x] At most one turn per session is in flight; a second request is rejected before any model call.
+- [x] Resending a turn whose response was lost returns the stored reply, not an error.
 - [ ] Server-side length limits: question ≤ 500 characters, canvas ≤ 5,000, enforced with Zod on every route that accepts them.
-- [ ] One live session per learner and persona is a database constraint, not only a check.
-- [ ] Immutable snapshot after each turn; the only later change is the verdict part of snapshot t, written in turn t+1's transaction.
-- [ ] Daily cost cap blocks new sessions only; demo reserve honoured.
-- [ ] `trace <session>` prints every FR-44 field from stored data, no LLM call, and logs the access.
-- [ ] Call 2 is streamed to the browser (user decision 2026-10-05, see plan deviations). The turn is committed only after the stream ends; a stream that fails midway releases the claim, writes no turn and ends with an error event. A technical retry of Call 2 is allowed only before its first token is sent.
-- [ ] Call 2's voice rules follow addendum §2.2 (talks freely, may ramble about surface facts and daily life); the skeleton's "1 to 3 sentences" rule is dropped. Harmless everyday detail may be improvised; nothing about money or expense tracking beyond what the call was given.
+- [x] One live session per learner and persona is a database constraint, not only a check.
+- [x] Immutable snapshot after each turn; the only later change is the verdict part of snapshot t, written in turn t+1's transaction.
+- [x] Daily cost cap blocks new sessions only; demo reserve honoured.
+- [x] `trace <session>` prints every FR-44 field from stored data, no LLM call, and logs the access.
+- [x] Call 2 is streamed to the browser (user decision 2026-10-05, see plan deviations). The turn is committed only after the stream ends; a stream that fails midway releases the claim, writes no turn and ends with an error event. A technical retry of Call 2 is allowed only before its first token is sent.
+- [x] Call 2's voice rules follow addendum §2.2 (talks freely, may ramble about surface facts and daily life); the skeleton's "1 to 3 sentences" rule is dropped. Harmless everyday detail may be improvised; nothing about money or expense tracking beyond what the call was given.
 
 ## Architecture
 
@@ -96,20 +96,20 @@ New tables: `snapshot`, `branch` (main branch row created with the session), `ev
 
 ## Todo
 
-- [ ] Pure engine modules + unit tests
-- [ ] Isolation and adversarial tests
-- [ ] Prompts, schemas, graph
-- [ ] `runTurn` + transaction + integration tests
-- [ ] Session creation, FR-5, cost cap
-- [ ] Events, `config`, `trace`
+- [x] Pure engine modules + unit tests
+- [x] Isolation and adversarial tests
+- [x] Prompts, schemas, graph
+- [x] `runTurn` + transaction + integration tests
+- [x] Session creation, FR-5, cost cap
+- [x] Events, `config`, `trace`
 - [ ] Manual 10-turn run reproduces UJ-1 steps 4 and 7 mechanics
 
 ## Success criteria
 
-- [ ] Every bullet of PRD §12.2 item 4 has a named passing test.
-- [ ] Isolation test: for a scripted 30-turn session, no Call 1 or Call 2 context contains any locked item's content or `secret_terms`; no context contains canvas text; Call 2 holds do-not-assert of at most one tag and never of an item just opened.
-- [ ] Log of a 30-turn session shows 2 logical calls per turn (§12.2 item 6, main-turn part).
-- [ ] Turn API response has exactly `personaText`, `turnIndex`, `error`.
+- [x] Every bullet of PRD §12.2 item 4 has a named passing test.
+- [x] Isolation test: for a scripted 30-turn session, no Call 1 or Call 2 context contains any locked item's content or `secret_terms`; no context contains canvas text; Call 2 holds do-not-assert of at most one tag and never of an item just opened.
+- [x] Log of a 30-turn session shows 2 logical calls per turn (§12.2 item 6, main-turn part).
+- [x] Turn API response has exactly `personaText`, `turnIndex`, `error`.
 
 ## Risk assessment
 
@@ -123,3 +123,25 @@ New tables: `snapshot`, `branch` (main branch row created with the session), `ev
 - Prompt injection from learner text cannot unlock: unlocking reads only checked fields, and tests feed hostile Call 1 output directly.
 - Parallel requests cannot spend unmetered money: the claim precedes the calls and every call is costed when it returns.
 - `trace` reads learner data, so it writes `admin_access_log` with channel `cli`.
+
+## Implementation notes (2026-10-05)
+
+Done in code. Open: the manual 10-turn run with real models (step 10; `GOOGLE_API_KEY` in `.env.local` is a placeholder), and the canvas length limit, which has no route until phase 5 (the question limit is enforced). Verified: typecheck, lint, 309 unit, 130 integration, 64 Playwright tests; 30 seeded faults in the engine, service and CLI are each caught by a test. Review: `plans/reports/code-reviewer-261005-1640-turn-engine-phase-3.md` (no critical finding; the high and all medium findings fixed).
+
+Where each bullet of PRD §12.2 item 4 is tested: `tests/engine/unlock.test.ts` (follow-up with and without a drop verdict, late pick-up, pick-up at t+1, wrong grounded turn, state before the turn, trust threshold), `tests/engine/check-analysis.test.ts` (label downgrades, openness unchanged, verdict negative or missing), `tests/engine/tokens-and-openness.test.ts` (start at 4, the table), `tests/engine/hooks.test.ts` (closing question), `tests/engine/plan-turn-adversarial.test.ts` (300 hostile sessions). Isolation: `tests/engine/contexts-isolation.test.ts` and, on the prompts really sent, the 30-turn test in `tests/server/run-turn.int.test.ts`, which also shows two logical calls per turn.
+
+Differences from the text above:
+
+- Prompts never show scenario ids, because a slug such as `paid-app` describes its secret. Items are shown by position (`I1`, `H1`, `T1`, `D1`); `src/engine/aliases.ts` maps the model's answer back. A hook has no id of its own: it is identified by its item.
+- A hook enters the ledger only when a verdict confirms the drop. The hook chosen for a turn is stored on the turn (`hook_selected`), not in the snapshot.
+- Turn API: the body is `{text, turnKey, expectedIndex}`. A reply that streams is newline-delimited JSON (`delta` events, then `done` with `personaText` and `turnIndex`, or `error`). Everything decided before the persona starts (bad input, stale tab, turn in flight, failed analysis, stored reply) is plain JSON with its HTTP status.
+- One turn has a 110 s time budget, below the 120 s claim lifetime, so a running turn cannot lose its claim. A call cut off by the budget is recorded and not retried.
+- `turn` and `snapshot` are keyed by `(branch_id, index)`; `branch` holds only `kind` for now (phase 7 adds the replay columns). `llm_call` has `turn_index`. Migration `0003` gives sessions written before the engine a main branch, tokens and starting-state snapshots.
+- New environment variables: `LLM_ANALYSIS` and `LLM_REPLAY_JUDGE` (required at start, like `LLM_PERSONA`), and `OPERATOR_EMAIL` (CLI only, must be in `ADMIN_EMAILS`; needed by `il trace` and `il config set`).
+- Config rows and defaults: `require_published` false, `session_daily_cap_usd` 5, `session_demo_reserve_usd` 1. The two money defaults are placeholders, not measured.
+- With the publish gate off, a session starts on the newest version that is not `unpublished`, `archived` or `taken_down`. The prep screen shows that version, or "Nhân vật này đang được cập nhật." when there is none.
+- The cap message on the prep screen is the PRD string; the full system-state screens stay in phase 8.
+- Demo sessions write no event. `session_started` has no device class yet (phase 5 knows it).
+- The in-memory `TurnStore` is left to phase 4, its first user; the interface and the Postgres store are here.
+
+Left open by the review, by choice: whether Vercel keeps a function alive after the browser drops a stream (the route now registers the turn with `after()`; check on the first deploy); a LangSmith flush slower than the claim lifetime could discard a streamed reply; the LangGraph run sends the whole scenario to LangSmith as its input, not only the prompts; a hook is marked ignored at t+1 even when its item opens at t+1 by another path.

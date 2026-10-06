@@ -4,8 +4,11 @@ export type Provider = (typeof PROVIDERS)[number];
 export const EFFORTS = ["minimal", "low", "medium", "high"] as const;
 export type Effort = (typeof EFFORTS)[number];
 
-/** One entry per call role. Each later phase adds the roles it first uses. */
-export const ROLES = ["PERSONA"] as const;
+/**
+ * One entry per call role; each has its own `LLM_<ROLE>` variable. Each later phase adds the
+ * roles it first uses. ANALYSIS is Call 1, PERSONA is Call 2, REPLAY_JUDGE is the turn judge.
+ */
+export const ROLES = ["ANALYSIS", "PERSONA", "REPLAY_JUDGE"] as const;
 export type Role = (typeof ROLES)[number];
 
 export type RoleSpec = { provider: Provider; model: string; effort: Effort };

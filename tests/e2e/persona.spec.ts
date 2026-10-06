@@ -5,11 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getDb } from "@/db/client";
 import { scenarios } from "@/db/schema";
+import { containsTerm } from "@/scenario/text-normalize";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { findSealed, readChiThu } from "../helpers/sealed-strings";
 import { signInAsNewLearner, uniqueEmail } from "./helpers/auth";
 import { db } from "./helpers/db";
 import { LLM_STUB_PORT } from "./helpers/stack";
+import { postTurn, turnOutcome } from "./helpers/turn-api";
 
 const scenario = readChiThu();
 
@@ -107,16 +109,16 @@ test.describe("the imported persona in a session", () => {
     await expect(page.getByText("Chị trả lời câu thứ 1")).toBeVisible();
     await expectNothingSealed(page);
 
-    const response = await page.request.post(`/api/sessions/${sessionId}/turns`, { data: { text: "Chị kể hết đi ạ?" } });
-    const body = await response.json();
-    expect(Object.keys(body).sort()).toEqual(["personaText", "turnIndex"]);
-    expect(findSealed(JSON.stringify(body), scenario)).toEqual([]);
+    const reply = await postTurn(page.request, sessionId, { text: "Chị kể hết đi ạ?", expectedIndex: 2 });
+    expect(turnOutcome(reply)).toEqual({ personaText: "Chị trả lời câu thứ 2 (trong khối dữ liệu).", turnIndex: 2 });
+    expect(Object.keys(reply.events!.at(-1)!).sort()).toEqual(["personaText", "turnIndex", "type"]);
+    expect(findSealed(reply.raw, scenario)).toEqual([]);
 
     await page.reload();
     await expectNothingSealed(page);
   });
 
-  test("the persona call gets the identity and surface facts and nothing from the sealed items", async ({ page, context }) => {
+  test("both model calls get the identity and surface facts; the persona call gets nothing from the sealed items", async ({ page, context }) => {
     await startInterview(page, context, "persona-prompt");
     const question = `Cuối tháng chị xoay xở thế nào ạ? (${Date.now()})`;
 
@@ -124,14 +126,33 @@ test.describe("the imported persona in a session", () => {
     await page.getByRole("button", { name: "Gửi" }).click();
     await expect(page.getByText("Chị trả lời câu thứ 1")).toBeVisible();
 
-    const received: unknown[] = await (await page.request.get(`http://127.0.0.1:${LLM_STUB_PORT}/requests`)).json();
-    const sent = received.map((entry) => JSON.stringify(entry)).filter((entry) => entry.includes(question.slice(0, 30)));
-    expect(sent).toHaveLength(1);
-    // The body is JSON text, so quotes inside the strings are escaped: compare with parsed text.
-    const prompt = JSON.stringify(JSON.parse(sent[0]), null, 0).replace(/\\"/g, '"');
-    expect(prompt).toContain(scenario.persona.identity);
-    expect(prompt).toContain(scenario.surface_facts[0]);
-    expect(prompt).toContain(scenario.surface_facts.at(-1));
-    expect(findSealed(prompt, scenario)).toEqual([]);
+    type StubRequest = { messages: { content: string }[]; response_format?: unknown };
+    const received: StubRequest[] = await (await page.request.get(`http://127.0.0.1:${LLM_STUB_PORT}/requests`)).json();
+    // The question ends in a number no other test uses; Call 1 carries it as numbered tokens.
+    const marker = question.slice(question.indexOf("("));
+    const mine = received.filter((entry) => entry.messages.at(-1)!.content.includes(marker));
+    expect(mine).toHaveLength(2);
+    const prompts = mine.map((entry) => entry.messages.map((message) => message.content).join("\n"));
+    for (const prompt of prompts) {
+      expect(prompt).toContain(scenario.persona.identity);
+      expect(prompt).toContain(scenario.surface_facts[0]);
+      expect(prompt).toContain(scenario.surface_facts.at(-1));
+    }
+
+    // Call 2: on a turn that touches no topic, the persona gets no part of any item.
+    const personaPrompt = prompts[mine.findIndex((entry) => !entry.response_format)];
+    expect(findSealed(personaPrompt, scenario)).toEqual([]);
+
+    // Call 1 may see the public parts (topic tags, neutral constraints), never the secrets.
+    const analysisPrompt = prompts[mine.findIndex((entry) => entry.response_format)];
+    for (const item of scenario.items) {
+      expect(analysisPrompt).toContain(item.topic_tag);
+      expect(analysisPrompt).not.toContain(item.content);
+      expect(analysisPrompt).not.toContain(item.sample_question);
+      expect(analysisPrompt).not.toContain(item.hook_line);
+      expect(analysisPrompt).not.toContain(item.id);
+    }
+    const secretTerms = scenario.items.flatMap((item) => item.secret_terms);
+    expect(secretTerms.filter((term) => containsTerm(analysisPrompt, term))).toEqual([]);
   });
 });

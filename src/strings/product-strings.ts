@@ -22,5 +22,11 @@ export const DATA_NOTICE = {
   noRealPeople: "Đừng nhập tên hay thông tin cá nhân của người thật.",
 } as const;
 
+/** Màn 3, shown when the daily cost cap blocks a new session (FR-37). */
+export const SESSION_CAP_REACHED = "Hôm nay InterviewLab đã hết chỗ cho buổi luyện mới. Quay lại sau 0 giờ đêm nay.";
+
+/** Màn 3, shown when no version of the persona can be played right now. */
+export const PERSONA_BEING_UPDATED = "Nhân vật này đang được cập nhật.";
+
 export const FOOTER_DATA_NOTE =
   "quản trị viên InterviewLab xem được buổi luyện để kiểm tra chất lượng. Bạn xóa được tài khoản và toàn bộ dữ liệu trong Buổi của tôi.";

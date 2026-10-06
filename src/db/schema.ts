@@ -14,6 +14,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { TurnDecision } from "@/engine/plan-turn";
+import type { HookEntry, RawAnalysis, UnlockedItem, Verdict } from "@/engine/types";
 import type { Scenario } from "@/scenario/schema";
 
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
@@ -75,6 +77,19 @@ export const scenarios = pgTable(
   (table) => [unique("scenario_persona_version_key").on(table.personaId, table.version)],
 );
 
+export const SESSION_STATUSES = [
+  "generating",
+  "interviewing",
+  "revealed",
+  "replaying",
+  "done",
+  "failed_eval",
+  "withdrawn",
+] as const;
+
+/** Marks the one turn request allowed to call the models for a session right now. */
+export type TurnClaim = { token: string; at: string };
+
 export const sessions = pgTable(
   "session",
   {
@@ -86,15 +101,35 @@ export const sessions = pgTable(
       .notNull()
       .references(() => scenarios.id),
     personaId: text("persona_id").notNull(),
-    status: text("status", { enum: ["interviewing"] }).notNull().default("interviewing"),
+    status: text("status", { enum: SESSION_STATUSES }).notNull().default("interviewing"),
     isDemo: boolean("is_demo").notNull().default(false),
+    /** Set by "Kết thúc buổi" or by turn 30. No turn is written after it. */
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    turnClaim: jsonb("turn_claim").$type<TurnClaim>(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    // FR-5: one session per persona per learner; demo accounts are exempt.
-    uniqueIndex("session_user_persona_key").on(table.userId, table.personaId).where(sql`${table.isDemo} = false`),
+    // FR-5: one session per persona per learner. Demo accounts are exempt, and a withdrawn
+    // session does not count, so the learner can start again when the persona returns.
+    uniqueIndex("session_user_persona_key")
+      .on(table.userId, table.personaId)
+      .where(sql`${table.isDemo} = false AND ${table.status} <> 'withdrawn'`),
   ],
+);
+
+/** A line of play inside a session: the main interview, and later one replay. */
+export const branches = pgTable(
+  "branch",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["main", "replay"] }).notNull(),
+    createdAt,
+  },
+  (table) => [uniqueIndex("branch_session_main_key").on(table.sessionId).where(sql`${table.kind} = 'main'`)],
 );
 
 export const turns = pgTable(
@@ -103,14 +138,59 @@ export const turns = pgTable(
     sessionId: uuid("session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "cascade" }),
     /** Turn 0 is the persona's opening line and has no learner text. */
     index: integer("index").notNull(),
+    /** Chosen by the browser for one question, so a resend finds the turn it already wrote. */
+    turnKey: uuid("turn_key"),
     learnerText: text("learner_text"),
+    /** Whitespace tokens of the line, numbered from 0; quotes are cut by these indexes. */
+    learnerTokens: jsonb("learner_tokens").$type<string[]>(),
     personaText: text("persona_text").notNull(),
+    personaTokens: jsonb("persona_tokens").$type<string[]>().notNull(),
+    /** Call 1 output as returned, before any check. */
+    analysisJson: jsonb("analysis_json").$type<RawAnalysis>(),
+    /** What code made of it: checked analysis, corrections, rules run, item opened, openness. */
+    decisionJson: jsonb("decision_json").$type<TurnDecision>(),
+    /** Verdict about this persona turn. Written in the transaction of the next turn. */
+    verdictJson: jsonb("verdict_json").$type<Verdict>(),
+    /** Item whose hook the persona was asked to drop in this turn. */
+    hookSelected: text("hook_selected"),
+    /** True when the verdict found a do-not-assert violation in this persona turn. */
+    flagged: boolean("flagged").notNull().default(false),
     latencyMs: integer("latency_ms"),
     createdAt,
   },
-  (table) => [primaryKey({ columns: [table.sessionId, table.index] })],
+  (table) => [
+    primaryKey({ columns: [table.branchId, table.index] }),
+    unique("turn_session_turn_key_key").on(table.sessionId, table.turnKey),
+    index("turn_session_idx").on(table.sessionId),
+  ],
+);
+
+/**
+ * Engine state after each turn. Append-only, with one exception: `ledger` and `disclosed` of
+ * snapshot t are updated once, by the verdict that arrives in the transaction of turn t+1.
+ */
+export const snapshots = pgTable(
+  "snapshot",
+  {
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "cascade" }),
+    index: integer("index").notNull(),
+    unlocked: jsonb("unlocked").$type<UnlockedItem[]>().notNull(),
+    ledger: jsonb("ledger").$type<HookEntry[]>().notNull(),
+    disclosed: jsonb("disclosed").$type<UnlockedItem[]>().notNull(),
+    openness: integer("openness").notNull(),
+    createdAt,
+  },
+  (table) => [primaryKey({ columns: [table.branchId, table.index] }), index("snapshot_session_idx").on(table.sessionId)],
 );
 
 /** Payload per kind of action a learner can start before sign-in or consent. */
@@ -139,6 +219,8 @@ export const llmCalls = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     scope: text("scope", { enum: LLM_SCOPES }).notNull(),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    /** The turn the call belongs to, so the calls of one turn can be counted. */
+    turnIndex: integer("turn_index"),
     attemptId: uuid("attempt_id"),
     role: text("role").notNull(),
     model: text("model").notNull(),
@@ -169,3 +251,36 @@ export const dailySpend = pgTable(
   },
   (table) => [primaryKey({ columns: [table.day, table.scope] })],
 );
+
+/** FR-38 events, written by the server only. Demo sessions write none. */
+export const events = pgTable(
+  "event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    props: jsonb("props").$type<Record<string, unknown>>().notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("event_name_at_idx").on(table.name, table.at)],
+);
+
+/** Operator settings changed with `pnpm il config set`. A missing row means the default in code. */
+export const config = pgTable("config", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One row each time an operator opens learner data. Rows outlive the data they point at. */
+export const adminAccessLog = pgTable("admin_access_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  adminEmail: text("admin_email").notNull(),
+  channel: text("channel", { enum: ["console", "cli"] }).notNull(),
+  sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+});

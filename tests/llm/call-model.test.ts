@@ -164,6 +164,69 @@ describe("callModel", () => {
     expect(calls).toHaveLength(1);
   });
 
+  describe("streamed text", () => {
+    const stream = (deps: Partial<CallModelDeps>, pieces: string[]) =>
+      callModel("PERSONA", messages, { ...options, onDelta: (text) => pieces.push(text) }, deps);
+
+    it("hands over each piece as it arrives and returns the whole reply with its usage", async () => {
+      const { deps, records } = harness([{ text: "Chị hay ghi vào sổ tay.", usage: { input: 800, output: 30, cached: 200 } }]);
+      const pieces: string[] = [];
+
+      const result = await stream(deps, pieces);
+
+      expect(pieces).toEqual(["Chị ", "hay ", "ghi ", "vào ", "sổ ", "tay."]);
+      expect(result.output).toBe("Chị hay ghi vào sổ tay.");
+      expect(result.usage).toEqual({ inputTokens: 800, cachedInputTokens: 200, outputTokens: 30, reasoningTokens: 0 });
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({ ok: true, attempt: 1, tokensIn: 800, tokensOut: 30, tokensCached: 200 });
+    });
+
+    it("retries a failure that happens before the first piece", async () => {
+      const { deps, records } = harness([{ error: new Error("503") }, { text: "lần hai" }]);
+      const pieces: string[] = [];
+
+      const result = await stream(deps, pieces);
+
+      expect(result.output).toBe("lần hai");
+      expect(result.attempts).toBe(2);
+      expect(pieces.join("")).toBe("lần hai");
+      expect(records.map((record) => record.ok)).toEqual([false, true]);
+    });
+
+    it("does not retry once a piece was handed over: the reader never gets a second beginning", async () => {
+      const { deps, records, calls } = harness([{ text: "một hai ba bốn", failAfterChunks: 2 }, { text: "không dùng" }]);
+      const pieces: string[] = [];
+
+      await expect(stream(deps, pieces)).rejects.toMatchObject({ name: "LlmCallError", attempts: 1 });
+
+      expect(pieces).toEqual(["một ", "hai "]);
+      expect(calls).toHaveLength(1);
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({ ok: false, attempt: 1 });
+    });
+
+    it("treats a stream with no text as an empty reply: a costed failure, then a retry", async () => {
+      const { deps, records } = harness([{ text: "", usage: { input: 300, output: 2 } }, { text: "có chữ" }]);
+      const pieces: string[] = [];
+
+      expect((await stream(deps, pieces)).output).toBe("có chữ");
+      expect(records[0]).toMatchObject({ ok: false, tokensIn: 300 });
+      expect(records[0].costUsd).toBeGreaterThan(0);
+    });
+
+    it("does not stream when no listener is given", async () => {
+      const { deps, calls } = harness([{ text: "một lần" }]);
+      expect((await callModel("PERSONA", messages, options, deps)).output).toBe("một lần");
+      expect(calls).toHaveLength(1);
+    });
+  });
+
+  it("records the turn a call belongs to", async () => {
+    const { deps, records } = harness([{ text: "ok" }]);
+    await callModel("PERSONA", messages, { ...options, scope: { ...options.scope, turnIndex: 7 } }, deps);
+    expect(records[0].turnIndex).toBe(7);
+  });
+
   describe("structured output", () => {
     const schema = z.object({ label: z.enum(["open", "closed"]), turn: z.number().nullable() });
 

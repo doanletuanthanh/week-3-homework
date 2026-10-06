@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseRoleSpec } from "@/llm/roles";
+import { parseRoleSpec, ROLES } from "@/llm/roles";
 import { hasPrice } from "@/llm/pricing";
 
 /** Comma-separated emails, lower-cased so every comparison is case-insensitive. */
@@ -41,7 +41,9 @@ const envSchema = z
     DATABASE_URL: z.string().min(1),
     ADMIN_EMAILS: emailList,
     DEMO_ACCOUNT_EMAILS: emailList,
+    LLM_ANALYSIS: roleSpec,
     LLM_PERSONA: roleSpec,
+    LLM_REPLAY_JUDGE: roleSpec,
     GOOGLE_API_KEY: optionalKey,
     OPENAI_API_KEY: optionalKey,
     LANGSMITH_TRACING: z.string().optional(),
@@ -59,13 +61,15 @@ const envSchema = z
     }
 
     const keyByProvider = { google: "GOOGLE_API_KEY", openai: "OPENAI_API_KEY" } as const;
-    const personaKey = keyByProvider[env.LLM_PERSONA.provider];
-    if (!env[personaKey]) {
-      ctx.addIssue({
-        code: "custom",
-        path: [personaKey],
-        message: `required because LLM_PERSONA uses provider "${env.LLM_PERSONA.provider}"`,
-      });
+    for (const provider of ["google", "openai"] as const) {
+      const users = ROLES.filter((role) => env[`LLM_${role}`].provider === provider).map((role) => `LLM_${role}`);
+      if (users.length > 0 && !env[keyByProvider[provider]]) {
+        ctx.addIssue({
+          code: "custom",
+          path: [keyByProvider[provider]],
+          message: `required because ${users.join(", ")} ${users.length > 1 ? "use" : "uses"} provider "${provider}"`,
+        });
+      }
     }
 
     if (env.LANGSMITH_TRACING === "true" && !env.LANGSMITH_API_KEY) {

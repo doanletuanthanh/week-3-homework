@@ -1,10 +1,10 @@
 /**
- * Wraps untrusted text (learner input, later scenario fields) so a prompt can refer to it as
- * data. A closing tag inside the text is neutralised so the text cannot end its own block.
+ * Wraps untrusted text (learner input, scenario fields) so a prompt can refer to it as data.
+ * Every closing tag inside the text is neutralised, so the text can neither end its own block
+ * nor pass for the end of another one.
  */
 export function dataBlock(tag: string, text: string): string {
-  const closing = new RegExp(`</\\s*${tag}\\s*>`, "gi");
-  return `<${tag}>\n${text.replace(closing, `<\\/${tag}>`)}\n</${tag}>`;
+  return `<${tag}>\n${text.replace(/<\s*\/\s*([\p{L}\p{N}_-]+)\s*>/gu, "<\\/$1>")}\n</${tag}>`;
 }
 
 /** The rule every prompt that contains a data block states once, in its fixed part. */

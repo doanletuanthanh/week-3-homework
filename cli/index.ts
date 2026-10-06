@@ -1,7 +1,10 @@
 import { config } from "dotenv";
 import type { Database } from "@/db/client";
+import { configCommand } from "./commands/config";
 import { importCommand } from "./commands/import-scenario";
+import { traceCommand } from "./commands/trace";
 import { validateCommand } from "./commands/validate";
+import { operatorEmail } from "./operator";
 import type { CliIo, Command } from "./scenario-file";
 
 config({ path: ".env.local", quiet: true });
@@ -23,6 +26,8 @@ async function main(): Promise<number> {
       connected ? (topicId, personaId) => listOtherPersonaTags(connected, topicId, personaId) : undefined,
     ),
     import: importCommand(connected),
+    config: configCommand(connected, operatorEmail),
+    trace: traceCommand(connected, operatorEmail),
   };
 
   const [name, ...args] = process.argv.slice(2);
@@ -31,7 +36,7 @@ async function main(): Promise<number> {
     const askedForHelp = name === undefined || name === "help" || name === "--help";
     if (!askedForHelp) io.err(`Không có lệnh "${name}".`);
     io.out("Cách dùng: pnpm il <lệnh>");
-    for (const entry of Object.values(commands)) io.out(`  ${entry.usage.padEnd(18)} ${entry.summary}`);
+    for (const entry of Object.values(commands)) io.out(`  ${entry.usage.padEnd(24)} ${entry.summary}`);
     return askedForHelp ? 0 : 1;
   }
   return command.run(args, io);

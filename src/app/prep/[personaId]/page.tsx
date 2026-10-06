@@ -1,20 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRightIcon, CheckIcon, ChevronRightIcon, CrossIcon, GoogleIcon, LockIcon, WarningIcon } from "@/components/icons";
+import { AlertIcon, ArrowRightIcon, CheckIcon, ChevronRightIcon, CrossIcon, GoogleIcon, LockIcon, WarningIcon } from "@/components/icons";
 import { PersonaAvatar } from "@/components/persona-avatar";
 import { getDb } from "@/db/client";
-import { findSessionForPersona, getScenarioByPersona } from "@/db/repo/sessions";
+import { getConfig } from "@/db/repo/config";
+import { findSessionForPersona, getPlayableScenario, getScenarioByPersona } from "@/db/repo/sessions";
 import { personaCard } from "@/scenario/persona-card";
 import { startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
+import { PERSONA_BEING_UPDATED, SESSION_CAP_REACHED } from "@/strings/product-strings";
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
 /** Màn 3 · Chuẩn bị. Guests can read it; "Bắt đầu" asks for sign-in and the data notice first. */
-export default async function PrepPage({ params }: { params: Promise<{ personaId: string }> }) {
+export default async function PrepPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ personaId: string }>;
+  searchParams: Promise<{ blocked?: string }>;
+}) {
   const { personaId } = await params;
+  const capReached = (await searchParams).blocked === "cap";
   const db = getDb();
-  const found = await getScenarioByPersona(db, personaId);
+  // The card shows the version a new session would start on; when none can be played, the newest one.
+  const playable = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"));
+  const found = playable ?? (await getScenarioByPersona(db, personaId));
   if (!found) notFound();
 
   const persona = personaCard(found.scenario.content);
@@ -104,12 +115,24 @@ export default async function PrepPage({ params }: { params: Promise<{ personaId
             </div>
           </div>
 
+          {capReached && !session && (
+            <p className="ferr" role="alert">
+              <AlertIcon size={16} />
+              {SESSION_CAP_REACHED}
+            </p>
+          )}
+          {!playable && !session && (
+            <p className="ferr" role="alert">
+              <AlertIcon size={16} />
+              {PERSONA_BEING_UPDATED}
+            </p>
+          )}
           {session ? (
             <Link className="btn btn-primary btn-lg prep-start" href={`/sessions/${session.id}`}>
               Tiếp tục buổi luyện
               <ArrowRightIcon />
             </Link>
-          ) : (
+          ) : !playable ? null : (
             <form action={startSession}>
               <input type="hidden" name="personaId" value={personaId} />
               <button type="submit" className="btn btn-primary btn-lg prep-start">

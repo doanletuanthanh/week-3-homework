@@ -35,7 +35,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 |---|-------|--------|------------|--------|
 | 1 | [Walking skeleton](./phase-01-start.md) | In progress: code and local tests done; deploy and latency open | — | 2d |
 | 2 | [Scenario schema, validate, first persona](./phase-02-scenario-schema-validate-and-first-persona.md) | In review: code and tests done; persona content awaits user review | 1 | 2.5d |
-| 3 | [Turn engine](./phase-03-turn-engine.md) | Pending | 2 | 5d |
+| 3 | [Turn engine](./phase-03-turn-engine.md) | In review: code and tests done; run with real models open | 2 | 5d |
 | 4 | [Eval harness and operator CLI](./phase-04-eval-harness-and-operator-cli.md) | Pending | 3 | 5d |
 | 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | Pending | 3 | 2.5d |
 | 6 | [Reveal pipeline and screen](./phase-06-reveal-pipeline-and-screen.md) | Pending | 5 | 6d |

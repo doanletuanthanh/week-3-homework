@@ -11,11 +11,10 @@ import { getFirstPersonaId, getScenarioByPersona } from "@/db/repo/sessions";
 import * as schema from "@/db/schema";
 import { scenarios, topics } from "@/db/schema";
 import type { Scenario, TopicFile } from "@/scenario/schema";
-import { openSession } from "@/server/sessions";
 import { importScenarioFile, runImport } from "../../cli/commands/import-scenario";
 import { LOCAL_DATABASE_URL } from "../helpers/local-stack";
 import { CHI_THU_FILE, readChiThu } from "../helpers/sealed-strings";
-import { PERSONA_ID, createLearner, resetDatabase } from "../helpers/test-db";
+import { PERSONA_ID, createLearner, resetDatabase, startSession } from "../helpers/test-db";
 
 const TOPIC: TopicFile = {
   id: "ux-chi-tieu",
@@ -77,10 +76,10 @@ describe("import: the chị Thu file", () => {
     expect(await getFirstPersonaId(getDb())).toBe(PERSONA_ID);
 
     const learner = await createLearner("linh@example.com");
-    const session = await openSession(getDb(), learner, PERSONA_ID);
+    const session = await startSession(learner);
 
     const [row] = await versions();
-    expect(session!.scenarioId).toBe(row.id);
+    expect(session.scenarioId).toBe(row.id);
   });
 });
 
@@ -125,16 +124,16 @@ describe("import: versions", () => {
 
   it("serves the newest version to new sessions and keeps a running session on its own version", async () => {
     const learner = await createLearner("linh@example.com");
-    const session = await openSession(getDb(), learner, PERSONA_ID);
+    const session = await startSession(learner);
 
     await importScenarioFile(getDb(), CHI_THU_FILE);
 
     const [first, second] = await versions();
     expect((await getScenarioByPersona(getDb(), PERSONA_ID))!.scenario.id).toBe(second.id);
-    expect((await openSession(getDb(), learner, PERSONA_ID))!.scenarioId).toBe(first.id);
-    expect(session!.scenarioId).toBe(first.id);
-    const other = await openSession(getDb(), await createLearner("minh@example.com"), PERSONA_ID);
-    expect(other!.scenarioId).toBe(second.id);
+    expect((await startSession(learner)).scenarioId).toBe(first.id);
+    expect(session.scenarioId).toBe(first.id);
+    const other = await startSession(await createLearner("minh@example.com"));
+    expect(other.scenarioId).toBe(second.id);
   });
 
   it("gives parallel imports of one persona consecutive versions", async () => {

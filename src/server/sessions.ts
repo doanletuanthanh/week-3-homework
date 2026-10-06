@@ -1,21 +1,49 @@
 import type { Database } from "@/db/client";
-import { createSession, findSessionForPersona, getScenarioByPersona, type SessionRow } from "@/db/repo/sessions";
+import { getConfig } from "@/db/repo/config";
+import { createSession, findSessionForPersona, getPlayableScenario, type SessionRow } from "@/db/repo/sessions";
 import type { AppUser } from "./auth";
+import { canStartSession } from "./cost-cap";
+import { recordEvent } from "./events";
+
+/** Where the learner goes after asking for a session; the prep screen explains a refusal. */
+export function sessionEntryPath(result: OpenSessionResult, personaId: string): string {
+  if (result.ok) return `/sessions/${result.session.id}`;
+  return result.reason === "cap_reached" ? `/prep/${encodeURIComponent(personaId)}?blocked=cap` : "/";
+}
+
+export type OpenSessionResult =
+  | { ok: true; session: SessionRow }
+  /** `cap_reached`: today's session budget is spent, so no new session starts (FR-37). */
+  | { ok: false; reason: "not_found" | "cap_reached" };
 
 /**
- * Starts the learner's session with a persona, or returns the one they already have. Demo
- * accounts always get a new session. Returns null when the persona does not exist.
+ * Starts the learner's session with a persona, or returns the one they already have ("Tiếp tục").
+ * Demo accounts always get a new session. An existing session is returned whatever the cost cap
+ * says: the cap only blocks new sessions.
  *
- * Unpublished personas are playable by every learner (accepted plan deviation), so there is no
- * publish check here.
+ * Unpublished personas are playable by every learner (accepted plan deviation) until the
+ * `require_published` config row is turned on.
  */
-export async function openSession(db: Database, user: AppUser, personaId: string): Promise<SessionRow | null> {
-  const found = await getScenarioByPersona(db, personaId);
-  if (!found) return null;
-
+export async function openSession(db: Database, user: AppUser, personaId: string): Promise<OpenSessionResult> {
   if (!user.isDemo) {
     const existing = await findSessionForPersona(db, user.id, personaId);
-    if (existing) return existing;
+    if (existing) return { ok: true, session: existing };
   }
-  return createSession(db, { userId: user.id, scenario: found.scenario, isDemo: user.isDemo });
+
+  const found = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"));
+  if (!found) return { ok: false, reason: "not_found" };
+  if (!(await canStartSession(db, user.isDemo))) return { ok: false, reason: "cap_reached" };
+
+  const { scenario } = found;
+  const { session } = await createSession(db, { userId: user.id, scenario, isDemo: user.isDemo }, (tx, created) =>
+    recordEvent(
+      tx,
+      { userId: user.id, sessionId: created.id, isDemo: user.isDemo },
+      {
+        name: "session_started",
+        props: { persona_id: scenario.personaId, topic_id: scenario.topicId, kind: "curated", scenario_version: scenario.version },
+      },
+    ),
+  );
+  return { ok: true, session };
 }

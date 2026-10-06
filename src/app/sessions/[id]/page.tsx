@@ -34,6 +34,7 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
       <InterviewChat
         sessionId={id}
         personaName={persona.displayNameCapitalized}
+        ended={found.session.endedAt !== null || found.session.status !== "interviewing"}
         initialTurns={turns.map((turn) => ({
           index: turn.index,
           learnerText: turn.learnerText,

@@ -1,6 +1,6 @@
 import { awaitAllCallbacks } from "@langchain/core/callbacks/promises";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import type { AIMessage, BaseMessage } from "@langchain/core/messages";
+import type { AIMessage, AIMessageChunk, BaseMessage } from "@langchain/core/messages";
 import type { z } from "zod";
 import { getEnv } from "@/config/env";
 import { LLM_ATTEMPT_TIMEOUT_MS, LLM_MAX_RETRIES } from "@/config/limits";
@@ -12,7 +12,7 @@ import { costUsd, ZERO_USAGE, type TokenUsage } from "./pricing";
 import type { Role, RoleSpec } from "./roles";
 
 /** Which budget a call belongs to, and the row it is attributed to. */
-export type CallScope = { scope: LlmScope; sessionId?: string; attemptId?: string };
+export type CallScope = { scope: LlmScope; sessionId?: string; turnIndex?: number; attemptId?: string };
 
 export type CallModelOptions<T> = {
   /** When set, the reply is structured output that must parse with this schema. */
@@ -22,6 +22,11 @@ export type CallModelOptions<T> = {
   scope: CallScope;
   /** Caller cancellation. An aborted call is recorded but not retried. */
   signal?: AbortSignal;
+  /**
+   * Text replies only: receives the reply piece by piece as the provider sends it. Once a piece
+   * has been handed over, a failure is final: a retry would send the reader a second beginning.
+   */
+  onDelta?: (text: string) => void;
 };
 
 export type CallModelResult<T> = {
@@ -95,7 +100,8 @@ function isRetryable(error: unknown): boolean {
 /**
  * The single entry point for model calls. Resolves the role to provider, model and effort from
  * env, applies a per-attempt timeout, retries technical failures, writes one `llm_call` row per
- * attempt (success or failure) as it returns, and flushes tracing before resolving.
+ * attempt (success or failure) as it returns, and flushes tracing before resolving. With
+ * `onDelta` the reply is streamed; a technical retry is then possible only before the first piece.
  */
 export async function callModel(
   role: Role,
@@ -118,7 +124,8 @@ export async function callModel<T>(
   const deps = { ...defaultDeps, ...depsOverride };
   const spec = deps.roleSpec(role);
   const model = deps.createModel(spec);
-  const { schema, scope, signal } = options;
+  const { schema, scope, signal, onDelta } = options;
+  let deltaSent = false;
   const runConfig = {
     runName: role,
     tags: [`call:${role.toLowerCase()}`],
@@ -135,9 +142,24 @@ export async function callModel<T>(
       if (!checked.success) throw new BilledAttemptError("structured output failed validation", usage);
       return { output: checked.data, usage };
     }
-    const message = (await model.invoke(messages, config)) as AIMessage;
-    const usage = readUsage(message);
-    const text = message.text.trim();
+    if (!onDelta) {
+      const message = (await model.invoke(messages, config)) as AIMessage;
+      const usage = readUsage(message);
+      const text = message.text.trim();
+      if (!text) throw new BilledAttemptError("model returned an empty reply", usage);
+      return { output: text, usage };
+    }
+
+    let whole: AIMessageChunk | undefined;
+    for await (const chunk of await model.stream(messages, config)) {
+      whole = whole ? whole.concat(chunk) : chunk;
+      if (chunk.text) {
+        deltaSent = true;
+        onDelta(chunk.text);
+      }
+    }
+    const usage = readUsage(whole);
+    const text = whole?.text.trim() ?? "";
     if (!text) throw new BilledAttemptError("model returned an empty reply", usage);
     return { output: text, usage };
   };
@@ -155,6 +177,7 @@ export async function callModel<T>(
           .recordCall({
             scope: scope.scope,
             sessionId: scope.sessionId,
+            turnIndex: scope.turnIndex,
             attemptId: scope.attemptId,
             role,
             model: spec.model,
@@ -184,7 +207,7 @@ export async function callModel<T>(
         return { output: result.output, usage: result.usage, costUsd: cost, latencyMs, attempts: attempt };
       }
       await record(false, lastError instanceof BilledAttemptError ? lastError.usage : ZERO_USAGE);
-      if (signal?.aborted || !isRetryable(lastError)) throw new LlmCallError(role, attempt, lastError);
+      if (signal?.aborted || deltaSent || !isRetryable(lastError)) throw new LlmCallError(role, attempt, lastError);
     }
     throw new LlmCallError(role, LLM_MAX_RETRIES + 1, lastError);
   } finally {

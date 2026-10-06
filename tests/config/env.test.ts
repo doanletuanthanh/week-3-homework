@@ -7,7 +7,9 @@ const valid = {
   DATABASE_URL: "postgresql://app@db/postgres",
   ADMIN_EMAILS: "admin@example.com",
   DEMO_ACCOUNT_EMAILS: "demo@example.com",
+  LLM_ANALYSIS: "google:gemini-3.8-flash:low",
   LLM_PERSONA: "google:gemini-3.8-flash:low",
+  LLM_REPLAY_JUDGE: "google:gemini-3.5-flash-lite:low",
   GOOGLE_API_KEY: "g-key",
 };
 
@@ -70,6 +72,26 @@ describe("parseEnv", () => {
   });
 
   it("reports every problem in one error", () => {
-    expect(() => parseEnv({})).toThrow(/NEXT_PUBLIC_SUPABASE_URL[\s\S]*DATABASE_URL[\s\S]*LLM_PERSONA/);
+    expect(() => parseEnv({})).toThrow(/NEXT_PUBLIC_SUPABASE_URL[\s\S]*DATABASE_URL[\s\S]*LLM_ANALYSIS[\s\S]*LLM_PERSONA[\s\S]*LLM_REPLAY_JUDGE/);
+  });
+
+  it("requires one role variable per call role", () => {
+    expect(() => parseEnv({ ...valid, LLM_ANALYSIS: undefined })).toThrow(/LLM_ANALYSIS/);
+    expect(() => parseEnv({ ...valid, LLM_REPLAY_JUDGE: undefined })).toThrow(/LLM_REPLAY_JUDGE/);
+    const env = parseEnv(valid);
+    expect(env.LLM_ANALYSIS).toEqual({ provider: "google", model: "gemini-3.8-flash", effort: "low" });
+    expect(env.LLM_REPLAY_JUDGE).toEqual({ provider: "google", model: "gemini-3.5-flash-lite", effort: "low" });
+  });
+
+  it("requires the key of every provider any role uses, and names the roles that need it", () => {
+    const mixed = { ...valid, LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low" };
+    expect(() => parseEnv(mixed)).toThrow(/OPENAI_API_KEY: required because LLM_REPLAY_JUDGE uses provider "openai"/);
+    expect(() => parseEnv({ ...mixed, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).toThrow(
+      /GOOGLE_API_KEY: required because LLM_ANALYSIS, LLM_PERSONA use provider "google"/,
+    );
+    expect(() => parseEnv({ ...mixed, OPENAI_API_KEY: "o-key" })).not.toThrow();
+    // No role on Google: its key is not needed.
+    const allOpenAi = { ...valid, LLM_ANALYSIS: "openai:gpt-6-luna:low", LLM_PERSONA: "openai:gpt-6-luna:low", LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low" };
+    expect(() => parseEnv({ ...allOpenAi, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).not.toThrow();
   });
 });

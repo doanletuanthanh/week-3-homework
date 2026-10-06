@@ -4,7 +4,7 @@ import { getDb } from "@/db/client";
 import { consumePendingAction, createPendingAction } from "@/db/repo/pending-actions";
 import type { PendingActionPayload } from "@/db/schema";
 import type { AppUser } from "./auth";
-import { openSession } from "./sessions";
+import { openSession, sessionEntryPath } from "./sessions";
 import { isUuid } from "./uuid";
 
 const COOKIE = "il_pending";
@@ -41,8 +41,8 @@ export async function resumePendingAction(user: AppUser): Promise<string | null>
 
   switch (payload.kind) {
     case "start_session": {
-      const session = await openSession(db, user, payload.personaId);
-      return session ? `/sessions/${session.id}` : null;
+      const result = await openSession(db, user, payload.personaId);
+      return result.ok || result.reason === "cap_reached" ? sessionEntryPath(result, payload.personaId) : null;
     }
   }
 }
