@@ -48,4 +48,7 @@ export const db = {
     await getDb().update(scenarios).set({ status: "draft", interimGate: false });
   },
   endSession: (sessionId: string) => getDb().update(sessions).set({ endedAt: sql`now()` }).where(eq(sessions.id, sessionId)),
+  /** Puts a session in a state later screens will give it, so the screens that exist can be checked against it. */
+  setSessionStatus: (sessionId: string, status: (typeof sessions.$inferSelect)["status"]) =>
+    getDb().update(sessions).set({ status }).where(eq(sessions.id, sessionId)),
 };

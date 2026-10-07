@@ -98,7 +98,7 @@ test.describe("turn engine, end to end", () => {
     expect((await db.turnsOf(sessionId))[1].decisionJson).toMatchObject({ analysis: { label: "leading", introduced_span: [4, 8] }, unlockedItemId: null });
     // Nothing the app shows says so. (The learner's own bubble is left out: in this test it carries the stub marker.)
     await expect(page.locator("main [role=alert]")).toHaveCount(0);
-    const shown = (await page.locator(".chat-p, [role=status], .interview-who").allInnerTexts()).join("\n").toLowerCase();
+    const shown = (await page.locator(".chat-p, [role=status], .sbar").allInnerTexts()).join("\n").toLowerCase();
     expect(shown).toContain("chị trả lời câu thứ 1");
     for (const word of ["leading", "dẫn dắt", "openness", "nhãn", "tự thêm"]) expect(shown).not.toContain(word);
   });
@@ -142,7 +142,7 @@ test.describe("turn engine, end to end", () => {
     expect(findSealed(await pageHtml(), scenario)).toEqual([]);
 
     await page.reload();
-    await expect(page.getByText("Chị trả lời câu thứ 2")).toBeVisible();
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 2" })).toBeVisible();
     await expect(page.getByText("Chị kể hết đi ạ")).toBeVisible();
     const html = await pageHtml();
     expect(findSealed(html, scenario)).toEqual([]);

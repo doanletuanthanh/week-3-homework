@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertIcon, ArrowRightIcon, CheckIcon, ChevronRightIcon, CrossIcon, GoogleIcon, LockIcon, WarningIcon } from "@/components/icons";
+import { AlertIcon, ArrowRightIcon, CheckIcon, ChevronRightIcon, CrossIcon, GoogleIcon, LockIcon, NoteIcon, WarningIcon } from "@/components/icons";
 import { PersonaAvatar } from "@/components/persona-avatar";
+import { StartSessionButton } from "@/components/start-session-button";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
 import { findSessionForPersona, getPlayableScenario, getScenarioByPersona } from "@/db/repo/sessions";
@@ -12,6 +13,9 @@ import { PERSONA_BEING_UPDATED, SESSION_CAP_REACHED } from "@/strings/product-st
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
+/** The standard error (PRD §6.0), shown when creating the session failed. Nothing was created. */
+const SESSION_START_FAILED = "Không kết nối được. Thử lại.";
+
 /** Màn 3 · Chuẩn bị. Guests can read it; "Bắt đầu" asks for sign-in and the data notice first. */
 export default async function PrepPage({
   params,
@@ -21,7 +25,7 @@ export default async function PrepPage({
   searchParams: Promise<{ blocked?: string }>;
 }) {
   const { personaId } = await params;
-  const capReached = (await searchParams).blocked === "cap";
+  const { blocked } = await searchParams;
   const db = getDb();
   // The card shows the version a new session would start on; when none can be played, the newest one.
   const playable = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"));
@@ -115,10 +119,27 @@ export default async function PrepPage({
             </div>
           </div>
 
-          {capReached && !session && (
+          <div className="cv-intro">
+            <NoteIcon className="c-secondary" />
+            <div>
+              <p className="label-lg">Ghi chú trong buổi</p>
+              <p className="body-sm c-variant">
+                Ghi lại điều bạn thấy quan trọng trong lúc nghe. Cuối buổi, chúng tôi đối chiếu ghi chú với những gì {persona.displayName} đã
+                nói. Ghi chú là tùy chọn.
+              </p>
+            </div>
+          </div>
+
+          {blocked === "cap" && !session && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {SESSION_CAP_REACHED}
+            </p>
+          )}
+          {blocked === "error" && !session && (
+            <p className="ferr" role="alert">
+              <AlertIcon size={16} />
+              {SESSION_START_FAILED}
             </p>
           )}
           {!playable && !session && (
@@ -128,17 +149,19 @@ export default async function PrepPage({
             </p>
           )}
           {session ? (
+            // One session per persona: the button follows its state, and its URL shows the right screen.
             <Link className="btn btn-primary btn-lg prep-start" href={`/sessions/${session.id}`}>
-              Tiếp tục buổi luyện
+              {session.status === "done" ? "Xem lại kết quả" : "Tiếp tục buổi luyện"}
               <ArrowRightIcon />
             </Link>
-          ) : !playable ? null : (
+          ) : !playable ? (
+            <Link className="btn btn-tonal btn-lg prep-start" href="/">
+              Về trang chủ
+            </Link>
+          ) : (
             <form action={startSession}>
               <input type="hidden" name="personaId" value={personaId} />
-              <button type="submit" className="btn btn-primary btn-lg prep-start">
-                Bắt đầu
-                <ArrowRightIcon />
-              </button>
+              <StartSessionButton />
             </form>
           )}
           {!user && (

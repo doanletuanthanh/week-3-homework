@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MAX_QUESTION_CHARS, MAX_TURNS, TURN_TIME_BUDGET_MS } from "@/config/limits";
 import type { Database } from "@/db/client";
+import type { DeviceClass } from "@/db/schema";
 import { claimTurn, findTurnByKey, releaseClaim, type ClaimRefusal } from "@/db/repo/turns";
 import { runTurnGraph, type TurnGraphResult } from "@/graphs/turn-graph";
 import { LlmCallError, type CallModelDeps } from "@/llm/call-model";
@@ -31,6 +32,8 @@ export type TurnResult = { ok: true; personaText: string; turnIndex: number } | 
 export type RunTurnOptions = {
   /** Receives the persona reply while it is generated. Not called for a stored reply. */
   onPersonaDelta?: (text: string) => void;
+  /** The screen the question was asked on, as the browser reported it. Kept from the first turn that has it. */
+  deviceClass?: DeviceClass;
   llmDeps?: Partial<CallModelDeps>;
   /** How long both model calls may take together. Tests shorten it. */
   timeBudgetMs?: number;
@@ -65,7 +68,7 @@ export async function runTurn(
   const already = await stored();
   if (already) return { ok: true, personaText: already.personaText, turnIndex: already.index };
 
-  const claimed = await claimTurn(db, { userId: user.id, sessionId, expectedIndex });
+  const claimed = await claimTurn(db, { userId: user.id, sessionId, expectedIndex, deviceClass: options.deviceClass });
   if (!claimed.ok) {
     // The first send may have been committed between the lookup above and the claim.
     const justStored = claimed.reason === "not_found" ? null : await stored();

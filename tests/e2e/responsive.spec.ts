@@ -30,7 +30,7 @@ test.describe("layout at this viewport", () => {
 
     await page.getByLabel("Câu hỏi của bạn").fill("Một câu hỏi đủ dài để kiểm tra việc xuống dòng trên màn hình hẹp, không có khoảng trắng: " + "a".repeat(120));
     await page.getByRole("button", { name: "Gửi" }).click();
-    await expect(page.getByText("Chị trả lời câu thứ 1")).toBeVisible();
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 1" })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 });

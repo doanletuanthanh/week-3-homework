@@ -15,7 +15,7 @@ async function startInterview(page: Page, context: BrowserContext, label: string
   return { userId, sessionId };
 }
 
-const NOT_ANSWERED = "Chưa nhận được câu trả lời";
+const NOT_ANSWERED = "Chị Thu chưa nghe rõ. Gửi lại câu hỏi.";
 
 test.describe("interview", () => {
   test("a question gets a persona reply; the turn, its analysis and both model calls are stored", async ({ page, context }) => {
@@ -61,7 +61,7 @@ test.describe("interview", () => {
     await sendButton(page).click();
 
     // First the typing line, then a growing reply that is not yet a turn.
-    await expect(page.getByRole("status").filter({ hasText: "Chị Thu đang trả lời…" })).toBeVisible();
+    await expect(page.locator(".typing").filter({ hasText: "Chị Thu đang gõ…" })).toBeVisible();
     const streaming = page.locator("[data-streaming] .bubble-p");
     await expect(streaming).toContainText("Chị trả lời");
     const partial = (await streaming.textContent()) ?? "";
@@ -70,7 +70,7 @@ test.describe("interview", () => {
     expect(await db.turnsOf(sessionId)).toHaveLength(1);
 
     await expect(page.locator("[data-streaming]")).toHaveCount(0);
-    await expect(page.getByText("Chị trả lời câu thứ 1 (trong khối dữ liệu).")).toBeVisible();
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 1 (trong khối dữ liệu)." })).toBeVisible();
     await expect(composer(page)).toBeEnabled();
     expect(await db.turnsOf(sessionId)).toHaveLength(2);
   });
@@ -98,7 +98,7 @@ test.describe("interview", () => {
 
     await expect(page.getByText("Chào em, chị là Thu.")).toBeVisible();
     await expect(page.getByText("Chị hay ăn trưa ở đâu?")).toBeVisible();
-    await expect(page.getByText("Chị trả lời câu thứ 1")).toBeVisible();
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 1" })).toBeVisible();
 
     await ask(page, "Rồi buổi tối thì sao ạ?", 2);
     expect((await db.turnsOf(sessionId)).map((turn) => turn.index)).toEqual([0, 1, 2]);
@@ -339,9 +339,9 @@ test.describe("the end of a session", () => {
     expect(await db.llmCallsOf(sessionId)).toHaveLength(0);
 
     await page.reload();
-    await expect(page.getByText("Buổi luyện đã kết thúc.")).toBeVisible();
-    await expect(composer(page)).toBeDisabled();
-    await expect(sendButton(page)).toBeDisabled();
+    await expect(page.getByRole("heading", { name: "Buổi luyện đã kết thúc." })).toBeVisible();
+    await expect(composer(page)).toHaveCount(0);
+    await expect(sendButton(page)).toHaveCount(0);
   });
 
   test("turn 30 ends the session; turn 31 is refused and the composer closes", async ({ page, context }) => {
@@ -357,10 +357,10 @@ test.describe("the end of a session", () => {
     await page.reload();
     await composer(page).fill("Câu cuối cùng của em ạ");
     await sendButton(page).click();
-    await expect(page.getByText("Chị trả lời câu thứ 30 (trong khối dữ liệu).")).toBeVisible();
-    await expect(page.locator("[data-streaming]")).toHaveCount(0);
-    await expect(page.getByText("Buổi luyện đã kết thúc.")).toBeVisible();
-    await expect(composer(page)).toBeDisabled();
+    // The session ends by itself: the page moves on without the learner pressing anything.
+    await expect(page.getByRole("heading", { name: "Buổi luyện đã kết thúc." })).toBeVisible();
+    await expect(composer(page)).toHaveCount(0);
+    expect((await db.turnsOf(sessionId)).at(-1)).toMatchObject({ index: 30, personaText: "Chị trả lời câu thứ 30 (trong khối dữ liệu)." });
 
     expect((await db.session(sessionId)).endedAt).not.toBeNull();
     const extra = await postTurn(page.request, sessionId, { text: "Câu 31", expectedIndex: 30 });

@@ -9,7 +9,7 @@ import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { getUser, noticePath, requireAckedUser, requireUser } from "./auth";
 import { resumePendingAction, storePendingAction } from "./pending-actions";
 import { safeNextPath } from "./safe-next";
-import { openSession, sessionEntryPath } from "./sessions";
+import { openSession, sessionEntryPath, sessionStartFailedPath, type OpenSessionResult } from "./sessions";
 import { createSupabaseServerClient } from "./supabase";
 
 /** Where a resumed pending action is performed after sign-in and consent. */
@@ -49,7 +49,15 @@ export async function startSession(formData: FormData): Promise<void> {
   const user = await getUser();
 
   if (user?.noticeAcked) {
-    redirect(sessionEntryPath(await openSession(getDb(), user, personaId), personaId));
+    let result: OpenSessionResult;
+    try {
+      result = await openSession(getDb(), user, personaId);
+    } catch (error) {
+      // The session is created in one transaction, so a failure leaves nothing half made.
+      console.error(error);
+      redirect(sessionStartFailedPath(personaId));
+    }
+    redirect(sessionEntryPath(result, personaId));
   }
 
   // A guest can reach this line, so nothing is stored for a persona that does not exist.

@@ -1,11 +1,23 @@
 import { after, NextResponse } from "next/server";
+import { CANVAS_FREEZE_GRACE_MS, MAX_TURNS } from "@/config/limits";
 import { getDb } from "@/db/client";
+import { DEVICE_CLASSES, type DeviceClass } from "@/db/schema";
 import { requireAckedApiUser } from "@/server/auth";
+import { freezeAbandonedCanvas } from "@/server/canvas";
 import { runTurn, type TurnError, type TurnResult } from "@/server/turns";
 import { isUuid } from "@/server/uuid";
 
-// Above the time budget of one turn (110 s), so the turn can still be committed or released.
-export const maxDuration = 150;
+// Above the time budget of one turn (110 s) plus the wait before the notes of a session that
+// turn 30 ended are frozen (60 s), so both still happen inside this request.
+export const maxDuration = 180;
+
+/** The browser reports its screen class in a header (FR-38); anything else is ignored. */
+function deviceClassOf(request: Request): DeviceClass | undefined {
+  const value = request.headers.get("x-device-class");
+  return DEVICE_CLASSES.find((deviceClass) => deviceClass === value);
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const STATUS: Record<TurnError, number> = {
   invalid_input: 400,
@@ -48,6 +60,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const started = new Promise<"stream">((resolve) => (streaming = () => resolve("stream")));
 
   const turn: Promise<TurnResult | { ok: false; error: "server_error" }> = runTurn(getDb(), auth.user, id, body, {
+    deviceClass: deviceClassOf(request),
     onPersonaDelta: (text) => {
       streaming!();
       void send({ type: "delta", text });
@@ -55,6 +68,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }).catch((error: unknown) => {
     console.error(error);
     return { ok: false as const, error: "server_error" as const };
+  });
+
+  // Turn 30 ended the session. The browser follows with the end request carrying the notes as
+  // typed; when it never does, the notes are frozen as last autosaved.
+  after(async () => {
+    const result = await turn;
+    if (!result.ok || result.turnIndex < MAX_TURNS) return;
+    await sleep(CANVAS_FREEZE_GRACE_MS);
+    await freezeAbandonedCanvas(getDb(), id).catch((error: unknown) => console.error(error));
   });
 
   // Whichever comes first: the first piece of the reply, or the whole outcome.

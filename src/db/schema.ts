@@ -88,6 +88,9 @@ export const SESSION_STATUSES = [
   "withdrawn",
 ] as const;
 
+export const DEVICE_CLASSES = ["mobile", "desktop"] as const;
+export type DeviceClass = (typeof DEVICE_CLASSES)[number];
+
 /** Marks the one turn request allowed to call the models for a session right now. */
 export type TurnClaim = { token: string; at: string };
 
@@ -107,6 +110,14 @@ export const sessions = pgTable(
     /** Set by "Kết thúc buổi" or by turn 30. No turn is written after it. */
     endedAt: timestamp("ended_at", { withTimezone: true }),
     turnClaim: jsonb("turn_claim").$type<TurnClaim>(),
+    /** The learner's notes: autosaved while they type, never read by any call of the interview. */
+    canvasText: text("canvas_text").notNull().default(""),
+    /** Whitespace tokens of the frozen notes, numbered from 0. Written once, by the freeze. */
+    canvasTokens: jsonb("canvas_tokens").$type<string[]>(),
+    /** Set when the session ends. The notes cannot change after it. */
+    canvasFrozenAt: timestamp("canvas_frozen_at", { withTimezone: true }),
+    /** Screen the learner asked their first question on: mobile is narrower than 768px. */
+    deviceClass: text("device_class", { enum: DEVICE_CLASSES }),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

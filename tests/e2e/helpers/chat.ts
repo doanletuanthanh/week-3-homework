@@ -8,7 +8,7 @@ export const sendButton = (page: Page) => page.getByRole("button", { name: "Gử
  * it is on screen while it is still streaming, before the turn is written.
  */
 export async function expectReply(page: Page, replyNumber: number) {
-  await expect(page.getByText(`Chị trả lời câu thứ ${replyNumber} (trong khối dữ liệu).`)).toBeVisible();
+  await expect(page.locator(".bubble-p").filter({ hasText: `Chị trả lời câu thứ ${replyNumber} (trong khối dữ liệu).` })).toBeVisible();
   await expect(page.locator("[data-streaming]")).toHaveCount(0);
   await expect(composer(page)).toBeEnabled();
 }

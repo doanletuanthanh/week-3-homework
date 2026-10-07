@@ -2,7 +2,7 @@ import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { MAX_TURNS, TURN_CLAIM_TTL_MS } from "@/config/limits";
 import type { Database, Executor } from "../client";
-import { adminAccessLog, branches, scenarios, sessions, snapshots, turns, type TurnClaim } from "../schema";
+import { adminAccessLog, branches, scenarios, sessions, snapshots, turns, type DeviceClass, type TurnClaim } from "../schema";
 
 type TurnInsert = typeof turns.$inferInsert;
 type SnapshotInsert = typeof snapshots.$inferInsert;
@@ -33,10 +33,11 @@ export type TurnClaimed = {
  * model is called. Refused when the session is not the learner's, is no longer being
  * interviewed, another request holds a fresh claim, or the browser is not at the next index.
  * A claim older than its time to live belongs to a request that died and is taken over.
+ * The first claim that names a device class stores it on the session.
  */
 export async function claimTurn(
   db: Database,
-  input: { userId: string; sessionId: string; expectedIndex: number; now?: Date },
+  input: { userId: string; sessionId: string; expectedIndex: number; deviceClass?: DeviceClass; now?: Date },
 ): Promise<{ ok: true; claim: TurnClaimed } | { ok: false; reason: ClaimRefusal }> {
   const now = input.now ?? new Date();
   return db.transaction(async (tx) => {
@@ -65,7 +66,8 @@ export async function claimTurn(
 
     const [scenario] = await tx.select().from(scenarios).where(eq(scenarios.id, session.scenarioId));
     const claim: TurnClaim = { token: randomUUID(), at: now.toISOString() };
-    await tx.update(sessions).set({ turnClaim: claim }).where(eq(sessions.id, session.id));
+    const deviceClass = session.deviceClass ?? input.deviceClass ?? null;
+    await tx.update(sessions).set({ turnClaim: claim, deviceClass }).where(eq(sessions.id, session.id));
     return { ok: true, claim: { token: claim.token, branchId: last.branchId, turnIndex, isDemo: session.isDemo, scenario } };
   });
 }

@@ -113,3 +113,17 @@ export const ReplayIcon = icon(
   </>,
 );
 export const SendIcon = icon(<path d="M5 12h14M13 6l6 6-6 6" />);
+export const NoteIcon = icon(
+  <>
+    <path d="M6 3.5h9l3.5 3.5v13.5H6z" />
+    <path d="M15 3.5V7h3.5M9 11h6M9 14.5h6M9 18h3.5" />
+  </>,
+);
+export const StopIcon = icon(<rect x="7" y="7" width="10" height="10" rx="1.5" />);
+export const ChevronDownIcon = icon(<path d="M6 9l6 6 6-6" />);
+export const RetryIcon = icon(
+  <>
+    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
+    <path d="M19.5 4.5v4h-4" />
+  </>,
+);

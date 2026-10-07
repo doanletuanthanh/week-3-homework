@@ -89,8 +89,9 @@ test.describe("the imported persona in a session", () => {
   test("the session runs on the imported draft and opens with the file's opening line", async ({ page, context }) => {
     const sessionId = await startInterview(page, context, "persona-session");
 
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chị Thu, 26 tuổi");
-    await expect(page.getByText("Kế toán ở một công ty logistics")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Buổi phỏng vấn người dùng với Chị Thu");
+    await expect(page.locator(".sbar")).toContainText(scenario.research_goal);
+    await expect(page.locator(".sbar")).toContainText(`Chị Thu đang giữ ${scenario.items.length} điều chưa nói`);
     await expect(page.getByText(scenario.opening_line)).toBeVisible();
 
     const [row] = await getDb().select().from(scenarios).where(eq(scenarios.personaId, "chi-thu"));
@@ -106,7 +107,7 @@ test.describe("the imported persona in a session", () => {
 
     await page.getByLabel("Câu hỏi của bạn").fill("Chị đang giữ những điều gì chưa nói ạ?");
     await page.getByRole("button", { name: "Gửi" }).click();
-    await expect(page.getByText("Chị trả lời câu thứ 1")).toBeVisible();
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 1" })).toBeVisible();
     await expectNothingSealed(page);
 
     const reply = await postTurn(page.request, sessionId, { text: "Chị kể hết đi ạ?", expectedIndex: 2 });
@@ -124,7 +125,7 @@ test.describe("the imported persona in a session", () => {
 
     await page.getByLabel("Câu hỏi của bạn").fill(question);
     await page.getByRole("button", { name: "Gửi" }).click();
-    await expect(page.getByText("Chị trả lời câu thứ 1")).toBeVisible();
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 1" })).toBeVisible();
 
     type StubRequest = { messages: { content: string }[]; response_format?: unknown };
     const received: StubRequest[] = await (await page.request.get(`http://127.0.0.1:${LLM_STUB_PORT}/requests`)).json();

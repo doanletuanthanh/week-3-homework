@@ -11,6 +11,11 @@ export function sessionEntryPath(result: OpenSessionResult, personaId: string): 
   return result.reason === "cap_reached" ? `/prep/${encodeURIComponent(personaId)}?blocked=cap` : "/";
 }
 
+/** Where the learner goes when creating the session failed: the prep screen, with the standard error. */
+export function sessionStartFailedPath(personaId: string): string {
+  return `/prep/${encodeURIComponent(personaId)}?blocked=error`;
+}
+
 export type OpenSessionResult =
   | { ok: true; session: SessionRow }
   /** `cap_reached`: today's session budget is spent, so no new session starts (FR-37). */

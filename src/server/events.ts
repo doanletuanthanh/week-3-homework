@@ -1,10 +1,12 @@
 import type { Executor } from "@/db/client";
-import { events } from "@/db/schema";
+import { events, type DeviceClass } from "@/db/schema";
 
 /** FR-38 events this slice writes so far. Later phases add theirs. */
 export type AppEvent =
   | { name: "session_started"; props: { persona_id: string; topic_id: string; kind: "curated"; scenario_version: number } }
-  | { name: "turn"; props: { turn_index: number; latency_ms: number } };
+  | { name: "turn"; props: { turn_index: number; latency_ms: number } }
+  /** Written by the freeze of the notes. `device_class` is null when no question was ever asked. */
+  | { name: "session_ended"; props: { canvas_empty: boolean; device_class: DeviceClass | null } };
 
 /**
  * Writes one event on the server, inside the caller's transaction when given one, so an event

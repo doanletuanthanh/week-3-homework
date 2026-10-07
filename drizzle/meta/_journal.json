@@ -43,6 +43,13 @@
       "when": 1791290068018,
       "tag": "0005_eval-run-failure-reason",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791295766150,
+      "tag": "0006_canvas-and-device-class",
+      "breakpoints": true
     }
   ]
 }
