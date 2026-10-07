@@ -37,7 +37,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 2 | [Scenario schema, validate, first persona](./phase-02-scenario-schema-validate-and-first-persona.md) | In review: code and tests done; persona content awaits user review | 1 | 2.5d |
 | 3 | [Turn engine](./phase-03-turn-engine.md) | In review: code and tests done; run with real models open | 2 | 5d |
 | 4 | [Eval harness and operator CLI](./phase-04-eval-harness-and-operator-cli.md) | In review: code and tests done, quick eval recorded; full run, second adjudicator and hand-labelled sets open | 3 | 5d |
-| 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | Pending | 3 | 2.5d |
+| 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | In review: code and tests done; real phones and a sweep for abandoned sessions open | 3 | 2.5d |
 | 6 | [Reveal pipeline and screen](./phase-06-reveal-pipeline-and-screen.md) | Pending | 5 | 6d |
 | 7 | [Replay](./phase-07-replay.md) | Pending | 6 | 2.5d |
 | 8 | [My sessions, account, system states](./phase-08-my-sessions-account-and-system-states.md) | Pending | 7 | 2.5d |
