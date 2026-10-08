@@ -40,7 +40,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | In review: code and tests done; real phones and a sweep for abandoned sessions open | 3 | 2.5d |
 | 6 | [Reveal pipeline and screen](./phase-06-reveal-pipeline-and-screen.md) | In review: code and tests done; real models, the two hand-labelled sets and measured reveal latency open | 5 | 6d |
 | 7 | [Replay](./phase-07-replay.md) | In review: code and tests done; a full session with real models open | 6 | 2.5d |
-| 8 | [My sessions, account, system states](./phase-08-my-sessions-account-and-system-states.md) | Pending | 7 | 2.5d |
+| 8 | [My sessions, account, system states](./phase-08-my-sessions-account-and-system-states.md) | In review: code and tests done; a real `seed-demo` run, the home screenshot and the auth tables of the real project open | 7 | 2.5d |
 | 9 | [Custom topics](./phase-09-custom-topics.md) | Pending | 4, 8 | 7d |
 | 10 | [Hardening, docs, launch checks](./phase-10-hardening-docs-and-launch-checks.md) | Pending | 9 | 2d |
 
@@ -74,7 +74,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 ## Open questions
 
 1. Measured p95 turn latency with the chosen models (target ≤ 6 s) — unknown until phase 1 deploys.
-2. Whether `auth.users` can be deleted inside the app transaction; fallback is app-data transaction then `auth.admin.deleteUser`.
+2. Whether `auth.users` can be deleted inside the app transaction: yes on the local stack, and phase 8 does so. To confirm on the real project, with what Supabase Auth keeps in its audit tables (phase 8 notes).
 3. Gemini free-tier rate limits are not published; 7 parallel reduced-eval runs may need a paid key even in dev.
 4. Should an unpublished persona carry a visible label for learners? None is planned; the PRD has a label only for generated scenarios.
 5. LangSmith free plan is 5,000 traces/month and one session is up to ~70 traces. Sampling or a paid plan is needed beyond ~70 sessions a month.
