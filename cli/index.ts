@@ -44,7 +44,7 @@ async function main(): Promise<number> {
     db = getDb();
   }
   const { listOtherPersonaTags } = await import("@/db/repo/scenarios");
-  const { roleSpecFromEnv } = await import("@/config/env");
+  const { getEnv, roleSpecFromEnv } = await import("@/config/env");
   const { createChatModel } = await import("@/llm/create-model");
   const { recordLlmCall } = await import("@/db/repo/llm-calls");
   const connected = db;
@@ -68,10 +68,8 @@ async function main(): Promise<number> {
     publish: publishCommand(connected, operatorEmail),
     unpublish: unpublishCommand(connected, operatorEmail),
     "judgement-eval": judgementEvalCommand(llmDeps),
-    "seed-demo": seedDemoCommand(connected, () => ({
-      demoEmails: (process.env.DEMO_ACCOUNT_EMAILS ?? "").split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean),
-      llmDeps: llmDeps(),
-    })),
+    // Reads the whole environment as the app does, so a bad value stops the command before it starts a session.
+    "seed-demo": seedDemoCommand(connected, () => ({ demoEmails: getEnv().DEMO_ACCOUNT_EMAILS, llmDeps: llmDeps() })),
   };
 
   const [name, ...args] = process.argv.slice(2);

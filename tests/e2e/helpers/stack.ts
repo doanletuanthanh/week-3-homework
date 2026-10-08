@@ -35,6 +35,8 @@ export function appEnv(publishableKey: string): Record<string, string> {
     ADMIN_EMAILS: "admin-e2e@example.com",
     DEMO_ACCOUNT_EMAILS: `${DEMO_EMAIL},${DEMO_LIST_EMAIL}`,
     QUOTA_HASH_SECRET,
+    // The error pages can be brought up by the tests (see src/server/test-faults.ts).
+    E2E_TEST_FAULTS: "true",
     LLM_ANALYSIS: "openai:gpt-6-luna:low",
     LLM_PERSONA: "openai:gpt-6-luna:low",
     LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low",

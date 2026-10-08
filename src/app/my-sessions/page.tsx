@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRightIcon, HistoryIcon, UserIcon } from "@/components/icons";
 import { DeleteAccountDialog } from "@/components/sessions/delete-account-dialog";
+import { RefreshOnShow } from "@/components/sessions/refresh-on-show";
 import { SessionList } from "@/components/sessions/session-list";
 import { SessionListSkeleton } from "@/components/ui/page-skeletons";
 import { getDb } from "@/db/client";
 import { getFirstPersonaId, hasGeneratingSession } from "@/db/repo/sessions";
 import { requireAckedUser, type AppUser } from "@/server/auth";
 import { listSessions } from "@/server/session-list";
+import { failIfAsked } from "@/server/test-faults";
 
 export const metadata = { title: "Buổi của tôi · InterviewLab" };
 
@@ -23,6 +25,7 @@ async function MySessions({ user }: { user: AppUser }) {
 
   return (
     <>
+      <RefreshOnShow />
       <div className="mine-head">
         <div>
           <span className="eyebrow">Lịch sử luyện tập</span>
@@ -41,7 +44,8 @@ async function MySessions({ user }: { user: AppUser }) {
           </Link>
         </section>
       ) : (
-        <SessionList initialItems={page.items} initialNextOffset={page.nextOffset} />
+        // Keyed by what the server sent: when a refresh brings other rows or states, the list starts from them.
+        <SessionList key={page.items.map((item) => `${item.id}:${item.state}`).join()} initialItems={page.items} initialNextOffset={page.nextOffset} />
       )}
 
       <section className="card acct" aria-labelledby="acct-title">
@@ -65,6 +69,7 @@ async function MySessions({ user }: { user: AppUser }) {
 /** The sign-in and the data notice are checked before anything is sent; the list then loads behind its skeleton. */
 export default async function MySessionsPage() {
   const user = await requireAckedUser("/my-sessions");
+  await failIfAsked("page");
   return (
     <main className="container mine">
       <Suspense fallback={<SessionListSkeleton />}>

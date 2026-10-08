@@ -3,14 +3,16 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
-import { getScenarioByPersona } from "@/db/repo/sessions";
+import { getScenarioByPersona, getSession } from "@/db/repo/sessions";
 import { acknowledgeNotice } from "@/db/repo/users";
 import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { getUser, noticePath, requireAckedUser, requireUser } from "./auth";
 import { resumePendingAction, storePendingAction } from "./pending-actions";
 import { safeNextPath } from "./safe-next";
+import { markSessionEntered } from "./session-entry";
 import { openSession, sessionEntryPath, sessionStartFailedPath, type OpenSessionResult } from "./sessions";
 import { createSupabaseServerClient } from "./supabase";
+import { isUuid } from "./uuid";
 
 /** Where a resumed pending action is performed after sign-in and consent. */
 const RESUME_PATH = "/resume";
@@ -57,6 +59,7 @@ export async function startSession(formData: FormData): Promise<void> {
       console.error(error);
       redirect(sessionStartFailedPath(personaId));
     }
+    if (result.ok) await markSessionEntered(result.session.id);
     redirect(sessionEntryPath(result, personaId));
   }
 
@@ -65,6 +68,15 @@ export async function startSession(formData: FormData): Promise<void> {
   await storePendingAction(user, { kind: "start_session", personaId });
   if (!user) await redirectToGoogle(RESUME_PATH);
   redirect(noticePath(RESUME_PATH));
+}
+
+/** "Tiếp tục buổi luyện" on Màn 3, for a session with no question yet: leads into the interview. */
+export async function continueSession(formData: FormData): Promise<void> {
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const user = await requireAckedUser("/my-sessions");
+  if (!isUuid(sessionId) || !(await getSession(getDb(), user.id, sessionId))) redirect("/my-sessions");
+  await markSessionEntered(sessionId);
+  redirect(`/sessions/${sessionId}`);
 }
 
 /** "Tôi hiểu" on Màn 0: stores consent with its version and time, then resumes what the learner started. */

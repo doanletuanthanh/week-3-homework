@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { QUOTA_HASH_SECRET_MIN_LENGTH } from "@/config/limits";
 import { parseRoleSpec, ROLES, type Role, type RoleSpec } from "@/llm/roles";
 import { hasPrice } from "@/llm/pricing";
 
@@ -45,7 +46,7 @@ const envSchema = z
     ADMIN_EMAILS: emailList,
     DEMO_ACCOUNT_EMAILS: emailList,
     // Keys the counters kept of a deleted account. Changing it makes every kept counter unreachable.
-    QUOTA_HASH_SECRET: z.string().min(32, "must be at least 32 characters"),
+    QUOTA_HASH_SECRET: z.string().min(QUOTA_HASH_SECRET_MIN_LENGTH, `must be at least ${QUOTA_HASH_SECRET_MIN_LENGTH} characters`),
     LLM_ANALYSIS: roleSpec,
     LLM_PERSONA: roleSpec,
     LLM_REPLAY_JUDGE: roleSpec,

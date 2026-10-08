@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { consumePendingAction, createPendingAction } from "@/db/repo/pending-actions";
 import type { PendingActionPayload } from "@/db/schema";
 import type { AppUser } from "./auth";
+import { markSessionEntered } from "./session-entry";
 import { openSession, sessionEntryPath } from "./sessions";
 import { isUuid } from "./uuid";
 
@@ -42,6 +43,8 @@ export async function resumePendingAction(user: AppUser): Promise<string | null>
   switch (payload.kind) {
     case "start_session": {
       const result = await openSession(db, user, payload.personaId);
+      // The learner pressed "Bắt đầu" before signing in: that press leads into the interview.
+      if (result.ok) await markSessionEntered(result.session.id);
       return result.ok || result.reason !== "not_found" ? sessionEntryPath(result, payload.personaId) : null;
     }
   }

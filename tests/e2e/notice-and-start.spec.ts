@@ -211,10 +211,23 @@ test.describe("starting a session", () => {
 
     await page.goto("/prep/chi-thu");
     await expect(page.getByRole("button", { name: "Bắt đầu" })).toHaveCount(0);
-    await page.getByRole("link", { name: "Tiếp tục buổi luyện" }).click();
+    await page.getByRole("button", { name: "Tiếp tục buổi luyện" }).click();
 
     await expect(page).toHaveURL(sessionUrl);
     expect(await db.sessionsOf(id)).toHaveLength(1);
+  });
+
+  test("an account the auth server holds no Google identity for cannot start a session", async ({ page, context }) => {
+    const id = await signInAsNewLearner(context, uniqueEmail("no-identity"));
+    await db.removeGoogleIdentity(id);
+    await page.goto("/data-notice?next=/prep/chi-thu");
+    await page.getByRole("button", { name: "Tôi hiểu" }).click();
+
+    await page.getByRole("button", { name: "Bắt đầu" }).click();
+
+    await expect(page).toHaveURL("/prep/chi-thu?blocked=error");
+    await expect(page.locator("main [role=alert]")).toHaveText("Không kết nối được. Thử lại.");
+    expect(await db.sessionsOf(id)).toEqual([]);
   });
 
   test("a demo account can start a new session with the same persona again", async ({ page, context }) => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ScenarioRow, SessionRow } from "@/db/repo/sessions";
 import { SESSION_STATUSES } from "@/db/schema";
 import { toBrowserReveal } from "@/engine/seal";
-import { buildSessionView } from "@/server/session-view";
+import { buildSessionView, opensOnPrep } from "@/server/session-view";
 import { chiThu } from "../helpers/engine-fixtures";
 import { NOTES, assemble, basisOf, fullParts, playedSession } from "../helpers/reveal-fixtures";
 
@@ -94,6 +94,21 @@ describe("buildSessionView: which screen a session's state renders (PRD §7)", (
     });
     // 18:30 UTC is already the next day in Vietnam.
     expect(view(sessionOf({ ...ready, status: "done", startedAt: new Date("2026-09-25T18:30:00Z") }))).toMatchObject({ header: { date: "26/09" } });
+  });
+});
+
+describe("opensOnPrep: a session with no question yet opens on Màn 3 (PRD §7)", () => {
+  const open = sessionOf({});
+  it.each([
+    ["no question, button not pressed in this browser", open, 0, false, true],
+    ["no question, 'Bắt đầu' or 'Tiếp tục buổi luyện' pressed", open, 0, true, false],
+    ["one question asked", open, 1, false, false],
+    ["many questions asked", open, 12, false, false],
+    ["ended with no question", sessionOf({ endedAt: new Date() }), 0, false, false],
+    ["ended and frozen with no question", sessionOf(ended), 0, false, false],
+    ...SESSION_STATUSES.filter((status) => status !== "interviewing").map((status) => [`${status}, whatever else`, sessionOf({ status }), 0, false, false] as const),
+  ] as const)("%s", (_name, session, learnerTurns, entered, expected) => {
+    expect(opensOnPrep(session, learnerTurns, entered)).toBe(expected);
   });
 });
 

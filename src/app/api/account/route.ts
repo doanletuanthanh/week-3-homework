@@ -22,7 +22,6 @@ export async function DELETE(request: Request) {
 
   const result = await deleteAccount(getDb(), user);
   if (!result.ok && result.error === "generating") return NextResponse.json({ error: "generating" }, { status: 409 });
-  // `not_found`: another tab deleted the account a moment ago. What is left to do is the same.
 
   // The account is gone, so the auth server may refuse this sign-out; the cookies are removed either way.
   const supabase = await createSupabaseServerClient();
@@ -31,5 +30,7 @@ export async function DELETE(request: Request) {
   for (const { name } of cookieStore.getAll()) {
     if (name.startsWith("sb-")) cookieStore.delete(name);
   }
+  // `not_found`: another tab deleted the account a moment ago. This one is signed out and sent to sign in.
+  if (!result.ok) return NextResponse.json({ error: "unauthorized", redirectTo: signInPath("/my-sessions") }, { status: 401 });
   return NextResponse.json({ deleted: true });
 }

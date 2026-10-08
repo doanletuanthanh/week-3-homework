@@ -142,6 +142,8 @@ test.describe("notes canvas: autosave and restore", () => {
     await signIn(secondContext, email);
     const second = await secondContext.newPage();
     await second.goto(`/sessions/${sessionId}`);
+    // No question was asked yet, so the session opens on Màn 3 in a browser that has not entered it.
+    await second.getByRole("button", { name: "Tiếp tục buổi luyện" }).click();
     await expect(notes(second)).toHaveValue("ghi ở máy thứ nhất");
     await secondContext.close();
   });
@@ -727,11 +729,13 @@ test.describe("Màn 3: the button follows the session", () => {
     // Zero learner turns, some turns, ended: all unfinished.
     await page.goto("/prep/chi-thu");
     const resume = page.getByRole("link", { name: "Tiếp tục buổi luyện" });
-    await expect(resume).toHaveAttribute("href", `/sessions/${sessionId}`);
+    // No question yet: the button is the press that leads into the interview.
+    await expect(page.getByRole("button", { name: "Tiếp tục buổi luyện" })).toBeVisible();
+    await expect(resume).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Bắt đầu" })).toHaveCount(0);
     await postEnd(page.request, sessionId, { canvasText: "" });
     await page.reload();
-    await expect(resume).toBeVisible();
+    await expect(resume).toHaveAttribute("href", `/sessions/${sessionId}`);
 
     await db.setSessionStatus(sessionId, "done");
     await page.reload();

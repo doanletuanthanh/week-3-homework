@@ -46,8 +46,22 @@ export type CallModelDeps = {
   attemptTimeoutMs: number;
 };
 
-// The plain handle, not a transaction: the row stays even if the caller's work rolls back.
-export const recordCallToDb: CallModelDeps["recordCall"] = (record) => recordLlmCall(getDb(), record);
+const FOREIGN_KEY_VIOLATION = "23503";
+
+/**
+ * The plain handle, not a transaction: the row stays even if the caller's work rolls back. When
+ * the session was deleted while the call ran (the learner deleted their account), the row is
+ * written without the session, so the cost still counts against the day's cap.
+ */
+export const recordCallToDb: CallModelDeps["recordCall"] = async (record) => {
+  try {
+    await recordLlmCall(getDb(), record);
+  } catch (error) {
+    const code = (error as { cause?: { code?: string } }).cause?.code ?? (error as { code?: string }).code;
+    if (code !== FOREIGN_KEY_VIOLATION || (record.sessionId == null && record.branchId == null)) throw error;
+    await recordLlmCall(getDb(), { ...record, sessionId: null, branchId: null });
+  }
+};
 
 const defaultDeps: CallModelDeps = {
   roleSpec: roleSpecFromEnv,

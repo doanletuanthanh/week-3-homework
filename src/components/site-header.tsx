@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/server/actions";
 import { getUser } from "@/server/auth";
+import { failIfAsked } from "@/server/test-faults";
 import { HeaderMenu, MySessionsLink } from "./header-menu";
 import { HistoryIcon, MenuIcon, SignOutIcon, UserIcon } from "./icons";
 
@@ -34,6 +35,7 @@ function Logo() {
  * library, so there is no "Thư viện" link.
  */
 export async function SiteHeader() {
+  await failIfAsked("layout");
   const user = await getUser();
   return (
     <header className="hdr">

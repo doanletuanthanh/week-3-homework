@@ -30,16 +30,21 @@ export const db = {
   tombstones: () => getDb().select().from(quotaTombstones),
   llmCallCount: async () => (await getDb().select({ id: llmCalls.id }).from(llmCalls)).length,
   /** Sign-in accounts with this id on the local auth server: one, or none once it is deleted. */
+  /** Removes the Google identity: the auth server then knows the account by its password alone. */
+  removeGoogleIdentity: (userId: string) => getDb().execute(sql`DELETE FROM auth.identities WHERE user_id = ${userId} AND provider = 'google'`),
   authAccounts: (userId: string) => getDb().execute<{ id: string }>(sql`SELECT id FROM auth.users WHERE id = ${userId}`),
   /**
    * Marks the account as the sign-in of one Google account, the way the auth server records a
    * Google sign-in. Google cannot be driven from a test, so the row is written directly.
    */
-  addGoogleIdentity: (userId: string, email: string, googleSubject: string) =>
-    getDb().execute(sql`
+  addGoogleIdentity: async (userId: string, email: string, googleSubject: string) => {
+    // One Google account per sign-in account: an earlier one is replaced.
+    await getDb().execute(sql`DELETE FROM auth.identities WHERE user_id = ${userId} AND provider = 'google'`);
+    await getDb().execute(sql`
       INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
       VALUES (${googleSubject}, ${userId}, ${JSON.stringify({ sub: googleSubject, email })}::jsonb, 'google', now(), now(), now())
-    `),
+    `);
+  },
 
   /** Adds session spend for today, as if earlier sessions had cost this much. */
   addSessionSpend: (usd: number) =>

@@ -70,6 +70,15 @@ export type SessionView =
   /** A state no screen exists for yet. */
   | { screen: "ended" };
 
+/**
+ * PRD §7: a session nobody has asked a question in opens on Màn 3, with "Tiếp tục buổi luyện"
+ * leading into the interview. `entered` is that button (or "Bắt đầu") having been pressed in this
+ * browser. Once a question exists, or the session ended, its own state decides the screen.
+ */
+export function opensOnPrep(session: Pick<SessionRow, "status" | "endedAt">, learnerTurns: number, entered: boolean): boolean {
+  return session.status === "interviewing" && session.endedAt === null && learnerTurns === 0 && !entered;
+}
+
 const dateParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" });
 
 /** The day a session started, as the learners' calendar has it (UTC+7). */

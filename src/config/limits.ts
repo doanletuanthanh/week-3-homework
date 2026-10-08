@@ -54,3 +54,6 @@ export const REVEAL_POLL_MS = 2_000;
 
 /** After this long the reveal screen adds that the learner may close the page. */
 export const REVEAL_SLOW_AFTER_MS = 30_000;
+
+/** Shortest `QUOTA_HASH_SECRET` the app and the CLI accept. */
+export const QUOTA_HASH_SECRET_MIN_LENGTH = 32;

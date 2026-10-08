@@ -4,14 +4,16 @@ import { createSession, findSessionForPersona, getPlayableScenario, type Session
 import type { AppUser } from "./auth";
 import { canStartSession } from "./cost-cap";
 import { recordEvent } from "./events";
-import { playedBeforeDeletion } from "./quota";
+import { listPlayedPersonas } from "@/db/repo/quota-tombstone";
+import { quotaKeyOf } from "./quota";
 
 /** Where the learner goes after asking for a session; the prep screen explains a refusal. */
 export function sessionEntryPath(result: OpenSessionResult, personaId: string): string {
   if (result.ok) return `/sessions/${result.session.id}`;
   if (result.reason === "cap_reached") return `/prep/${encodeURIComponent(personaId)}?blocked=cap`;
   // The prep screen finds out for itself that the persona was played before, and says so.
-  return result.reason === "played_before" ? `/prep/${encodeURIComponent(personaId)}` : "/";
+  if (result.reason === "played_before") return `/prep/${encodeURIComponent(personaId)}`;
+  return result.reason === "no_identity" ? sessionStartFailedPath(personaId) : "/";
 }
 
 /** Where the learner goes when creating the session failed: the prep screen, with the standard error. */
@@ -24,8 +26,10 @@ export type OpenSessionResult =
   /**
    * `cap_reached`: today's session budget is spent, so no new session starts (FR-37).
    * `played_before`: this Google account had its session with the persona, then deleted the account.
+   * `no_identity`: the auth server holds no Google identity for the learner, so the one-session
+   * rule cannot be checked against deleted accounts. No session starts without that check.
    */
-  | { ok: false; reason: "not_found" | "cap_reached" | "played_before" };
+  | { ok: false; reason: "not_found" | "cap_reached" | "played_before" | "no_identity" };
 
 /**
  * Starts the learner's session with a persona, or returns the one they already have ("Tiếp tục").
@@ -39,7 +43,9 @@ export async function openSession(db: Database, user: AppUser, personaId: string
   if (!user.isDemo) {
     const existing = await findSessionForPersona(db, user.id, personaId);
     if (existing) return { ok: true, session: existing };
-    if (await playedBeforeDeletion(db, user.id, personaId)) return { ok: false, reason: "played_before" };
+    const key = await quotaKeyOf(db, user.id);
+    if (key === null) return { ok: false, reason: "no_identity" };
+    if ((await listPlayedPersonas(db, key)).includes(personaId)) return { ok: false, reason: "played_before" };
   }
 
   const found = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"));

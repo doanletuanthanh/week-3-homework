@@ -179,3 +179,13 @@ export async function hasGeneratingSession(db: Executor, userId: string): Promis
 export async function deleteSession(db: Executor, sessionId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
 }
+
+/** How many questions the learner has asked in the main interview. */
+export async function countLearnerTurns(db: Executor, sessionId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(turns)
+    .innerJoin(branches, eq(branches.id, turns.branchId))
+    .where(and(eq(turns.sessionId, sessionId), eq(branches.kind, "main"), sql`${turns.index} > 0`));
+  return row.total;
+}

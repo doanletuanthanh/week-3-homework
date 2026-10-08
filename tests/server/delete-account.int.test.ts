@@ -7,6 +7,7 @@ import { createPendingAction } from "@/db/repo/pending-actions";
 import { logAdminAccess } from "@/db/repo/turns";
 import { joinWaitlist } from "@/db/repo/waitlist";
 import { adminAccessLog, branches, dailySpend, events, llmCalls, pendingActions, quotaTombstones, sessions, snapshots, turns, users, waitlist } from "@/db/schema";
+import { recordCallToDb } from "@/llm/call-model";
 import { resolveUser } from "@/server/auth";
 import type { AppUser } from "@/server/auth";
 import { canStartSession, sessionSpendToday } from "@/server/cost-cap";
@@ -325,6 +326,8 @@ describe("deleteAccount: what is kept so that no limit is reset", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const learner = await createLearner("linh@example.com");
     await startSession(learner);
+    // The identity is gone by the time the account is deleted.
+    await db().execute(sql`DELETE FROM auth.identities WHERE user_id = ${learner.id}`);
 
     expect(await deleteAccount(db(), learner)).toEqual({ ok: true });
 
@@ -402,7 +405,7 @@ describe("a token that outlives its account", () => {
 
   it("is not served from a row that was left behind without its account, and cannot start a session", async () => {
     // A row with no sign-in account behind it, as an interrupted request could once have left.
-    const orphan = await createLearner("linh@example.com");
+    const orphan = await createLearner("linh@example.com", NO_LISTS, { googleSubject: null });
 
     expect(await resolveUser(db(), googleClaims(orphan.email, orphan.id), NO_LISTS, strict)).toBeNull();
     expect(await resolveUser(db(), googleClaims("moi@example.com", orphan.id), NO_LISTS, strict)).toBeNull();
@@ -447,7 +450,7 @@ describe("quotaKeyOf", () => {
   });
 
   it("is null without a Google identity, and refuses to work without the secret", async () => {
-    const learner = await createLearner("linh@example.com");
+    const learner = await createLearner("linh@example.com", NO_LISTS, { googleSubject: null });
     expect(await quotaKeyOf(db(), learner.id)).toBeNull();
 
     const withIdentity = await createGoogleLearner("an@example.com", "google-subject-of-an");
@@ -455,16 +458,71 @@ describe("quotaKeyOf", () => {
     delete process.env.QUOTA_HASH_SECRET;
     try {
       await expect(quotaKeyOf(db(), withIdentity.id)).rejects.toThrow("QUOTA_HASH_SECRET is not set");
+      process.env.QUOTA_HASH_SECRET = "too-short";
+      await expect(quotaKeyOf(db(), withIdentity.id)).rejects.toThrow("QUOTA_HASH_SECRET must be at least 32 characters");
     } finally {
       process.env.QUOTA_HASH_SECRET = secret;
     }
   });
 
   it("ignores an identity of another provider", async () => {
-    const learner = await createLearner("linh@example.com");
+    const learner = await createLearner("linh@example.com", NO_LISTS, { googleSubject: null });
     await db().execute(sql`INSERT INTO auth.users (id, email) VALUES (${learner.id}, ${learner.email})`);
     await db().execute(sql`INSERT INTO auth.identities (provider_id, user_id, identity_data, provider) VALUES (${learner.id}, ${learner.id}, '{}'::jsonb, 'email')`);
 
     expect(await quotaKeyOf(db(), learner.id)).toBeNull();
+  });
+});
+
+describe("a learner the auth server holds no Google identity for", () => {
+  it("cannot start a session: the one-session rule could not be checked against deleted accounts", async () => {
+    const learner = await createLearner("linh@example.com", NO_LISTS, { googleSubject: null });
+
+    const result = await openSession(db(), learner, PERSONA_ID);
+
+    expect(result).toEqual({ ok: false, reason: "no_identity" });
+    expect(sessionEntryPath(result, PERSONA_ID)).toBe("/prep/chi-thu?blocked=error");
+    expect(await db().select().from(sessions)).toEqual([]);
+    expect(await db().select().from(events)).toEqual([]);
+  });
+
+  it("still gets the session it already has, and a demo account is not held to the check", async () => {
+    const learner = await createLearner("linh@example.com");
+    const session = await startSession(learner);
+    await db().execute(sql`DELETE FROM auth.identities WHERE user_id = ${learner.id}`);
+    const demo = await createLearner("demo@example.com", DEMO_LISTS, { googleSubject: null });
+
+    expect(await openSession(db(), learner, PERSONA_ID)).toMatchObject({ ok: true, session: { id: session.id } });
+    expect(await openSession(db(), demo, PERSONA_ID)).toMatchObject({ ok: true });
+  });
+});
+
+describe("a model call that finishes after its account was deleted", () => {
+  const call = (sessionId: string | null, branchId: string | null = null) =>
+    ({ scope: "session", sessionId, branchId, turnIndex: 3, role: "PERSONA", model: "gpt-6-luna", tokensIn: 10, tokensOut: 5, tokensCached: 0, tokensReasoning: 0, costUsd: 0.75, latencyMs: 20, attempt: 1, ok: true }) as const;
+
+  it("has its cost recorded without the session, so the day's cap still counts it", async () => {
+    const learner = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
+    const session = await startSession(learner);
+    const [branch] = await db().select().from(branches);
+    const before = await sessionSpendToday(db());
+    await deleteAccount(db(), learner);
+
+    // The call was on its way while the account was deleted; its session and branch are gone.
+    await recordCallToDb(call(session.id, branch.id));
+
+    expect(await db().select().from(llmCalls)).toMatchObject([{ sessionId: null, branchId: null, role: "PERSONA", costUsd: 0.75, turnIndex: 3 }]);
+    expect(await sessionSpendToday(db())).toBeCloseTo(before + 0.75, 9);
+  });
+
+  it("is recorded as given while its session exists, and other failures are not swallowed", async () => {
+    const learner = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
+    const session = await startSession(learner);
+
+    await recordCallToDb(call(session.id));
+    expect(await db().select().from(llmCalls)).toMatchObject([{ sessionId: session.id }]);
+
+    await expect(recordCallToDb({ ...call(null), tokensIn: Number.NaN })).rejects.toThrow();
+    expect(await db().select().from(llmCalls)).toHaveLength(1);
   });
 });

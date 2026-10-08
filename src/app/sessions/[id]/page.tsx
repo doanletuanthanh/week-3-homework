@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { Suspense, cache } from "react";
 import { GuessScreen } from "@/components/guess/guess-screen";
@@ -11,13 +11,14 @@ import { SessionSkeleton } from "@/components/ui/page-skeletons";
 import { WithdrawnScreen } from "@/components/withdrawn-screen";
 import { getDb } from "@/db/client";
 import { loadReplay } from "@/db/repo/replay";
-import { getSession, listTurns } from "@/db/repo/sessions";
+import { countLearnerTurns, getSession, listTurns } from "@/db/repo/sessions";
 import { isOnWaitlist } from "@/db/repo/waitlist";
 import { personaCard } from "@/scenario/persona-card";
 import { requireAckedUser } from "@/server/auth";
 import { freezeAbandonedCanvas } from "@/server/canvas";
 import { revealRunIsDue, runReveal } from "@/server/reveal";
-import { buildSessionView } from "@/server/session-view";
+import { hasEnteredSession } from "@/server/session-entry";
+import { buildSessionView, opensOnPrep } from "@/server/session-view";
 import { isUuid } from "@/server/uuid";
 
 // A reveal that has no live runner is started from here, after the page is sent.
@@ -136,7 +137,11 @@ async function SessionScreen({ id }: { id: string }) {
  */
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await loadSession(id);
+  const { session } = await loadSession(id);
+  // No question yet: the session opens on Màn 3, whose button leads back here (PRD §7).
+  if (session.status === "interviewing" && session.endedAt === null) {
+    if (opensOnPrep(session, await countLearnerTurns(getDb(), id), await hasEnteredSession(id))) redirect(`/prep/${encodeURIComponent(session.personaId)}`);
+  }
   return (
     <Suspense fallback={<SessionSkeleton />}>
       <SessionScreen id={id} />

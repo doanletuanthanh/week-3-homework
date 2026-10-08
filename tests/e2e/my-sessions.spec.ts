@@ -93,23 +93,29 @@ test.describe("Màn 9: one session through every state", () => {
       expect(sent).toEqual({ items: [{ id: sessionId, personaName: "Chị Thu", topicTitle: TOPIC, date: expect.stringMatching(/^\d{2}\/\d{2}$/u), state: "in_progress", result: null }], nextOffset: null });
     };
 
-    // interviewing, no question yet → Màn 4.
+    // interviewing, no question yet → Màn 3, whose button leads into Màn 4. This learner comes
+    // back in a browser that has not pressed that button.
+    await context.clearCookies({ name: "il_entered" });
     await expectNoNumbers();
     await expect(page.getByText("1 buổi", { exact: true })).toBeVisible();
     await row().click();
+    await expect(page).toHaveURL("/prep/chi-thu");
+    await page.getByRole("button", { name: "Tiếp tục buổi luyện" }).click();
     await expect(page).toHaveURL(`/sessions/${sessionId}`);
     await expect(composer(page)).toBeVisible();
+
+    // interviewing, asked → Màn 4 at the turn it stopped on, in any browser.
+    await playQuestions(page.request, sessionId, PRIMARY_QUESTIONS);
+    await context.clearCookies({ name: "il_entered" });
+    await expectNoNumbers();
+    await row().click();
+    await expect(page).toHaveURL(`/sessions/${sessionId}`);
+    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 6" })).toBeVisible();
+    await expect(sendButton(page)).toBeVisible();
     // The browser's back button leaves the session for the screen before it.
     await page.goBack();
     await expect(page).toHaveURL("/my-sessions");
     await expect(heading(page)).toBeVisible();
-
-    // interviewing, asked → Màn 4 at the turn it stopped on.
-    await playQuestions(page.request, sessionId, PRIMARY_QUESTIONS);
-    await expectNoNumbers();
-    await row().click();
-    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 6" })).toBeVisible();
-    await expect(sendButton(page)).toBeVisible();
 
     // ended, no guess → Màn 5.
     expect((await postEnd(page.request, sessionId, { canvasText: PRIMARY_NOTES })).status).toBe(200);
@@ -212,6 +218,25 @@ test.describe("Màn 9: one session through every state", () => {
   });
 });
 
+test.describe("Màn 9: coming back to the list", () => {
+  test("the back button shows the session as it is now, not as it was when the list was left", async ({ page, context }) => {
+    const { sessionId } = await startInterview(page, context, "mine-back");
+    await playQuestions(page.request, sessionId, ["Chị kể em nghe về công việc của chị được không ạ?"]);
+    await page.goto("/my-sessions");
+    await expect(rowOf(page, sessionId).locator(".pill")).toHaveText("Đang làm dở");
+
+    await rowOf(page, sessionId).click();
+    await expect(composer(page)).toBeVisible();
+    // While the learner is on the session, it changes: here the persona is pulled with its sessions.
+    await db.setSessionStatus(sessionId, "withdrawn");
+    await page.goBack();
+
+    await expect(page).toHaveURL("/my-sessions");
+    await expect(rowOf(page, sessionId).locator(".pill")).toHaveText("Đã dừng: nhân vật đã được gỡ");
+    await expect(rowOf(page, sessionId).locator(".btn")).toHaveCount(0);
+  });
+});
+
 test.describe("Màn 9: a long list", () => {
   test("twenty rows first, newest on top; 'Tải thêm' adds the rest and then goes away", async ({ page }) => {
     const demo = await signInAsListDemo(page);
@@ -297,6 +322,8 @@ test.describe("Màn 9: a long list", () => {
     await page.goto("/my-sessions");
     await expect(rows(page)).toHaveCount(20);
 
+    // The list has finished asking the server for itself: what follows is the press alone.
+    await page.waitForLoadState("networkidle");
     await context.clearCookies();
     await loadMore(page).click();
 
@@ -311,7 +338,9 @@ test.describe("Màn 3 for a demo account (FR-45)", () => {
     const newest = (await db.sessionsOf(demo.id)).sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
 
     await page.goto("/prep/chi-thu");
-    await expect(page.getByRole("link", { name: "Tiếp tục buổi luyện" })).toHaveAttribute("href", `/sessions/${newest.id}`);
+    // The newest session has no question yet, so the main button is the press that leads into it.
+    const newestId = page.locator("form:has(button:text-is('Tiếp tục buổi luyện')) input[name=sessionId]");
+    await expect(newestId).toHaveValue(newest.id);
     await expect(page.getByRole("button", { name: "Bắt đầu", exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Bắt đầu buổi mới" }).click();
@@ -323,14 +352,18 @@ test.describe("Màn 3 for a demo account (FR-45)", () => {
 
     // The main button now points at the session just started.
     await page.goto("/prep/chi-thu");
-    await expect(page.getByRole("link", { name: "Tiếp tục buổi luyện" })).toHaveAttribute("href", `/sessions/${created}`);
+    await expect(newestId).toHaveValue(created);
+    await page.getByRole("button", { name: "Tiếp tục buổi luyện" }).click();
+    await expect(page).toHaveURL(`/sessions/${created}`);
+    await expect(composer(page)).toBeVisible();
   });
 
   test("a learner gets no second start: one session per persona", async ({ page, context }) => {
     const { sessionId, userId } = await startInterview(page, context, "mine-one-session");
 
     await page.goto("/prep/chi-thu");
-    await expect(page.getByRole("link", { name: "Tiếp tục buổi luyện" })).toHaveAttribute("href", `/sessions/${sessionId}`);
+    await expect(page.locator("form input[name=sessionId]")).toHaveValue(sessionId);
+    await expect(page.getByRole("button", { name: "Tiếp tục buổi luyện" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Bắt đầu/u })).toHaveCount(0);
     expect(await db.sessionsOf(userId)).toHaveLength(1);
   });

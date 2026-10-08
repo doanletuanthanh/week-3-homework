@@ -7,9 +7,9 @@ import { StartSessionButton } from "@/components/start-session-button";
 import { PrepSkeleton } from "@/components/ui/page-skeletons";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
-import { findSessionForPersona, getPlayableScenario, getScenarioByPersona } from "@/db/repo/sessions";
+import { countLearnerTurns, findSessionForPersona, getPlayableScenario, getScenarioByPersona } from "@/db/repo/sessions";
 import { personaCard } from "@/scenario/persona-card";
-import { startSession } from "@/server/actions";
+import { continueSession, startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { playedBeforeDeletion } from "@/server/quota";
 import { PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED } from "@/strings/product-strings";
@@ -53,6 +53,8 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
   const session = user ? await findSessionForPersona(db, user.id, personaId) : null;
   const playedBefore = user !== null && !user.isDemo && !session && (await playedBeforeDeletion(db, user.id, personaId));
   const canStartAnother = user?.isDemo === true && session !== null && playable;
+  // No question asked yet: "Tiếp tục buổi luyện" is the press that leads into the interview (PRD §7).
+  const notAskedYet = session !== null && session.status === "interviewing" && session.endedAt === null && (await countLearnerTurns(db, session.id)) === 0;
 
   return (
     <main className="container prep">
@@ -172,7 +174,12 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
               {PERSONA_BEING_UPDATED}
             </p>
           )}
-          {session ? (
+          {session && notAskedYet ? (
+            <form action={continueSession}>
+              <input type="hidden" name="sessionId" value={session.id} />
+              <StartSessionButton label="Tiếp tục buổi luyện" />
+            </form>
+          ) : session ? (
             // One session per persona: the button follows its state, and its URL shows the right screen.
             <Link className="btn btn-primary btn-lg prep-start" href={`/sessions/${session.id}`}>
               {session.status === "done" ? "Xem lại kết quả" : "Tiếp tục buổi luyện"}

@@ -2,6 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { LOCAL_SUPABASE_URL } from "../../helpers/local-stack";
+import { db } from "./db";
 
 const PASSWORD = "e2e-local-password";
 
@@ -30,6 +31,8 @@ export async function createAccount(email: string, options: { provider?: "google
       app_metadata: { provider: "google", providers: ["google"] },
     });
     if (updated.error) throw updated.error;
+    // What a real Google sign-in leaves on the auth server: the identity naming the Google account.
+    await db.addGoogleIdentity(data.user.id, email, `google-${data.user.id}`);
   }
   return data.user.id;
 }
