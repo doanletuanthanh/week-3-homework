@@ -28,6 +28,19 @@ export const SESSION_CAP_REACHED = "Hôm nay InterviewLab đã hết chỗ cho b
 /** Màn 3, shown when no version of the persona can be played right now. */
 export const PERSONA_BEING_UPDATED = "Nhân vật này đang được cập nhật.";
 
+/** Màn 3, shown to an account that had its session with the persona, was deleted, and signed in again (FR-5). */
+export const PLAYED_BEFORE_DELETION = "Bạn đã luyện với nhân vật này trước khi xóa tài khoản. Mỗi nhân vật chỉ có một buổi.";
+
+/** What the learner types to enable "Xóa vĩnh viễn". */
+export const DELETE_CONFIRM_WORD = "XÓA";
+
+/** Màn 9, the confirmation of FR-66. `kept` names what deleting the account does not remove. */
+export const DELETE_ACCOUNT = {
+  title: "Xóa tài khoản và toàn bộ dữ liệu?",
+  body: "Mọi buổi, ghi chú, kết quả và chủ đề tự tạo của bạn sẽ bị xóa vĩnh viễn. Không khôi phục được.",
+  kept: "Còn lại: một bộ đếm lượt dùng ẩn danh, và bản ghi vết ở LangSmith cho tới khi tự hết hạn.",
+} as const;
+
 export const FOOTER_DATA_NOTE =
   "quản trị viên InterviewLab xem được buổi luyện để kiểm tra chất lượng. Bạn xóa được tài khoản và toàn bộ dữ liệu trong Buổi của tôi.";
 
@@ -106,6 +119,9 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(DATA_NOTICE).map(([name, text]) => ({ key: `data_notice.${name}`, text })),
     { key: "session_cap_reached", text: SESSION_CAP_REACHED },
     { key: "persona_being_updated", text: PERSONA_BEING_UPDATED },
+    { key: "played_before_deletion", text: PLAYED_BEFORE_DELETION },
+    ...Object.entries(DELETE_ACCOUNT).map(([name, text]) => ({ key: `delete_account.${name}`, text })),
+    { key: "delete_confirm_word", text: DELETE_CONFIRM_WORD },
     { key: "footer_data_note", text: FOOTER_DATA_NOTE },
     ...Object.entries(CANVAS_EXPLANATION).map(([name, text]) => ({ key: `canvas_explanation.${name}`, text })),
     ...Object.entries(DIAGNOSIS).map(([name, text]) => ({ key: `diagnosis.${name}`, text })),

@@ -1,9 +1,7 @@
 import { sql } from "drizzle-orm";
+import { DAY_ZONE } from "@/config/limits";
 import type { Executor } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
-
-/** Days start at midnight in Vietnam, where the learners are. */
-const DAY_ZONE = "Asia/Ho_Chi_Minh";
 
 /**
  * LLM spend of interview sessions since 00:00 UTC+7: every `llm_call` of scope `session` today

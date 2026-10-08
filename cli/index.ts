@@ -8,6 +8,7 @@ import { evalCommand } from "./commands/eval";
 import { importCommand } from "./commands/import-scenario";
 import { judgementEvalCommand } from "./commands/judgement-eval";
 import { publishCommand, unpublishCommand } from "./commands/publish";
+import { seedDemoCommand } from "./commands/seed-demo";
 import { approveStringsCommand, checkStringsCommand } from "./commands/strings";
 import { traceCommand } from "./commands/trace";
 import { validateCommand } from "./commands/validate";
@@ -67,6 +68,10 @@ async function main(): Promise<number> {
     publish: publishCommand(connected, operatorEmail),
     unpublish: unpublishCommand(connected, operatorEmail),
     "judgement-eval": judgementEvalCommand(llmDeps),
+    "seed-demo": seedDemoCommand(connected, () => ({
+      demoEmails: (process.env.DEMO_ACCOUNT_EMAILS ?? "").split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean),
+      llmDeps: llmDeps(),
+    })),
   };
 
   const [name, ...args] = process.argv.slice(2);

@@ -1,3 +1,6 @@
+/** Days start at midnight in Vietnam, where the learners are. */
+export const DAY_ZONE = "Asia/Ho_Chi_Minh";
+
 /** Longest learner question, in characters (PRD Màn 4). */
 export const MAX_QUESTION_CHARS = 500;
 

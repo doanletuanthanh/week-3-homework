@@ -201,6 +201,18 @@ export async function getRevealView(db: Database, user: AppUser, sessionId: stri
   return reveal ? { found: true, ready: true, reveal } : { found: true, ready: false, due: revealRunIsDue(session) };
 }
 
+/**
+ * "Tải về" was pressed. The sheet can be taken away only from a finished session, so only then
+ * is the event written. `not_found` covers a session of someone else.
+ */
+export async function recordTakeawayDownload(db: Database, user: AppUser, sessionId: string): Promise<"recorded" | "not_done" | "not_found"> {
+  const found = await getSession(db, user.id, sessionId);
+  if (!found) return "not_found";
+  if (found.session.status !== "done") return "not_done";
+  await recordEvent(db, { userId: user.id, sessionId, isDemo: found.session.isDemo }, { name: "takeaway_downloaded", props: {} });
+  return "recorded";
+}
+
 /** The learner's own main transcript as a browser may see it right now; null when the session is not theirs. */
 export async function getTranscriptView(db: Database, user: AppUser, sessionId: string): Promise<BrowserTurn[] | null> {
   const found = await getSession(db, user.id, sessionId);

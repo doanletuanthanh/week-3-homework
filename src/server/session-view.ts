@@ -22,7 +22,16 @@ type Persona = { displayName: string; displayNameCapitalized: string };
  * scenario's items is here.
  */
 export type SessionView =
-  | { screen: "withdrawn"; personaName: string; turns: ViewTurn[] }
+  | {
+      screen: "withdrawn";
+      personaName: string;
+      topicTitle: string;
+      /** The day the session started, as "dd/mm". */
+      date: string;
+      /** The learner turn the session stopped at. */
+      turnCount: number;
+      turns: ViewTurn[];
+    }
   | {
       screen: "interview";
       sessionId: string;
@@ -64,7 +73,7 @@ export type SessionView =
 const dateParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" });
 
 /** The day a session started, as the learners' calendar has it (UTC+7). */
-function dayOf(date: Date): { day: string; month: string; year: string } {
+export function dayOf(date: Date): { day: string; month: string; year: string } {
   const parts = Object.fromEntries(dateParts.formatToParts(date).map((part) => [part.type, part.value]));
   return { day: parts.day, month: parts.month, year: parts.year };
 }
@@ -95,7 +104,9 @@ export function buildSessionView(input: {
   };
   const sessionId = session.id;
 
-  if (session.status === "withdrawn") return { screen: "withdrawn", personaName: card.displayNameCapitalized, turns };
+  if (session.status === "withdrawn") {
+    return { screen: "withdrawn", personaName: card.displayNameCapitalized, topicTitle, date: header.date, turnCount: header.turnCount, turns };
+  }
 
   if (session.status === "interviewing") {
     if (session.canvasFrozenAt !== null) return { screen: "guess", sessionId, personaName: card.displayName, itemCount: card.itemCount };

@@ -62,7 +62,7 @@ export function RevealScreen({ sessionId, persona, header, reveal, waitlisted, p
           <ToldList items={reveal.toldItems} />
           <MissedList items={reveal.missedItems} persona={persona} />
           {reveal.notes !== null && <NotesReview notes={reveal.notes} ungraded={reveal.recognized.state === "ungraded"} persona={persona} />}
-          <Takeaway takeaway={reveal.takeaway} persona={persona} canDownload={done} print={print} />
+          <Takeaway takeaway={reveal.takeaway} persona={persona} canDownload={done} sessionId={sessionId} print={print} />
           <NextStep waitlisted={waitlisted} />
         </div>
       </main>

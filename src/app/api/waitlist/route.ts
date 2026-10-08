@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { joinWaitlist } from "@/db/repo/waitlist";
 import { WAITLIST_CONTEXTS } from "@/db/schema";
 import { requireAckedApiUser } from "@/server/auth";
+import { recordEvent } from "@/server/events";
 
 const inputSchema = z.object({ context: z.enum(WAITLIST_CONTEXTS) });
 
@@ -14,6 +15,12 @@ export async function POST(request: Request) {
 
   const input = inputSchema.safeParse(await request.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
-  await joinWaitlist(getDb(), auth.user.id, input.data.context);
+  const { user } = auth;
+  const { context } = input.data;
+  await getDb().transaction(async (tx) => {
+    if (await joinWaitlist(tx, user.id, context)) {
+      await recordEvent(tx, { userId: user.id, sessionId: null, isDemo: user.isDemo }, { name: "waitlist_joined", props: { context } });
+    }
+  });
   return NextResponse.json({ joined: true });
 }

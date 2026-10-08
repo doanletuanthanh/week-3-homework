@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getEnv, type Env } from "@/config/env";
 import { getDb, type Executor } from "@/db/client";
-import { upsertUser } from "@/db/repo/users";
+import { upsertUser, upsertUserOfAccount } from "@/db/repo/users";
 import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { verifyClaims } from "./auth-claims";
 import { createSupabaseServerClient } from "./supabase";
@@ -19,15 +19,21 @@ export type AppUser = {
 /**
  * Turns verified token claims into the app user: rejects anything that is not a verified Google
  * account, creates or updates the `user` row, and derives the admin and demo flags from env.
+ *
+ * A token stays valid for a while after its account is deleted. With `requireAuthAccount`, the
+ * sign-in account must still exist: otherwise nothing is written and the request counts as
+ * signed out.
  */
 export async function resolveUser(
   db: Executor,
   claims: unknown,
   env: Pick<Env, "ADMIN_EMAILS" | "DEMO_ACCOUNT_EMAILS">,
+  options: { requireAuthAccount?: boolean } = {},
 ): Promise<AppUser | null> {
   const identity = verifyClaims(claims);
   if (!identity) return null;
-  const row = await upsertUser(db, identity);
+  const row = options.requireAuthAccount ? await upsertUserOfAccount(db, identity) : await upsertUser(db, identity);
+  if (!row) return null;
   return {
     id: row.id,
     email: row.email,
@@ -42,7 +48,7 @@ export const getUser = cache(async (): Promise<AppUser | null> => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data) return null;
-  return resolveUser(getDb(), data.claims, getEnv());
+  return resolveUser(getDb(), data.claims, getEnv(), { requireAuthAccount: true });
 });
 
 export function signInPath(next: string): string {

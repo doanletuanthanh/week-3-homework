@@ -11,6 +11,7 @@ type Props = {
   persona: Persona;
   /** The session is `done`: nothing is held back, so the sheet may be taken away. */
   canDownload: boolean;
+  sessionId: string;
   print: { topicTitle: string; date: string; fileName: string };
 };
 
@@ -131,8 +132,10 @@ function PrintSheet({ takeaway, persona, print }: Pick<Props, "takeaway" | "pers
  * Every sentence is the learner's own words, a fixed string, or a generator claim the verifier
  * passed. "Tải về" prints this section alone, and only once the session is `done`.
  */
-export function Takeaway({ takeaway, persona, canDownload, print }: Props) {
+export function Takeaway({ takeaway, persona, canDownload, sessionId, print }: Props) {
   function download() {
+    // Reported to the server, which writes the event; printing does not wait for it or depend on it.
+    void fetch(`/api/sessions/${sessionId}/download`, { method: "POST", keepalive: true }).catch(() => {});
     // The browser names the saved PDF after the page title.
     const title = document.title;
     document.title = print.fileName;

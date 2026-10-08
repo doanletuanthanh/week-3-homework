@@ -6,8 +6,8 @@ export default function SessionNotFound() {
     <main className="center-page">
       <section className="card-lg auth-card">
         <h1 className="headline-md">Không tìm thấy buổi này.</h1>
-        <Link className="btn btn-primary btn-lg auth-button" href="/">
-          Về trang chủ
+        <Link className="btn btn-primary btn-lg auth-button" href="/my-sessions">
+          Buổi của tôi
         </Link>
       </section>
     </main>

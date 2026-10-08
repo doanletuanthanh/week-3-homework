@@ -2,9 +2,10 @@ import { and, eq } from "drizzle-orm";
 import type { Executor } from "../client";
 import { waitlist, type WaitlistContext } from "../schema";
 
-/** FR-32: records the request once; asking again changes nothing. */
-export async function joinWaitlist(db: Executor, userId: string, context: WaitlistContext): Promise<void> {
-  await db.insert(waitlist).values({ userId, context }).onConflictDoNothing();
+/** FR-32: records the request once; asking again changes nothing. True when this call added the row. */
+export async function joinWaitlist(db: Executor, userId: string, context: WaitlistContext): Promise<boolean> {
+  const added = await db.insert(waitlist).values({ userId, context }).onConflictDoNothing().returning({ userId: waitlist.userId });
+  return added.length > 0;
 }
 
 export async function isOnWaitlist(db: Executor, userId: string, context: WaitlistContext): Promise<boolean> {

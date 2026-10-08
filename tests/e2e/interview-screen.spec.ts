@@ -101,7 +101,7 @@ test.describe("Màn 4: what the interview screen shows", () => {
     const missing = await page.goto("/sessions/00000000-0000-4000-8000-000000000000");
     expect(missing?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "Không tìm thấy buổi này." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Về trang chủ", exact: true })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("main").getByRole("link", { name: "Buổi của tôi", exact: true })).toHaveAttribute("href", "/my-sessions");
 
     const otherContext = await browser.newContext();
     const other = await otherContext.newPage();

@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { AlertIcon, ArrowRightIcon, CheckIcon, ChevronRightIcon, CrossIcon, GoogleIcon, LockIcon, NoteIcon, WarningIcon } from "@/components/icons";
 import { PersonaAvatar } from "@/components/persona-avatar";
 import { StartSessionButton } from "@/components/start-session-button";
+import { PrepSkeleton } from "@/components/ui/page-skeletons";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
 import { findSessionForPersona, getPlayableScenario, getScenarioByPersona } from "@/db/repo/sessions";
 import { personaCard } from "@/scenario/persona-card";
 import { startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
-import { PERSONA_BEING_UPDATED, SESSION_CAP_REACHED } from "@/strings/product-strings";
+import { playedBeforeDeletion } from "@/server/quota";
+import { PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED } from "@/strings/product-strings";
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
@@ -32,9 +35,24 @@ export default async function PrepPage({
   const found = playable ?? (await getScenarioByPersona(db, personaId));
   if (!found) notFound();
 
+  return (
+    <Suspense fallback={<PrepSkeleton />}>
+      <PrepScreen personaId={personaId} blocked={blocked} found={found} playable={playable !== null} />
+    </Suspense>
+  );
+}
+
+type Found = NonNullable<Awaited<ReturnType<typeof getScenarioByPersona>>>;
+
+/** The screen itself: the persona, and the button that fits what the signed-in learner has with them. */
+async function PrepScreen({ personaId, blocked, found, playable }: { personaId: string; blocked?: string; found: Found; playable: boolean }) {
+  const db = getDb();
   const persona = personaCard(found.scenario.content);
   const user = await getUser();
-  const session = user && !user.isDemo ? await findSessionForPersona(db, user.id, personaId) : null;
+  // A demo account has no one-session limit: this is its newest session with the persona.
+  const session = user ? await findSessionForPersona(db, user.id, personaId) : null;
+  const playedBefore = user !== null && !user.isDemo && !session && (await playedBeforeDeletion(db, user.id, personaId));
+  const canStartAnother = user?.isDemo === true && session !== null && playable;
 
   return (
     <main className="container prep">
@@ -130,19 +148,25 @@ export default async function PrepPage({
             </div>
           </div>
 
-          {blocked === "cap" && !session && (
+          {playedBefore && (
+            <p className="ferr" role="alert">
+              <AlertIcon size={16} />
+              {PLAYED_BEFORE_DELETION}
+            </p>
+          )}
+          {blocked === "cap" && (!session || canStartAnother) && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {SESSION_CAP_REACHED}
             </p>
           )}
-          {blocked === "error" && !session && (
+          {blocked === "error" && (!session || canStartAnother) && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {SESSION_START_FAILED}
             </p>
           )}
-          {!playable && !session && (
+          {!playable && !session && !playedBefore && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {PERSONA_BEING_UPDATED}
@@ -154,7 +178,7 @@ export default async function PrepPage({
               {session.status === "done" ? "Xem lại kết quả" : "Tiếp tục buổi luyện"}
               <ArrowRightIcon />
             </Link>
-          ) : !playable ? (
+          ) : !playable || playedBefore ? (
             <Link className="btn btn-tonal btn-lg prep-start" href="/">
               Về trang chủ
             </Link>
@@ -162,6 +186,13 @@ export default async function PrepPage({
             <form action={startSession}>
               <input type="hidden" name="personaId" value={personaId} />
               <StartSessionButton />
+            </form>
+          )}
+          {canStartAnother && (
+            // FR-45: the main button above opens the newest session; this starts one more.
+            <form action={startSession}>
+              <input type="hidden" name="personaId" value={personaId} />
+              <StartSessionButton another />
             </form>
           )}
           {!user && (

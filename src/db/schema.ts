@@ -300,6 +300,18 @@ export const dailySpend = pgTable(
   (table) => [primaryKey({ columns: [table.day, table.scope] })],
 );
 
+/**
+ * What stays of a deleted account, so that deleting it and signing in again resets no limit. The
+ * key is a keyed hash of the Google account; the row holds counters and persona ids only: no
+ * email, name, text, user id or session id.
+ */
+export const quotaTombstones = pgTable("quota_tombstone", {
+  key: text("key").primaryKey(),
+  /** Personas the account had a session with that counted for the one-session rule. */
+  playedPersonaIds: jsonb("played_persona_ids").$type<string[]>().notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** FR-38 events, written by the server only. Demo sessions write none. */
 export const events = pgTable(
   "event",

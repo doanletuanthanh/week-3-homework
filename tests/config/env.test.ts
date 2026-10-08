@@ -7,6 +7,7 @@ const valid = {
   DATABASE_URL: "postgresql://app@db/postgres",
   ADMIN_EMAILS: "admin@example.com",
   DEMO_ACCOUNT_EMAILS: "demo@example.com",
+  QUOTA_HASH_SECRET: "0123456789abcdef0123456789abcdef",
   LLM_ANALYSIS: "google:gemini-3.8-flash:low",
   LLM_PERSONA: "google:gemini-3.8-flash:low",
   LLM_REPLAY_JUDGE: "google:gemini-3.5-flash-lite:low",
@@ -40,6 +41,13 @@ describe("parseEnv", () => {
     expect(() =>
       parseEnv({ ...valid, ADMIN_EMAILS: "Thanh@Gmail.com", DEMO_ACCOUNT_EMAILS: "  thanh@gmail.COM " }),
     ).toThrow(/both ADMIN_EMAILS and DEMO_ACCOUNT_EMAILS: thanh@gmail.com/);
+  });
+
+  it("requires the secret that keys the counters kept of a deleted account, at a usable length", () => {
+    expect(() => parseEnv({ ...valid, QUOTA_HASH_SECRET: undefined })).toThrow(/QUOTA_HASH_SECRET/);
+    expect(() => parseEnv({ ...valid, QUOTA_HASH_SECRET: "" })).toThrow(/QUOTA_HASH_SECRET: must be at least 32 characters/);
+    expect(() => parseEnv({ ...valid, QUOTA_HASH_SECRET: "too-short" })).toThrow(/QUOTA_HASH_SECRET: must be at least 32 characters/);
+    expect(parseEnv(valid).QUOTA_HASH_SECRET).toBe(valid.QUOTA_HASH_SECRET);
   });
 
   it("requires the API key of the provider a role uses", () => {

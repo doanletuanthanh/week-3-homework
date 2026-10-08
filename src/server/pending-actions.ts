@@ -42,7 +42,7 @@ export async function resumePendingAction(user: AppUser): Promise<string | null>
   switch (payload.kind) {
     case "start_session": {
       const result = await openSession(db, user, payload.personaId);
-      return result.ok || result.reason === "cap_reached" ? sessionEntryPath(result, payload.personaId) : null;
+      return result.ok || result.reason !== "not_found" ? sessionEntryPath(result, payload.personaId) : null;
     }
   }
 }

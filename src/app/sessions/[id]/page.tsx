@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { cache } from "react";
+import { Suspense, cache } from "react";
 import { GuessScreen } from "@/components/guess/guess-screen";
 import { InterviewScreen } from "@/components/interview/interview-screen";
-import { TranscriptList } from "@/components/interview/transcript-list";
 import { RevealComputing } from "@/components/reveal/reveal-computing";
 import { ReplayScreen } from "@/components/replay/replay-screen";
 import { RevealScreen } from "@/components/reveal/reveal-screen";
+import { SessionSkeleton } from "@/components/ui/page-skeletons";
+import { WithdrawnScreen } from "@/components/withdrawn-screen";
 import { getDb } from "@/db/client";
 import { loadReplay } from "@/db/repo/replay";
 import { getSession, listTurns } from "@/db/repo/sessions";
@@ -16,7 +17,7 @@ import { personaCard } from "@/scenario/persona-card";
 import { requireAckedUser } from "@/server/auth";
 import { freezeAbandonedCanvas } from "@/server/canvas";
 import { revealRunIsDue, runReveal } from "@/server/reveal";
-import { buildSessionView, type ViewTurn } from "@/server/session-view";
+import { buildSessionView } from "@/server/session-view";
 import { isUuid } from "@/server/uuid";
 
 // A reveal that has no live runner is started from here, after the page is sent.
@@ -51,27 +52,12 @@ function SessionEnded() {
   );
 }
 
-/** The persona was pulled with its sessions: what was said stays readable, nothing more can be sent. */
-function SessionWithdrawn({ turns, personaName }: { turns: ViewTurn[]; personaName: string }) {
-  return (
-    <main className="container stopped">
-      <section className="card stopped-head">
-        <h1 className="headline-md">Nhân vật này đã được gỡ. Buổi của bạn dừng ở đây.</h1>
-      </section>
-      <section className="card stopped-log" aria-label="Hội thoại">
-        <TranscriptList turns={turns} pending={null} personaName={personaName} />
-      </section>
-    </main>
-  );
-}
-
 /**
  * One URL per session. It renders the screen of the session's current state, never the screen
  * that was open before (PRD §7): the interview, the guess, the reveal being computed, the reveal,
  * the replay at the turn it stopped at, or the read-only transcript of a withdrawn session.
  */
-export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+async function SessionScreen({ id }: { id: string }) {
   const loaded = await loadSession(id);
   const { user, scenario, topic } = loaded;
   let { session } = loaded;
@@ -97,7 +83,9 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
 
   switch (view.screen) {
     case "withdrawn":
-      return <SessionWithdrawn turns={view.turns} personaName={view.personaName} />;
+      return (
+        <WithdrawnScreen personaName={view.personaName} topicTitle={view.topicTitle} date={view.date} turnCount={view.turnCount} turns={view.turns} />
+      );
     case "interview":
       return (
         <InterviewScreen
@@ -139,4 +127,19 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     case "ended":
       return <SessionEnded />;
   }
+}
+
+/**
+ * The sign-in, the data notice and whose session it is are checked before anything is sent, so
+ * "not found" and the way to sign-in answer with their own status. The screen then loads behind
+ * the standard skeleton.
+ */
+export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  await loadSession(id);
+  return (
+    <Suspense fallback={<SessionSkeleton />}>
+      <SessionScreen id={id} />
+    </Suspense>
+  );
 }

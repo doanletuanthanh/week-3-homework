@@ -133,3 +133,12 @@ export const RetryIcon = icon(
     <path d="M19.5 4.5v4h-4" />
   </>,
 );
+export const MenuIcon = icon(<path d="M4 7h16M4 12h16M4 17h16" />);
+export const TrashIcon = icon(<path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5" />);
+export const SignOutIcon = icon(<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h9" />);
+export const HistoryIcon = icon(
+  <>
+    <path d="M4 12a8 8 0 1 0 2.6-5.9L4 8.5" />
+    <path d="M4 4.5v4h4M12 8v4.5l3 1.8" />
+  </>,
+);

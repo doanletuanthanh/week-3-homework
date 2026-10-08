@@ -1,4 +1,4 @@
-import type { BrowserContext } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { LOCAL_SUPABASE_URL } from "../../helpers/local-stack";
@@ -72,4 +72,22 @@ let counter = 0;
 export function uniqueEmail(label: string): string {
   counter += 1;
   return `${label}-${Date.now()}-${counter}@example.com`;
+}
+
+/** The auth id of an account that exists; creates it when it does not. For accounts several specs share. */
+export async function ensureAccount(email: string): Promise<string> {
+  const admin = adminClient();
+  const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (error) throw error;
+  return data.users.find((user) => user.email === email)?.id ?? createAccount(email);
+}
+
+/** A fresh Google-marked learner who has accepted the data notice, with the page on `next`. */
+export async function signInAndAccept(page: Page, context: BrowserContext, label: string, next: string = "/my-sessions") {
+  const email = uniqueEmail(label);
+  const userId = await signInAsNewLearner(context, email);
+  await page.goto(`/data-notice?next=${next}`);
+  await page.getByRole("button", { name: "Tôi hiểu" }).click();
+  await page.waitForURL((url) => url.pathname === next);
+  return { userId, email };
 }

@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { branches, config, evalRuns, events, llmCalls, pendingActions, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
+import { branches, config, evalRuns, events, llmCalls, pendingActions, quotaTombstones, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
 import { LOCAL_DATABASE_URL } from "../../helpers/local-stack";
 
 process.env.DATABASE_URL = LOCAL_DATABASE_URL;
@@ -25,6 +25,21 @@ export const db = {
     getDb().select().from(llmCalls).where(eq(llmCalls.sessionId, sessionId)).orderBy(llmCalls.createdAt),
   pendingActions: () => getDb().select().from(pendingActions),
   waitlistOf: (userId: string) => getDb().select().from(waitlist).where(eq(waitlist.userId, userId)),
+  eventsNamed: (name: string) => getDb().select().from(events).where(eq(events.name, name)).orderBy(events.at),
+  eventsOfUser: (userId: string) => getDb().select().from(events).where(eq(events.userId, userId)),
+  tombstones: () => getDb().select().from(quotaTombstones),
+  llmCallCount: async () => (await getDb().select({ id: llmCalls.id }).from(llmCalls)).length,
+  /** Sign-in accounts with this id on the local auth server: one, or none once it is deleted. */
+  authAccounts: (userId: string) => getDb().execute<{ id: string }>(sql`SELECT id FROM auth.users WHERE id = ${userId}`),
+  /**
+   * Marks the account as the sign-in of one Google account, the way the auth server records a
+   * Google sign-in. Google cannot be driven from a test, so the row is written directly.
+   */
+  addGoogleIdentity: (userId: string, email: string, googleSubject: string) =>
+    getDb().execute(sql`
+      INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+      VALUES (${googleSubject}, ${userId}, ${JSON.stringify({ sub: googleSubject, email })}::jsonb, 'google', now(), now(), now())
+    `),
 
   /** Adds session spend for today, as if earlier sessions had cost this much. */
   addSessionSpend: (usd: number) =>

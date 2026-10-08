@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, ne, notInArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne, notInArray, sql } from "drizzle-orm";
+import type { RevealJson } from "@/engine/reveal-types";
 import { tokenize } from "@/engine/tokens";
 import { initialState } from "@/engine/types";
 import type { Database, Executor } from "../client";
@@ -126,4 +127,55 @@ export async function listTurns(db: Executor, userId: string, sessionId: string)
     .where(and(eq(turns.sessionId, sessionId), eq(sessions.userId, userId), eq(branches.kind, "main")))
     .orderBy(asc(turns.index));
   return rows.map((row) => row.turn);
+}
+
+/** What one row of the learner's session list is built from. */
+export type SessionListRow = {
+  id: string;
+  status: SessionRow["status"];
+  startedAt: Date;
+  /** Read for a `done` session only: no other session's result leaves the database for a list. */
+  revealJson: RevealJson | null;
+  displayName: string;
+  topicTitle: string;
+};
+
+/** A learner's own sessions, newest first. */
+export async function listSessionRows(db: Executor, userId: string, page: { offset: number; limit: number }): Promise<SessionListRow[]> {
+  return db
+    .select({
+      id: sessions.id,
+      status: sessions.status,
+      startedAt: sessions.startedAt,
+      revealJson: sql<RevealJson | null>`CASE WHEN ${sessions.status} = 'done' THEN ${sessions.revealJson} END`,
+      displayName: scenarios.displayName,
+      topicTitle: topics.title,
+    })
+    .from(sessions)
+    .innerJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
+    .innerJoin(topics, eq(topics.id, scenarios.topicId))
+    .where(eq(sessions.userId, userId))
+    .orderBy(desc(sessions.startedAt), desc(sessions.id))
+    .limit(page.limit)
+    .offset(page.offset);
+}
+
+export async function countSessions(db: Executor, userId: string): Promise<number> {
+  const [row] = await db.select({ total: count() }).from(sessions).where(eq(sessions.userId, userId));
+  return row.total;
+}
+
+/** True while a scenario is being prepared for the learner: the account cannot be deleted meanwhile. */
+export async function hasGeneratingSession(db: Executor, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(and(eq(sessions.userId, userId), eq(sessions.status, "generating")))
+    .limit(1);
+  return row !== undefined;
+}
+
+/** Removes a session with its turns, snapshots, branches and events. Its model-call rows stay, so its cost stays counted. */
+export async function deleteSession(db: Executor, sessionId: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.id, sessionId));
 }

@@ -76,8 +76,8 @@ export async function postReplayTurn(sessionId: string, body: TurnBody, handlers
 /** `data` is the parsed body of a successful answer. */
 export type PlainOutcome = { ok: true; data: unknown } | Failed;
 
-/** A JSON request to one of the session's other routes (notes, end, replay). Never throws. */
-export async function sendJson(url: string, method: "PUT" | "POST", body: unknown): Promise<PlainOutcome> {
+/** A JSON request to one of the app's other routes (notes, end, replay, account). Never throws. */
+export async function sendJson(url: string, method: "PUT" | "POST" | "DELETE", body: unknown): Promise<PlainOutcome> {
   try {
     // `keepalive` lets a save that starts while the page is closing still reach the server.
     const response = await fetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body), keepalive: true });

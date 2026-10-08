@@ -1,8 +1,8 @@
 import type { Executor } from "@/db/client";
-import { events, type DeviceClass } from "@/db/schema";
+import { events, type DeviceClass, type WaitlistContext } from "@/db/schema";
 import type { ReplayLevel, ReplayResult } from "@/engine/replay-result";
 
-/** FR-38 events this slice writes so far. Later phases add theirs. */
+/** FR-38 events this slice writes. The custom-topic path adds its own. */
 export type AppEvent =
   | { name: "session_started"; props: { persona_id: string; topic_id: string; kind: "curated"; scenario_version: number } }
   | { name: "turn"; props: { turn_index: number; latency_ms: number } }
@@ -27,7 +27,13 @@ export type AppEvent =
     }
   | { name: "replay_started"; props: { level: ReplayLevel } }
   /** Written when a replay ends, however it ends. `turns` is how many replay questions were answered. */
-  | { name: "replay_result"; props: { level: ReplayLevel; result: ReplayResult; turns: number } };
+  | { name: "replay_result"; props: { level: ReplayLevel; result: ReplayResult; turns: number } }
+  /** "Tải về" was pressed on a finished session. One event per press. */
+  | { name: "takeaway_downloaded"; props: Record<string, never> }
+  /** Written when the learner joins a waitlist, not when they press again. */
+  | { name: "waitlist_joined"; props: { context: WaitlistContext } }
+  /** Written without a user: the account it reports no longer exists. `sessions` is how many it had. */
+  | { name: "account_deleted"; props: { sessions: number } };
 
 /**
  * Writes one event on the server, inside the caller's transaction when given one, so an event
@@ -36,7 +42,7 @@ export type AppEvent =
  */
 export async function recordEvent(
   db: Executor,
-  subject: { userId: string; sessionId: string; isDemo: boolean },
+  subject: { userId: string | null; sessionId: string | null; isDemo: boolean },
   event: AppEvent,
 ): Promise<void> {
   if (subject.isDemo) return;

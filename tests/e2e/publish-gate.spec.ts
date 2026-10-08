@@ -89,7 +89,7 @@ test.describe("publish and unpublish, as a learner sees them", () => {
 
     // What was said stays readable; nothing more can be sent.
     await page.reload();
-    await expect(page.locator(".bubble-p").filter({ hasText: "Chị trả lời câu thứ 1 (trong khối dữ liệu)." })).toBeVisible();
+    await expect(page.locator(".stopped-log .tl").filter({ hasText: "Chị trả lời câu thứ 1 (trong khối dữ liệu)." })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Nhân vật này đã được gỡ. Buổi của bạn dừng ở đây.");
     await expect(composer(page)).toHaveCount(0);
     await expect(sendButton(page)).toHaveCount(0);

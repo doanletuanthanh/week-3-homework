@@ -44,6 +44,8 @@ const envSchema = z
     DATABASE_URL: z.string().min(1),
     ADMIN_EMAILS: emailList,
     DEMO_ACCOUNT_EMAILS: emailList,
+    // Keys the counters kept of a deleted account. Changing it makes every kept counter unreachable.
+    QUOTA_HASH_SECRET: z.string().min(32, "must be at least 32 characters"),
     LLM_ANALYSIS: roleSpec,
     LLM_PERSONA: roleSpec,
     LLM_REPLAY_JUDGE: roleSpec,

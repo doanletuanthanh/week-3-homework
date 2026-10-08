@@ -5,6 +5,10 @@ export const APP_PORT = 3100;
 export const APP_URL = `http://localhost:${APP_PORT}`;
 export const LLM_STUB_PORT = 4010;
 export const DEMO_EMAIL = "demo-e2e@example.com";
+/** A second demo account, for the tests that fill a session list: its sessions are counted by nobody else. */
+export const DEMO_LIST_EMAIL = "demo-list-e2e@example.com";
+/** Local stack only: keys the counters the app keeps of a deleted test account. */
+export const QUOTA_HASH_SECRET = "e2e-local-quota-hash-secret-0123456789";
 
 /** Keys of the running local Supabase stack, read from the CLI so none are stored in the repo. */
 export function localSupabaseKeys(): { publishableKey: string; secretKey: string } {
@@ -29,7 +33,8 @@ export function appEnv(publishableKey: string): Record<string, string> {
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publishableKey,
     DATABASE_URL: LOCAL_DATABASE_URL,
     ADMIN_EMAILS: "admin-e2e@example.com",
-    DEMO_ACCOUNT_EMAILS: DEMO_EMAIL,
+    DEMO_ACCOUNT_EMAILS: `${DEMO_EMAIL},${DEMO_LIST_EMAIL}`,
+    QUOTA_HASH_SECRET,
     LLM_ANALYSIS: "openai:gpt-6-luna:low",
     LLM_PERSONA: "openai:gpt-6-luna:low",
     LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low",

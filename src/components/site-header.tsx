@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { signOut } from "@/server/actions";
 import { getUser } from "@/server/auth";
-import { UserIcon } from "./icons";
+import { HeaderMenu, MySessionsLink } from "./header-menu";
+import { HistoryIcon, MenuIcon, SignOutIcon, UserIcon } from "./icons";
 
 function Logo() {
   return (
@@ -27,7 +28,11 @@ function Logo() {
   );
 }
 
-/** Site header. Signed out: "Đăng nhập". Signed in: account menu with "Đăng xuất". */
+/**
+ * Site header (PRD §6.0). Signed out: "Đăng nhập". Signed in: "Buổi của tôi" and the account menu
+ * with "Đăng xuất"; below 768px the two fold into one menu behind a button. This slice has no
+ * library, so there is no "Thư viện" link.
+ */
 export async function SiteHeader() {
   const user = await getUser();
   return (
@@ -40,23 +45,53 @@ export async function SiteHeader() {
           <span className="vsep hdr-wide" />
           <span className="hdr-badge hdr-wide">UX · BA · PM</span>
         </div>
+        {user && (
+          <nav className="nav hdr-wide" aria-label="Chính">
+            <MySessionsLink />
+          </nav>
+        )}
         <div className="hdr-r">
           {user ? (
-            <details className="user-menu">
-              <summary className="user" aria-label="Tài khoản: mở menu">
-                <span className="user-meta hdr-wide">
-                  <span>{user.email}</span>
-                </span>
-                <span className="user-av">
-                  <UserIcon />
-                </span>
-              </summary>
-              <div className="menu">
-                <form action={signOut}>
-                  <button type="submit">Đăng xuất</button>
-                </form>
-              </div>
-            </details>
+            <>
+              <HeaderMenu
+                className="user-menu hdr-wide"
+                summaryClassName="user"
+                summaryLabel="Tài khoản: mở menu"
+                summary={
+                  <>
+                    <span className="user-meta">
+                      <span>{user.email}</span>
+                    </span>
+                    <span className="user-av">
+                      <UserIcon />
+                    </span>
+                  </>
+                }
+              >
+                <div className="menu">
+                  <form action={signOut}>
+                    <button type="submit">
+                      <SignOutIcon size={16} />
+                      Đăng xuất
+                    </button>
+                  </form>
+                </div>
+              </HeaderMenu>
+              <HeaderMenu className="user-menu hdr-narrow" summaryClassName="hdr-menu" summaryLabel="Menu" summary={<MenuIcon size={22} />}>
+                <nav className="menu" aria-label="Chính">
+                  <MySessionsLink>
+                    <HistoryIcon size={16} />
+                  </MySessionsLink>
+                  <div className="hr" />
+                  <form action={signOut}>
+                    <button type="submit" className="menu-out">
+                      <SignOutIcon size={16} />
+                      <span>Đăng xuất · {user.email}</span>
+                    </button>
+                  </form>
+                </nav>
+              </HeaderMenu>
+            </>
           ) : (
             <Link className="btn btn-surface btn-md" href="/sign-in">
               Đăng nhập

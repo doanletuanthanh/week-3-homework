@@ -71,6 +71,17 @@ describe("buildSessionView: which screen a session's state renders (PRD §7)", (
     expect(view(session).screen).toBe(screen);
   });
 
+  it("withdrawn: the page gets who, the topic, the day and the turn it stopped at, with the transcript", () => {
+    expect(view(sessionOf({ ...ready, status: "withdrawn" }))).toEqual({
+      screen: "withdrawn",
+      personaName: "Chị Thu",
+      topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm",
+      date: "25/09",
+      turnCount: 6,
+      turns,
+    });
+  });
+
   it("tells the interview screen that turn 30 ended the session, so it sends the end request", () => {
     expect(view(sessionOf({ endedAt: new Date() }))).toMatchObject({ screen: "interview", endedOnServer: true });
     expect(view(sessionOf({}))).toMatchObject({ screen: "interview", endedOnServer: false });
