@@ -119,7 +119,7 @@ describe("il eval --profile full", () => {
 
     expect(await runEval(["chi-thu", "--profile", "full"], io, getDb(), value)).toBe(1);
 
-    expect(out[0]).toMatch(/^Eval full cho chi-thu phiên bản 1: 46 episode × 30 lượt, khoảng 3612 call, ước tính \d+\.\d\d USD/);
+    expect(out[0]).toMatch(/^Eval full cho chi-thu phiên bản 1: 46 episode × 30 lượt, khoảng 3664 call, ước tính \d+\.\d\d USD/);
     expect(asked).toEqual(["Chạy eval đầy đủ với chi phí trên? (gõ yes để chạy) "]);
     expect(out.at(-1)).toBe("Đã hủy: không gọi model nào.");
     expect(models.records).toEqual([]);
@@ -146,7 +146,10 @@ describe("il eval --profile full", () => {
       ANALYSIS: repeat(26 * 30, { structured: rawAnalysis() }),
       // 26 engine episodes and 20 baseline episodes: the baseline runs on the persona's model.
       PERSONA: repeat(46 * 30, { text: "Ừ em, chị cũng bình thường thôi." }),
-      REPLAY_JUDGE: repeat(26, { structured: { prev_turn_verdict: NO_VERDICT } }),
+      // A full run ends each engine episode with the three reveal calls; the end judge stands in for the turn judge.
+      END_JUDGE: repeat(26, { structured: { last_turn_verdict: NO_VERDICT, canvas_matches: [] } }),
+      FEEDBACK: repeat(26, { structured: { claims: [] } }),
+      VERIFIER: repeat(26, { structured: { claims: [] } }),
       EVAL_LEAK_JUDGE: repeat(46, flagged),
     });
     const { io, out, err } = capture();

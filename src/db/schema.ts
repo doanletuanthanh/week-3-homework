@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { TurnDecision } from "@/engine/plan-turn";
+import type { RevealJson, RevealParts } from "@/engine/reveal-types";
 import type { HookEntry, RawAnalysis, UnlockedItem, Verdict } from "@/engine/types";
 import type { EpisodeResult, EvalReport, LeakKind } from "@/eval/types";
 import type { Scenario } from "@/scenario/schema";
@@ -118,6 +119,22 @@ export const sessions = pgTable(
     canvasFrozenAt: timestamp("canvas_frozen_at", { withTimezone: true }),
     /** Screen the learner asked their first question on: mobile is narrower than 768px. */
     deviceClass: text("device_class", { enum: DEVICE_CLASSES }),
+    /** How many items the learner thinks the persona told (FR-18). Never an input of a model call. */
+    guess: integer("guess"),
+    /** When the guess was stored and the session became `revealed`. */
+    revealedAt: timestamp("revealed_at", { withTimezone: true }),
+    /** Processed output of each reveal call, written as the call completes, so no call is made twice. */
+    revealParts: jsonb("reveal_parts").$type<RevealParts>().notNull().default({}),
+    /** The frozen reveal. Holds what is sealed: a browser only gets what `engine/seal.ts` builds from it. */
+    revealJson: jsonb("reveal_json").$type<RevealJson>(),
+    /** Set with `revealJson`. After it, nothing about the reveal is written again. */
+    revealReadyAt: timestamp("reveal_ready_at", { withTimezone: true }),
+    /** The one runner allowed to write reveal results right now; every write checks it. */
+    revealRunToken: uuid("reveal_run_token"),
+    /** Runners that have claimed this reveal so far. */
+    revealRunAttempt: integer("reveal_run_attempt").notNull().default(0),
+    /** Refreshed while the runner lives; a stale one means the runner died and may be replaced. */
+    revealHeartbeatAt: timestamp("reveal_heartbeat_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -276,6 +293,22 @@ export const events = pgTable(
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("event_name_at_idx").on(table.name, table.at)],
+);
+
+export const WAITLIST_CONTEXTS = ["no_more_personas"] as const;
+export type WaitlistContext = (typeof WAITLIST_CONTEXTS)[number];
+
+/** FR-32: a learner who asked to be told about new content. One row per learner and context. */
+export const waitlist = pgTable(
+  "waitlist",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    context: text("context", { enum: WAITLIST_CONTEXTS }).notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.context] })],
 );
 
 /** Operator settings changed with `pnpm il config set`. A missing row means the default in code. */

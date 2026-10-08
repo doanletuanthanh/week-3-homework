@@ -319,7 +319,7 @@ test.describe("ending the session", () => {
     await endDialog(page).getByRole("button", { name: "Kết thúc buổi" }).click();
 
     await expect(endedHeading(page)).toBeVisible();
-    await expect(page.getByText("Ghi chú của bạn đã được đóng băng.")).toBeVisible();
+    await expect(page.getByRole("slider", { name: "Số điều chị Thu đã kể" })).toBeVisible();
     await expect(composer(page)).toHaveCount(0);
     await expect(notes(page)).toHaveCount(0);
     await expect(page).toHaveURL(`/sessions/${sessionId}`);

@@ -47,6 +47,9 @@ const envSchema = z
     LLM_ANALYSIS: roleSpec,
     LLM_PERSONA: roleSpec,
     LLM_REPLAY_JUDGE: roleSpec,
+    LLM_END_JUDGE: roleSpec,
+    LLM_FEEDBACK: roleSpec,
+    LLM_VERIFIER: roleSpec,
     // CLI-only roles: needed by the commands that call them, not by the app.
     LLM_EVAL_INTERVIEWER: optionalRoleSpec,
     LLM_EVAL_LEAK_JUDGE: optionalRoleSpec,

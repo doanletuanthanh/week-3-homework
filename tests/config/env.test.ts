@@ -10,6 +10,9 @@ const valid = {
   LLM_ANALYSIS: "google:gemini-3.8-flash:low",
   LLM_PERSONA: "google:gemini-3.8-flash:low",
   LLM_REPLAY_JUDGE: "google:gemini-3.5-flash-lite:low",
+  LLM_END_JUDGE: "google:gemini-3.8-flash:low",
+  LLM_FEEDBACK: "google:gemini-3.8-flash:low",
+  LLM_VERIFIER: "google:gemini-3.5-flash-lite:low",
   GOOGLE_API_KEY: "g-key",
 };
 
@@ -87,11 +90,12 @@ describe("parseEnv", () => {
     const mixed = { ...valid, LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low" };
     expect(() => parseEnv(mixed)).toThrow(/OPENAI_API_KEY: required because LLM_REPLAY_JUDGE uses provider "openai"/);
     expect(() => parseEnv({ ...mixed, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).toThrow(
-      /GOOGLE_API_KEY: required because LLM_ANALYSIS, LLM_PERSONA use provider "google"/,
+      /GOOGLE_API_KEY: required because LLM_ANALYSIS, LLM_PERSONA, LLM_END_JUDGE, LLM_FEEDBACK, LLM_VERIFIER use provider "google"/,
     );
     expect(() => parseEnv({ ...mixed, OPENAI_API_KEY: "o-key" })).not.toThrow();
     // No role on Google: its key is not needed.
-    const allOpenAi = { ...valid, LLM_ANALYSIS: "openai:gpt-6-luna:low", LLM_PERSONA: "openai:gpt-6-luna:low", LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low" };
+    const openAi = "openai:gpt-6-luna:low";
+    const allOpenAi = { ...valid, LLM_ANALYSIS: openAi, LLM_PERSONA: openAi, LLM_REPLAY_JUDGE: openAi, LLM_END_JUDGE: openAi, LLM_FEEDBACK: openAi, LLM_VERIFIER: openAi };
     expect(() => parseEnv({ ...allOpenAi, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).not.toThrow();
   });
 

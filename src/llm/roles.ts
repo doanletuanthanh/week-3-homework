@@ -7,8 +7,9 @@ export type Effort = (typeof EFFORTS)[number];
 /**
  * Roles the app itself calls; each has its own required `LLM_<ROLE>` variable. Each later phase
  * adds the roles it first uses. ANALYSIS is Call 1, PERSONA is Call 2, REPLAY_JUDGE is the turn judge.
+ * END_JUDGE, FEEDBACK and VERIFIER are the three reveal calls, in that order.
  */
-export const APP_ROLES = ["ANALYSIS", "PERSONA", "REPLAY_JUDGE"] as const;
+export const APP_ROLES = ["ANALYSIS", "PERSONA", "REPLAY_JUDGE", "END_JUDGE", "FEEDBACK", "VERIFIER"] as const;
 
 /**
  * Roles only the operator CLI calls (evaluation and the fixed-string check). Their variables are

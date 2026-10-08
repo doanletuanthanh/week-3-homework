@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { config, evalRuns, events, llmCalls, pendingActions, scenarios, sessions, snapshots, stringApprovals, turns, users } from "@/db/schema";
+import { config, evalRuns, events, llmCalls, pendingActions, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
 import { LOCAL_DATABASE_URL } from "../../helpers/local-stack";
 
 process.env.DATABASE_URL = LOCAL_DATABASE_URL;
@@ -20,6 +20,7 @@ export const db = {
   llmCallsOf: (sessionId: string) =>
     getDb().select().from(llmCalls).where(eq(llmCalls.sessionId, sessionId)).orderBy(llmCalls.createdAt),
   pendingActions: () => getDb().select().from(pendingActions),
+  waitlistOf: (userId: string) => getDb().select().from(waitlist).where(eq(waitlist.userId, userId)),
 
   /** Adds session spend for today, as if earlier sessions had cost this much. */
   addSessionSpend: (usd: number) =>

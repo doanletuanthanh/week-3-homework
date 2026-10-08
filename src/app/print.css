@@ -1,0 +1,25 @@
+/* "Tải về" (FR-29): the takeaway alone, on one A4 sheet. The browser's print dialog saves it as a PDF. */
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff}
+  body{display:block;min-height:0}
+  body > header,body > footer,.reveal-col > :not(.takeaway),.takeaway > :not(.print-sheet),dialog{display:none !important}
+  .reveal{padding:0}
+  .reveal-col{max-width:none;gap:0}
+  .takeaway{padding:0;border-radius:0;box-shadow:none;background:#fff}
+  .print-sheet{display:flex;flex-direction:column;gap:24px;padding:56px 64px;color:var(--on-surface)}
+  .print-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .print-top .code{text-align:right}
+  .print-sheet .eyebrow{margin-bottom:8px}
+  .print-sheet .headline-lg{font-size:32px;line-height:40px}
+  .print-blk{display:flex;flex-direction:column;gap:14px;padding:22px 0;border-top:1px solid #d9dcef;break-inside:avoid}
+  .print-sheet .pair{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .print-sheet .pair-c{padding:12px 14px;border-radius:8px}
+  .print-sheet .pair-instead{background:#fff1ef}
+  .print-sheet .pair-ask{background:#edfaf3}
+  .print-sheet .q2{font:500 17px/25px var(--serif)}
+  .print-sheet .habit{background:none;box-shadow:none;padding:0}
+  .print-fill{display:flex;flex-direction:column;gap:22px;padding-top:4px}
+  .print-fill i{display:block;height:1px;background:#9aa39c}
+  .print-sheet *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}

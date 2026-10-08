@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { createEvalRun, finishEvalRun } from "@/db/repo/eval";
 import { adjudications, evalRuns, leakFlags, scenarios, sessions, stringApprovals } from "@/db/schema";
 import { openSession } from "@/server/sessions";
+import { productStrings } from "@/strings/product-strings";
 import { runAdjudicate } from "../../cli/commands/adjudicate";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { runPublish, runUnpublish } from "../../cli/commands/publish";
@@ -83,12 +84,13 @@ describe("il check-strings", () => {
   });
 
   it("checks the product strings under their own scope, with no classifier call", async () => {
-    const models = roleModels({ STRING_CHECK: repeat(11, CLEAN_STRING) });
+    const count = productStrings().length;
+    const models = roleModels({ STRING_CHECK: repeat(count, CLEAN_STRING) });
     const { io, out } = capture();
 
     expect(await runCheckStrings(["product"], io, getDb(), models.llmDeps)).toBe(0);
 
-    expect(out.at(-1)).toBe("11 chuỗi, 11 vừa kiểm, 0 không qua.");
+    expect(out.at(-1)).toBe(`${count} chuỗi, ${count} vừa kiểm, 0 không qua.`);
     expect(models.calls("ANALYSIS")).toHaveLength(0);
     const rows = await getDb().select().from(stringApprovals);
     expect(rows.every((row) => row.scope === "product" && row.personaId === "")).toBe(true);
@@ -347,14 +349,14 @@ describe("il publish", () => {
     expect((await newestVersion()).status).toBe("draft");
   });
 
-  it("refuses while verifier disagreement is not measured, which is every run before the reveal pipeline", async () => {
+  it("refuses while verifier disagreement is not measured: a run whose episodes did not end with the reveal", async () => {
     await seedFullRun([], { verifierMeasured: false });
     await approveEverything(thanh);
     const { io, err } = capture();
 
     expect(await runPublish(["chi-thu"], io, getDb(), thanh)).toBe(1);
 
-    expect(err).toEqual(["KHÔNG publish chi-thu phiên bản 1: 1 lý do", "  - Ngưỡng chưa đạt: Bất đồng verifier ≤ 10.0% (chưa đo: eval chưa chạy reveal)."]);
+    expect(err).toEqual(["KHÔNG publish chi-thu phiên bản 1: 1 lý do", "  - Ngưỡng chưa đạt: Bất đồng verifier ≤ 10.0% (chưa đo: không có episode nào chạy reveal với verifier trả lời)."]);
   });
 
   it("does not count a finished quick run of the same version", async () => {

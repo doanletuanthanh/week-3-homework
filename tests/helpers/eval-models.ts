@@ -1,16 +1,19 @@
 import type { LlmCallRecord } from "@/db/repo/llm-calls";
 import type { CallModelDeps } from "@/llm/call-model";
-import { ROLES, type Role } from "@/llm/roles";
+import { ROLES, type Role, type RoleSpec } from "@/llm/roles";
 import { scriptedModel, type ScriptedStep } from "./scripted-model";
 
-/** One priced model per role, so a call can be traced back to the role that made it. */
-const MODEL_OF: Record<Role, string> = {
-  ANALYSIS: "gemini-3.8-flash",
-  PERSONA: "gemini-3.5-flash",
-  REPLAY_JUDGE: "gemini-3.5-flash-lite",
-  EVAL_INTERVIEWER: "gpt-6-luna",
-  EVAL_LEAK_JUDGE: "gpt-6-sol",
-  STRING_CHECK: "gpt-6.1-sol",
+/** One priced model and effort per role, so a call can be traced back to the role that made it. */
+const SPEC_OF: Record<Role, RoleSpec> = {
+  ANALYSIS: { provider: "openai", model: "gemini-3.8-flash", effort: "low" },
+  PERSONA: { provider: "openai", model: "gemini-3.5-flash", effort: "low" },
+  REPLAY_JUDGE: { provider: "openai", model: "gemini-3.5-flash-lite", effort: "low" },
+  END_JUDGE: { provider: "openai", model: "gemini-3.1-flash-lite", effort: "low" },
+  FEEDBACK: { provider: "openai", model: "gemini-3.8-flash", effort: "medium" },
+  VERIFIER: { provider: "openai", model: "gemini-3.5-flash", effort: "medium" },
+  EVAL_INTERVIEWER: { provider: "openai", model: "gpt-6-luna", effort: "low" },
+  EVAL_LEAK_JUDGE: { provider: "openai", model: "gpt-6-sol", effort: "low" },
+  STRING_CHECK: { provider: "openai", model: "gpt-6.1-sol", effort: "low" },
 };
 
 /**
@@ -22,11 +25,11 @@ export function roleModels(script: Partial<Record<Role, ScriptedStep[]>>) {
     Role,
     ReturnType<typeof scriptedModel>
   >;
-  const roleOf = (model: string) => ROLES.find((role) => MODEL_OF[role] === model)!;
+  const roleOf = (spec: RoleSpec) => ROLES.find((role) => SPEC_OF[role].model === spec.model && SPEC_OF[role].effort === spec.effort)!;
   const records: LlmCallRecord[] = [];
   const llmDeps: Partial<CallModelDeps> = {
-    roleSpec: (role) => ({ provider: "openai", model: MODEL_OF[role], effort: "low" }),
-    createModel: (spec) => scripted[roleOf(spec.model)].model,
+    roleSpec: (role) => SPEC_OF[role],
+    createModel: (spec) => scripted[roleOf(spec)].model,
     recordCall: async (record) => {
       records.push(record);
     },

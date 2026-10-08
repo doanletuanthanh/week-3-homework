@@ -1,5 +1,5 @@
 import type { Scenario } from "@/scenario/schema";
-import type { EpisodeKind, EpisodeResult, EvalProfile, EvalReport, Threshold } from "./types";
+import type { EpisodeKind, EpisodeResult, EvalProfile, EvalReport, Threshold, VerifierCounts } from "./types";
 
 /** Calibration target of FR-34: a good run opens this share of the items. */
 export const CALIBRATION_TARGET = { min: 0.5, max: 0.75 } as const;
@@ -55,6 +55,24 @@ export function buildReport(
   const contradictionCount = engine.reduce((sum, episode) => sum + episode.contradictions.length, 0);
   const openedItems = engine.reduce((sum, episode) => sum + episode.openedItemIds.length, 0);
 
+  // NFR-8 is about the two things the verifier cannot take away: an unlock and a "told" verdict.
+  const verifierByKind: VerifierCounts = {};
+  for (const episode of engine) {
+    for (const [kind, counts] of Object.entries(episode.verifier ?? {}) as [keyof VerifierCounts, { agree: number; disagree: number }][]) {
+      const total = (verifierByKind[kind] ??= { agree: 0, disagree: 0 });
+      total.agree += counts.agree;
+      total.disagree += counts.disagree;
+    }
+  }
+  const credited = [verifierByKind.unlock, verifierByKind.disclosure].filter((counts) => counts !== undefined);
+  const creditChecks = credited.reduce((sum, counts) => sum + counts.agree + counts.disagree, 0);
+  const creditDisagreed = credited.reduce((sum, counts) => sum + counts.disagree, 0);
+  const verifierDisagreement = creditChecks === 0 ? null : creditDisagreed / creditChecks;
+  const kindDetail = (kind: "unlock" | "disclosure", name: string) => {
+    const counts = verifierByKind[kind] ?? { agree: 0, disagree: 0 };
+    return `${name} ${counts.disagree}/${counts.agree + counts.disagree}`;
+  };
+
   const thresholds: Threshold[] = [
     {
       key: "good_opens_enough",
@@ -77,8 +95,11 @@ export function buildReport(
     {
       key: "verifier_disagreement",
       label: `Bất đồng verifier ≤ ${percent(MAX_VERIFIER_DISAGREEMENT)}`,
-      met: false,
-      detail: "chưa đo: eval chưa chạy reveal",
+      met: verifierDisagreement !== null && verifierDisagreement <= MAX_VERIFIER_DISAGREEMENT,
+      detail:
+        verifierDisagreement === null
+          ? "chưa đo: không có episode nào chạy reveal với verifier trả lời"
+          : `${percent(verifierDisagreement)} (${kindDetail("unlock", "mở khóa")}, ${kindDetail("disclosure", "đã kể")})`,
     },
   ];
 
@@ -95,7 +116,8 @@ export function buildReport(
       openedItems,
       rate: openedItems === 0 ? null : contradictionCount / openedItems,
     },
-    verifierDisagreement: null,
+    verifierDisagreement,
+    verifierByKind,
     thresholds,
     cost: { estimateUsd: run.estimateUsd, actualUsd: episodes.reduce((sum, episode) => sum + episode.costUsd, 0) },
   };
@@ -117,6 +139,13 @@ export function formatReport(report: EvalReport): string[] {
     leakLine("baseline chỉ-prompt", leaks.baseline),
     `Truyền đạt hook: ${hookTransmission.rate === null ? "không có hook nào được chọn" : `${hookTransmission.dropped}/${hookTransmission.selected} (${percent(hookTransmission.rate)})`}`,
     `Mâu thuẫn trước/sau mở item: ${contradictions.count} trên ${contradictions.openedItems} item đã mở${contradictions.rate === null ? "" : ` (${percent(contradictions.rate)})`}`,
+    ...(report.verifierByKind && Object.keys(report.verifierByKind).length > 0
+      ? [
+          `Bất đồng verifier theo loại: ${Object.entries(report.verifierByKind)
+            .map(([kind, counts]) => `${kind} ${counts.disagree}/${counts.agree + counts.disagree}`)
+            .join(", ")}`,
+        ]
+      : []),
     "Ngưỡng:",
     ...report.thresholds.map((threshold) => `  [${threshold.met ? "ĐẠT" : "CHƯA ĐẠT"}] ${threshold.label}: ${threshold.detail}`),
     `Chi phí: ước tính ${cost.estimateUsd.toFixed(2)} USD, thực tế ${cost.actualUsd.toFixed(4)} USD`,

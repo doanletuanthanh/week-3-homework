@@ -50,6 +50,13 @@
       "when": 1791295766150,
       "tag": "0006_canvas-and-device-class",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791367553580,
+      "tag": "0007_reveal-and-waitlist",
+      "breakpoints": true
     }
   ]
 }

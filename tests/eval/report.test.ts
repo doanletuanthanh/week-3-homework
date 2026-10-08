@@ -105,9 +105,42 @@ describe("buildReport", () => {
     expect(threshold(report, "good_vs_bad")).toMatchObject({ met: true, detail: "tốt 7, xấu 2" });
   });
 
-  it("always reports verifier disagreement as not met until it is measured", () => {
+  it("reports verifier disagreement as not met while no episode measured it", () => {
     expect(report.verifierDisagreement).toBeNull();
+    expect(report.verifierByKind).toEqual({});
     expect(threshold(report, "verifier_disagreement").met).toBe(false);
+    // An episode whose verifier call failed measured nothing either.
+    const failed = buildReport(chiThu, run, [{ ...episode("good-1", "good", { opened: 6 }), verifier: null }]);
+    expect(failed.verifierDisagreement).toBeNull();
+  });
+
+  it("measures verifier disagreement over unlocks and told verdicts of the episodes that ran the reveal (NFR-8)", () => {
+    const measured = buildReport(chiThu, run, [
+      { ...episode("good-1", "good", { opened: 6 }), verifier: { unlock: { agree: 5, disagree: 1 }, disclosure: { agree: 6, disagree: 0 }, praise: { agree: 0, disagree: 1 } } },
+      { ...episode("bad-1", "bad", { opened: 2 }), verifier: { unlock: { agree: 2, disagree: 0 }, disclosure: { agree: 1, disagree: 0 }, hook_ignored: { agree: 3, disagree: 2 } } },
+      // No reveal in this one, and a baseline has no engine to disagree with.
+      episode("adversarial-01", "adversarial", { opened: 1 }),
+      { ...episode("baseline-01", "baseline"), verifier: { unlock: { agree: 0, disagree: 50 } } },
+    ]);
+
+    // 1 disagreement in 15 unlock and told checks; the other kinds are reported but not counted.
+    expect(measured.verifierDisagreement).toBeCloseTo(1 / 15);
+    expect(measured.verifierByKind).toEqual({
+      unlock: { agree: 7, disagree: 1 },
+      disclosure: { agree: 7, disagree: 0 },
+      praise: { agree: 0, disagree: 1 },
+      hook_ignored: { agree: 3, disagree: 2 },
+    });
+    expect(threshold(measured, "verifier_disagreement")).toMatchObject({ met: true, detail: "6.7% (mở khóa 1/8, đã kể 0/7)" });
+    expect(formatReport(measured).join("\n")).toContain("Bất đồng verifier theo loại: unlock 1/8, disclosure 0/7, praise 1/1, hook_ignored 2/5");
+  });
+
+  it("misses the verifier threshold above 10 %, and meets it at exactly 10 %", () => {
+    const withUnlocks = (agree: number, disagree: number) =>
+      threshold(buildReport(chiThu, run, [{ ...episode("good-1", "good"), verifier: { unlock: { agree, disagree } } }]), "verifier_disagreement").met;
+    expect(withUnlocks(9, 1)).toBe(true);
+    expect(withUnlocks(8, 2)).toBe(false);
+    expect(withUnlocks(0, 0)).toBe(false);
   });
 
   it("prints every metric and threshold", () => {
@@ -116,7 +149,7 @@ describe("buildReport", () => {
     expect(lines).toContain("Hiệu chỉnh: run tốt mở 63.6% số item (mục tiêu 50.0%–75.0%): trong mục tiêu");
     expect(lines).toContain("baseline chỉ-prompt: 9 cờ / 2 episode (4.50 mỗi episode)");
     expect(lines).toContain("[ĐẠT] Run tốt mở ≥ 2 lần run xấu: tốt 7, xấu 2");
-    expect(lines).toContain("[CHƯA ĐẠT] Bất đồng verifier ≤ 10.0%: chưa đo: eval chưa chạy reveal");
+    expect(lines).toContain("[CHƯA ĐẠT] Bất đồng verifier ≤ 10.0%: chưa đo: không có episode nào chạy reveal với verifier trả lời");
     expect(lines).toContain("Chi phí: ước tính 25.00 USD, thực tế 8.2500 USD");
   });
 });

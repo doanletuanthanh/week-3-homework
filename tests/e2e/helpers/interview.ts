@@ -17,7 +17,8 @@ export async function startInterview(page: Page, context: BrowserContext, label:
 export const notes = (page: Page) => page.getByRole("textbox", { name: "Ghi chú" });
 export const endButton = (page: Page) => page.getByRole("button", { name: "Kết thúc buổi" });
 export const endDialog = (page: Page) => page.getByRole("alertdialog", { name: "Kết thúc và đóng băng ghi chú?" });
-export const endedHeading = (page: Page) => page.getByRole("heading", { name: "Buổi luyện đã kết thúc." });
+/** An ended session opens on the guess screen (Màn 5). */
+export const endedHeading = (page: Page) => page.getByRole("heading", { name: "Bạn nghĩ chị Thu đã kể cho bạn bao nhiêu trong 11 điều?" });
 
 /** Waits until the server holds exactly this text as the session's notes. */
 export async function expectSavedNotes(sessionId: string, text: string) {

@@ -2,11 +2,18 @@ import { z } from "zod";
 import { applyVerdict } from "@/engine/apply-verdict";
 import { buildAnalysisContext } from "@/engine/contexts";
 import { planTurn } from "@/engine/plan-turn";
+import { resolveVerdicts } from "@/engine/reveal-claims";
+import { resolveCanvasMatches } from "@/engine/reveal-compute";
+import { buildEndJudgeContext, buildVerifierContext } from "@/engine/reveal-contexts";
+import { CANVAS_MATCH_KINDS, type CanvasMatch, type RevealBasis, type VerifierCheck } from "@/engine/reveal-types";
+import { tokenize, type TokenRange } from "@/engine/tokens";
 import { LABELS, initialState, type EngineState, type Label } from "@/engine/types";
 import { judgeTurn } from "@/graphs/turn-graph";
 import { callModel, type CallModelDeps, type CallScope } from "@/llm/call-model";
 import { buildAnalysisMessages } from "@/llm/prompts/analysis";
-import { analysisSchema } from "@/llm/schemas";
+import { buildEndJudgeMessages } from "@/llm/prompts/end-judge";
+import { buildVerifierMessages } from "@/llm/prompts/verifier";
+import { analysisSchema, endJudgeSchema, verifierSchema } from "@/llm/schemas";
 import type { Scenario } from "@/scenario/schema";
 
 /**
@@ -42,11 +49,45 @@ export const verdictCaseSchema = z.strictObject({
 });
 export type VerdictCase = z.infer<typeof verdictCaseSchema>;
 
-export const SET_KINDS = ["label-classifier", "turn-verdict"] as const;
+/**
+ * `canvas-judge`: what the end judge must find in a learner's notes. `unlocked`, `told` and
+ * `dropped` (items whose hook the persona dropped) set the scene; each entry of `expected` is a
+ * stretch of the notes, word for word, with what it must be judged as. `none` is a stretch that
+ * must stay unmarked: a surface fact, a topic touched without the content, a negation.
+ */
+export const canvasCaseSchema = z.strictObject({
+  id: z.string().min(1),
+  unlocked: z.array(z.string()).default([]),
+  told: z.array(z.string()).default([]),
+  dropped: z.array(z.string()).default([]),
+  transcript: z.array(exchange).min(1),
+  notes: z.string().min(1),
+  expected: z.array(z.strictObject({ phrase: z.string().min(1), kind: z.enum([...CANVAS_MATCH_KINDS, "none"]), item: z.string().optional() })).min(1),
+  note: z.string().optional(),
+});
+export type CanvasCase = z.infer<typeof canvasCaseSchema>;
+
+/**
+ * `leading-novelty`: whether the words a learner added in their last question were new. `span` is
+ * those words as written in that question; `said` means the persona had already said the idea.
+ */
+export const noveltyCaseSchema = z.strictObject({
+  id: z.string().min(1),
+  transcript: z.array(exchange),
+  question: z.string().min(1),
+  span: z.string().min(1),
+  expected: z.enum(["novel", "said"]),
+  note: z.string().optional(),
+});
+export type NoveltyCase = z.infer<typeof noveltyCaseSchema>;
+
+export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty"] as const;
 export type SetKind = (typeof SET_KINDS)[number];
 
 /** NFR-7: a set proves a gate only from this size up. */
 export const MIN_SET_SIZE = 100;
+/** NFR-7 asks for fewer cases of leading novelty. */
+export const MIN_NOVELTY_SET_SIZE = 50;
 const MAX_BLAME_RATE = 0.05;
 const MIN_LABEL_AGREEMENT = 0.85;
 
@@ -87,7 +128,13 @@ function rate(key: string, label: string, hits: number, total: number, limit: nu
   return { key, label, value, limit, atLeast, met, count: `${hits}/${total}` };
 }
 
-export type SetScore = { size: number; rates: Rate[]; mismatches: string[] };
+export type SetScore = {
+  size: number;
+  rates: Rate[];
+  mismatches: string[];
+  /** Cases the set needs to prove its gate; `MIN_SET_SIZE` when not given. */
+  minSize?: number;
+};
 
 /** NFR-7, label classifier: good questions wrongly called `leading`, and overall agreement. */
 export function scoreLabelSet(rows: { id: string; expected: Label; predicted: Label }[]): SetScore {
@@ -140,7 +187,43 @@ export function scoreVerdictSet(rows: VerdictRow[]): SetScore {
  */
 export function judgementExitCode(score: SetScore): 0 | 1 | 2 {
   if (score.rates.some((entry) => !entry.met)) return 1;
-  return score.size < MIN_SET_SIZE ? 2 : 0;
+  return score.size < (score.minSize ?? MIN_SET_SIZE) ? 2 : 0;
+}
+
+export type CanvasRow = {
+  id: string;
+  phrase: string;
+  expected: { kind: CanvasCase["expected"][number]["kind"]; item: string | null };
+  /** What the judge's match over that stretch was, after the code checks; `none` when there was none. */
+  predicted: { kind: CanvasCase["expected"][number]["kind"]; item: string | null };
+};
+
+/**
+ * NFR-7, canvas judge: a correct paraphrase of an item that was missed or called "never said"
+ * blames the learner for a note they got right. A stretch that should stay unmarked but was
+ * marked is reported as a mismatch and is not part of the gate.
+ */
+export function scoreCanvasSet(rows: CanvasRow[]): SetScore {
+  const items = rows.filter((row) => row.expected.item !== null);
+  const blamed = items.filter((row) => row.predicted.item !== row.expected.item);
+  const wrong = rows.filter((row) => row.predicted.kind !== row.expected.kind || row.predicted.item !== row.expected.item);
+  const show = (side: CanvasRow["expected"]) => (side.item === null ? side.kind : `${side.kind} ${side.item}`);
+  return {
+    size: rows.length,
+    rates: [rate("paraphrase_missed", "Đoạn diễn đạt đúng bị bỏ lỡ hoặc gắn nhầm \"chưa từng được nói\"", blamed.length, items.length, MAX_BLAME_RATE)],
+    mismatches: wrong.map((row) => `${row.id} "${row.phrase}": gán tay ${show(row.expected)}, máy ${show(row.predicted)}`),
+  };
+}
+
+/** NFR-7, leading novelty: words the persona had already said, taken for words the learner added. */
+export function scoreNoveltySet(rows: { id: string; expected: "novel" | "said"; predicted: "novel" | "said" }[]): SetScore {
+  const said = rows.filter((row) => row.expected === "said");
+  return {
+    size: rows.length,
+    minSize: MIN_NOVELTY_SET_SIZE,
+    rates: [rate("said_as_novel", "Cụm persona đã nói bị coi là tự thêm", said.filter((row) => row.predicted === "novel").length, said.length, MAX_BLAME_RATE)],
+    mismatches: rows.filter((row) => row.predicted !== row.expected).map((row) => `${row.id}: gán tay ${row.expected}, máy ${row.predicted}`),
+  };
 }
 
 export type JudgementOptions = { scope: CallScope; llmDeps?: Partial<CallModelDeps> };
@@ -205,6 +288,93 @@ export async function runVerdictSet(scenario: Scenario, cases: VerdictCase[], op
   return scoreVerdictSet(rows);
 }
 
+/** Where `phrase` sits in the tokens of `text`. */
+function phraseRange(caseId: string, text: string, phrase: string): TokenRange {
+  const tokens = tokenize(text);
+  const words = tokenize(phrase);
+  const start = tokens.findIndex((_, index) => words.every((word, offset) => tokens[index + offset] === word));
+  if (start < 0) throw new TestSetError(`${caseId}: không tìm thấy "${phrase}" trong văn bản của ca này.`);
+  return [start, start + words.length - 1];
+}
+
+/** The frozen session a reveal call reads, from a hand-written case. */
+function caseBasis(scenario: Scenario, entry: { transcript: { learner: string; persona: string }[] }, state: Partial<EngineState>, notes: string): RevealBasis {
+  const turnIndex = entry.transcript.length;
+  return {
+    scenario,
+    turns: toTranscript(scenario, entry.transcript).map((line) => ({
+      ...line,
+      learnerTokens: line.learnerText === null ? null : tokenize(line.learnerText),
+      analysis: null,
+      unlockedItemId: null,
+      opennessDropped: false,
+      flagged: false,
+    })),
+    state: { ...initialState(scenario.openness_start), turnIndex, ...state },
+    canvasTokens: tokenize(notes),
+  };
+}
+
+/** Runs the production end judge on each case's notes and keeps what code made of its matches. */
+export async function runCanvasSet(scenario: Scenario, cases: CanvasCase[], options: JudgementOptions): Promise<SetScore> {
+  const rows: CanvasRow[] = [];
+  for (const entry of cases) {
+    const turn = entry.transcript.length;
+    const at = (itemId: string) => ({ itemId, turn });
+    const basis = caseBasis(
+      scenario,
+      entry,
+      {
+        unlocked: itemIds(scenario, entry.id, entry.unlocked).map(at),
+        disclosed: itemIds(scenario, entry.id, entry.told).map(at),
+        ledger: itemIds(scenario, entry.id, entry.dropped).map((itemId) => ({ itemId, droppedAt: turn, pickedAt: null, ignoredAt: null, closedAt: null })),
+      },
+      entry.notes,
+    );
+    const reply = await callModel(
+      "END_JUDGE",
+      buildEndJudgeMessages(buildEndJudgeContext(basis)),
+      { schema: endJudgeSchema, meta: { judgement_case: entry.id }, scope: options.scope },
+      options.llmDeps,
+    );
+    const matches = resolveCanvasMatches(scenario, basis.state, basis.canvasTokens, reply.output.canvas_matches);
+    for (const expected of entry.expected) {
+      if (expected.item !== undefined) itemIds(scenario, entry.id, [expected.item]);
+      const [start, end] = phraseRange(entry.id, entry.notes, expected.phrase);
+      const overlapping: CanvasMatch | undefined = matches.find((match) => match.range[0] <= end && start <= match.range[1]);
+      rows.push({
+        id: entry.id,
+        phrase: expected.phrase,
+        expected: { kind: expected.kind, item: expected.item ?? null },
+        predicted: overlapping ? { kind: overlapping.kind, item: overlapping.itemId } : { kind: "none", item: null },
+      });
+    }
+  }
+  return scoreCanvasSet(rows);
+}
+
+/** Runs the production verifier on one leading-novelty check per case. */
+export async function runNoveltySet(scenario: Scenario, cases: NoveltyCase[], options: JudgementOptions): Promise<SetScore> {
+  const rows = [];
+  for (const entry of cases) {
+    // The question with the added words is the last learner turn; the persona's reply to it plays no part.
+    const transcript = [...entry.transcript, { learner: entry.question, persona: "(chưa trả lời)" }];
+    const basis = caseBasis(scenario, { transcript }, {}, "");
+    phraseRange(entry.id, entry.question, entry.span);
+    const check: VerifierCheck = { id: "V1", kind: "leading_novelty", turn: transcript.length, itemId: null, claimId: null, text: entry.span };
+    const reply = await callModel(
+      "VERIFIER",
+      buildVerifierMessages(buildVerifierContext(basis, [check], [])),
+      { schema: verifierSchema, meta: { judgement_case: entry.id }, scope: options.scope },
+      options.llmDeps,
+    );
+    const [verdict] = resolveVerdicts(reply.output.claims, [check]);
+    // No answer is not an agreement: the words are then not shown as added.
+    rows.push({ id: entry.id, expected: entry.expected, predicted: verdict?.agree ? ("novel" as const) : ("said" as const) });
+  }
+  return scoreNoveltySet(rows);
+}
+
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 /** The score as lines for a terminal. */
@@ -215,8 +385,8 @@ export function formatScore(score: SetScore): string[] {
       return `[${entry.met ? "ĐẠT" : "CHƯA ĐẠT"}] ${entry.label}: ${measured}, cổng ${entry.atLeast ? "≥" : "≤"} ${percent(entry.limit)}`;
     }),
     ...(score.mismatches.length > 0 ? ["Các ca lệch:", ...score.mismatches.map((line) => `  ${line}`)] : []),
-    ...(score.size < MIN_SET_SIZE
-      ? [`Bộ thử có ${score.size} ca, cần ≥ ${MIN_SET_SIZE} ca gán tay: kết quả này chưa chứng minh được cổng NFR-7.`]
+    ...(score.size < (score.minSize ?? MIN_SET_SIZE)
+      ? [`Bộ thử có ${score.size} ca, cần ≥ ${score.minSize ?? MIN_SET_SIZE} ca gán tay: kết quả này chưa chứng minh được cổng NFR-7.`]
       : []),
   ];
 }

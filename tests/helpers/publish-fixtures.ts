@@ -4,6 +4,7 @@ import { getScenarioByPersona } from "@/db/repo/sessions";
 import { buildReport } from "@/eval/report";
 import { episodeSpecs } from "@/eval/run-eval";
 import type { EpisodeResult } from "@/eval/types";
+import { productStrings } from "@/strings/product-strings";
 import { runApproveStrings, runCheckStrings } from "../../cli/commands/strings";
 import { repeat, roleModels } from "./eval-models";
 
@@ -33,8 +34,8 @@ export async function newestVersion(personaId = "chi-thu") {
 
 /**
  * A finished full run of the newest version: every episode stored, the given leak flags, and a
- * report in which every threshold is met. Verifier disagreement is filled in as the reveal
- * pipeline will report it once evaluation runs it; without it the report is what this code builds.
+ * report in which every threshold is met. Each engine episode ran the reveal, with the verifier
+ * disagreeing with 1 unlock in 25; with `verifierMeasured: false` no episode ran it.
  */
 export async function seedFullRun(flags: { episode: string; turn: number }[] = [], options = { verifierMeasured: true }) {
   const db = getDb();
@@ -52,16 +53,11 @@ export async function seedFullRun(flags: { episode: string; turn: number }[] = [
       .filter((flag) => flag.episode === spec.key)
       .map((flag) => ({ turn: flag.turn, itemId: "shame", kind: "content" as const, excerpt: "Câu trả lời.", allowedHooks: ["Hook được phép."], reason: "Lý do của judge." })),
     contradictions: [],
+    ...(options.verifierMeasured && spec.reveal ? { verifier: { unlock: { agree: 24, disagree: 1 } } } : {}),
     costUsd: 0.5,
   }));
   for (const episode of episodes) await saveEpisode(db, run.id, episode);
   const report = buildReport(scenario.content, { profile: "full", turns: 30, estimateUsd: 25 }, episodes);
-  if (options.verifierMeasured) {
-    report.verifierDisagreement = 0.04;
-    report.thresholds = report.thresholds.map((threshold) =>
-      threshold.key === "verifier_disagreement" ? { ...threshold, met: true, detail: "4.0%" } : threshold,
-    );
-  }
   await finishEvalRun(db, run.id, report, episodes);
   return run;
 }
@@ -69,7 +65,7 @@ export async function seedFullRun(flags: { episode: string; turn: number }[] = [
 /** Checks and approves every fixed string of chị Thu and of the product, through the commands. */
 export async function approveEverything(operator: () => string) {
   await runCheckStrings(["chi-thu"], silent, getDb(), cleanPersonaCheck().llmDeps);
-  await runCheckStrings(["product"], silent, getDb(), roleModels({ STRING_CHECK: repeat(11, CLEAN_STRING) }).llmDeps);
+  await runCheckStrings(["product"], silent, getDb(), roleModels({ STRING_CHECK: repeat(productStrings().length, CLEAN_STRING) }).llmDeps);
   await runApproveStrings(["chi-thu", "approve", "--all"], silent, getDb(), operator);
   await runApproveStrings(["product", "approve", "--all"], silent, getDb(), operator);
 }

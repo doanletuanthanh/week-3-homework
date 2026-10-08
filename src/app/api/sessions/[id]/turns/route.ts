@@ -4,12 +4,13 @@ import { getDb } from "@/db/client";
 import { DEVICE_CLASSES, type DeviceClass } from "@/db/schema";
 import { requireAckedApiUser } from "@/server/auth";
 import { freezeAbandonedCanvas } from "@/server/canvas";
+import { runReveal } from "@/server/reveal";
 import { runTurn, type TurnError, type TurnResult } from "@/server/turns";
 import { isUuid } from "@/server/uuid";
 
 // Above the time budget of one turn (110 s) plus the wait before the notes of a session that
-// turn 30 ended are frozen (60 s), so both still happen inside this request.
-export const maxDuration = 180;
+// turn 30 ended are frozen (60 s), with room left for the reveal that the freeze starts.
+export const maxDuration = 300;
 
 /** The browser reports its screen class in a header (FR-38); anything else is ignored. */
 function deviceClassOf(request: Request): DeviceClass | undefined {
@@ -71,12 +72,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
 
   // Turn 30 ended the session. The browser follows with the end request carrying the notes as
-  // typed; when it never does, the notes are frozen as last autosaved.
+  // typed; when it never does, the notes are frozen as last autosaved and the reveal starts from them.
   after(async () => {
     const result = await turn;
     if (!result.ok || result.turnIndex < MAX_TURNS) return;
     await sleep(CANVAS_FREEZE_GRACE_MS);
-    await freezeAbandonedCanvas(getDb(), id).catch((error: unknown) => console.error(error));
+    try {
+      if (await freezeAbandonedCanvas(getDb(), id)) await runReveal(getDb(), id);
+    } catch (error) {
+      console.error(error);
+    }
   });
 
   // Whichever comes first: the first piece of the reply, or the whole outcome.

@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import type { RevealBasis, RevealParts } from "@/engine/reveal-types";
+import { tokenize } from "@/engine/tokens";
+import { runRevealGraph } from "@/graphs/reveal-graph";
 import { judgeTurn, runTurnGraph } from "@/graphs/turn-graph";
 import { LlmCallError, recordCallToDb, type CallModelDeps, type CallScope } from "@/llm/call-model";
 import type { Scenario } from "@/scenario/schema";
@@ -70,10 +73,33 @@ function judgedTurns(scenario: Scenario, store: InMemoryTurnStore): JudgedTurn[]
   });
 }
 
+/** The finished episode as the reveal reads a session: the same turns, and notes nobody took. */
+function revealBasis(scenario: Scenario, store: InMemoryTurnStore): RevealBasis {
+  return {
+    scenario,
+    turns: [
+      { index: 0, learnerText: null, learnerTokens: null, personaText: scenario.opening_line, analysis: null, unlockedItemId: null, opennessDropped: false, flagged: false },
+      ...store.turns.map(({ plan, question, personaText }) => ({
+        index: plan.turnIndex,
+        learnerText: question,
+        learnerTokens: tokenize(question),
+        personaText,
+        analysis: plan.analysis,
+        unlockedItemId: plan.unlockedItemId,
+        opennessDropped: plan.opennessAfter < plan.opennessBefore,
+        flagged: (store.verdicts.get(plan.turnIndex)?.violations.length ?? 0) > 0,
+      })),
+    ],
+    state: store.state,
+    canvasTokens: [],
+  };
+}
+
 /**
  * One simulated interview on the in-memory store, through the same turn graph a learner's session
  * uses: the simulated learner asks, the engine answers, up to the episode's turn count. The last
- * persona turn gets its verdict from the turn judge, then the leak judge reads the whole episode.
+ * persona turn gets its verdict from the turn judge, or, in an episode that runs the reveal, from
+ * the end judge as in a learner's session; then the leak judge reads the whole episode.
  * The context of every in-session call is checked for isolation before the call is made; a
  * violation fails the episode and the run.
  */
@@ -144,7 +170,23 @@ export async function runEpisode(scenario: Scenario, spec: EpisodeSpec, options:
     }, options);
   }
 
-  if (store.turns.length > 0) {
+  let verifier: EpisodeResult["verifier"];
+  if (spec.reveal) {
+    // A failed reveal call fails the step, as a failed turn judge does: a rate limit is waited out
+    // and the calls already made are not made again.
+    let stored: RevealParts = {};
+    const basis = revealBasis(scenario, store);
+    const { parts, reveal } = await withRateLimitBackoff(
+      () =>
+        runRevealGraph(
+          { basis, parts: stored },
+          { scope, meta, llmDeps, failOnLlmError: true, onPart: async (part) => void (stored = { ...stored, ...part }) },
+        ),
+      options,
+    );
+    if (parts.judge?.ok) store.applyFinalVerdict(parts.judge.verdict);
+    verifier = reveal.verifierChecks;
+  } else if (store.turns.length > 0) {
     // No later Call 1 will judge the last persona turn: the turn judge does, as it will in replay.
     const verdict = await withRateLimitBackoff(
       () =>
@@ -177,6 +219,7 @@ export async function runEpisode(scenario: Scenario, spec: EpisodeSpec, options:
     openedItemIds: store.state.unlocked.map((entry) => entry.itemId),
     flags,
     contradictions,
+    ...(verifier === undefined ? {} : { verifier }),
     costUsd,
   };
 }

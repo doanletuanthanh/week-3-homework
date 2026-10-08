@@ -36,3 +36,18 @@ export const CANVAS_AUTOSAVE_RETRY_MS = 3000;
  * the server freezes the last autosaved text itself.
  */
 export const CANVAS_FREEZE_GRACE_MS = 60_000;
+
+/** The reveal runner refreshes its heartbeat this often while it lives. */
+export const REVEAL_HEARTBEAT_MS = 15_000;
+
+/** A reveal runner whose heartbeat is older than this died, and another may take the reveal over. */
+export const REVEAL_STALE_MS = 150_000;
+
+/** Runners one reveal may have. When the last one dies too, the degraded result is written. */
+export const REVEAL_MAX_RUNS = 3;
+
+/** The reveal screen asks whether the result is ready this often. */
+export const REVEAL_POLL_MS = 2_000;
+
+/** After this long the reveal screen adds that the learner may close the page. */
+export const REVEAL_SLOW_AFTER_MS = 30_000;

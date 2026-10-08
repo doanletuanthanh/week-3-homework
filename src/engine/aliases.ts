@@ -23,6 +23,12 @@ function itemIndex(scenario: Pick<Scenario, "items">, kind: AliasKind, value: un
   return index < scenario.items.length ? index : null;
 }
 
+/** The scenario id of the item an alias of this kind points at; null for anything else a model wrote. */
+export function resolveAlias(scenario: Pick<Scenario, "items">, kind: AliasKind, value: unknown): string | null {
+  const index = itemIndex(scenario, kind, value);
+  return index === null ? null : scenario.items[index].id;
+}
+
 /** Call 1 output with every alias turned into a scenario id. Unknown references are dropped. */
 export type ResolvedAnalysis = Omit<RawAnalysis, "prev_turn_verdict" | "hook_id" | "topic_tags"> & {
   /** `disclosed_item_ids` are item ids, `violations` are do-not-assert ids. */

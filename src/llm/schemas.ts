@@ -25,3 +25,45 @@ export const analysisSchema = z.object({
 
 /** The turn judge (addendum §2.6): a verdict for the persona turn that has no later Call 1. */
 export const turnJudgeSchema = z.object({ prev_turn_verdict: verdictSchema });
+
+/** Reveal call 1, the end judge (addendum §2.3). */
+export const endJudgeSchema = z.object({
+  last_turn_verdict: verdictSchema,
+  canvas_matches: z.array(
+    z.object({
+      range: z.array(z.number().int()),
+      kind: z.enum(["item", "never_said"]),
+      item_id: z.string().nullable(),
+      reason: z.string(),
+    }),
+  ),
+});
+
+/**
+ * Reveal call 2, the feedback generator (addendum §2.4). A claim names the slot it answers; its
+ * id and its kind are given by code from that slot, not taken from the model.
+ */
+export const feedbackSchema = z.object({
+  claims: z.array(
+    z.object({
+      slot: z.string(),
+      text: z.string(),
+      cited_turns: z.array(z.number().int()),
+      item_id: z.string().nullable(),
+      canvas_range: z.array(z.number().int()).nullable(),
+      suggested_question: z.string().nullable(),
+    }),
+  ),
+});
+
+/** Reveal call 3, the verifier (addendum §2.5). `label` is set for a suggested question only. */
+export const verifierSchema = z.object({
+  claims: z.array(
+    z.object({
+      claim_id: z.string(),
+      verdict: z.enum(["agree", "disagree"]),
+      reason: z.string(),
+      label: z.enum(LABELS).nullable(),
+    }),
+  ),
+});

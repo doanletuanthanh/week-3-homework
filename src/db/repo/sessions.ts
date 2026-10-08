@@ -104,12 +104,13 @@ export async function createSession(
   return { session: existing, created: false };
 }
 
-/** A learner's own session with its scenario; null when it does not exist or belongs to someone else. */
+/** A learner's own session with its scenario and topic; null when it does not exist or belongs to someone else. */
 export async function getSession(db: Executor, userId: string, sessionId: string) {
   const [row] = await db
-    .select({ session: sessions, scenario: scenarios })
+    .select({ session: sessions, scenario: scenarios, topic: topics })
     .from(sessions)
     .innerJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
+    .innerJoin(topics, eq(topics.id, scenarios.topicId))
     .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
     .limit(1);
   return row ?? null;

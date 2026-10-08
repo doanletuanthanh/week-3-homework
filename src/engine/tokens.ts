@@ -20,6 +20,14 @@ export function isValidRange(range: unknown, tokenCount: number): range is Token
   );
 }
 
+/**
+ * Where each token of `tokenize(text)` sits in the text: first character and the one after the
+ * last. Lets a quote be marked inside the text as it was written, line breaks included.
+ */
+export function tokenOffsets(text: string): { start: number; end: number }[] {
+  return [...text.matchAll(/\S+/gu)].map((match) => ({ start: match.index, end: match.index + match[0].length }));
+}
+
 /** The quoted words, exactly as stored; null when the range does not fit the line. */
 export function sliceTokens(tokens: string[], range: unknown): string | null {
   if (!isValidRange(range, tokens.length)) return null;

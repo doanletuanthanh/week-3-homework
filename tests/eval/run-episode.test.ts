@@ -7,6 +7,7 @@ import { episodeSpecs, estimateRun, runEpisodes } from "@/eval/run-eval";
 import type { EpisodeSpec } from "@/eval/types";
 import { DROPPED, NO_VERDICT, a, chiThu, rawAnalysis, told } from "../helpers/engine-fixtures";
 import { NO_FINDINGS, repeat, roleModels } from "../helpers/eval-models";
+import type { ScriptedStep } from "../helpers/scripted-model";
 import { findSealed } from "../helpers/sealed-strings";
 
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
@@ -15,26 +16,30 @@ const options = (models: ReturnType<typeof roleModels>) => ({ runId: RUN_ID, llm
 const good = (turns: number): EpisodeSpec => ({ key: "good-1", kind: "good", turns });
 
 /** Three turns that open a surface item, get a hook dropped, and open its follow-up item. */
+const threeTurns = () => ({
+  EVAL_INTERVIEWER: [
+    { structured: { question: "Khoản gửi về nhà chị tính thế nào ạ?" } },
+    { structured: { question: '"Chị có hay định ghi lại chi tiêu không ạ?"' } },
+    { structured: { question: "Lần chị định ghi lại đó,\n chị định ghi kiểu gì ạ?" } },
+  ],
+  ANALYSIS: [
+    { structured: rawAnalysis({ topic_tags: [a("tag", "money-home")], question_type: "open" }) },
+    { structured: rawAnalysis({ prev_turn_verdict: told("money-home"), topic_tags: [a("tag", "paid-app")] }) },
+    {
+      structured: rawAnalysis({
+        prev_turn_verdict: DROPPED,
+        hook_id: a("hook", "paid-app"),
+        label: "confirm_grounded",
+        grounded_turn_id: 2,
+      }),
+    },
+  ],
+  PERSONA: [{ text: "Câu trả lời một." }, { text: "Câu trả lời hai." }, { text: "Câu trả lời ba." }],
+});
+
 function threeTurnScript() {
   return roleModels({
-    EVAL_INTERVIEWER: [
-      { structured: { question: "Khoản gửi về nhà chị tính thế nào ạ?" } },
-      { structured: { question: '"Chị có hay định ghi lại chi tiêu không ạ?"' } },
-      { structured: { question: "Lần chị định ghi lại đó,\n chị định ghi kiểu gì ạ?" } },
-    ],
-    ANALYSIS: [
-      { structured: rawAnalysis({ topic_tags: [a("tag", "money-home")], question_type: "open" }) },
-      { structured: rawAnalysis({ prev_turn_verdict: told("money-home"), topic_tags: [a("tag", "paid-app")] }) },
-      {
-        structured: rawAnalysis({
-          prev_turn_verdict: DROPPED,
-          hook_id: a("hook", "paid-app"),
-          label: "confirm_grounded",
-          grounded_turn_id: 2,
-        }),
-      },
-    ],
-    PERSONA: [{ text: "Câu trả lời một." }, { text: "Câu trả lời hai." }, { text: "Câu trả lời ba." }],
+    ...threeTurns(),
     REPLAY_JUDGE: [{ structured: { prev_turn_verdict: told("paid-app") } }],
     EVAL_LEAK_JUDGE: [NO_FINDINGS],
   });
@@ -315,8 +320,9 @@ describe("episode plan of a run", () => {
 
     // Per engine episode: 30 questions, 30 × 2 engine calls, one turn judge, one leak judge.
     expect(quick.calls).toBe(2 * (30 + 60 + 2));
+    // A full run ends each engine episode with the three reveal calls in place of the turn judge.
     // Per baseline episode: 30 questions, 30 replies, one leak judge.
-    expect(full.calls).toBe(26 * 92 + 20 * 61);
+    expect(full.calls).toBe(26 * (30 + 60 + 3 + 1) + 20 * 61);
     expect(full.usd).toBeGreaterThan(quick.usd);
     expect(quick.usd).toBeGreaterThan(0);
   });
@@ -373,5 +379,70 @@ describe("runEpisodes", () => {
     const run = runEpisodes(leaky, ["a", "b"].map(spec), { ...options(models), concurrency: 2 });
 
     await expect(run).rejects.toBeInstanceOf(IsolationError);
+  });
+});
+
+describe("runEpisode with the reveal", () => {
+  const verifierReply = (count: number, disagree: string[] = []): ScriptedStep => ({
+    structured: {
+      claims: Array.from({ length: count }, (_, index) => ({ claim_id: `V${index + 1}`, verdict: disagree.includes(`V${index + 1}`) ? "disagree" : "agree", reason: "r", label: null })),
+    },
+  });
+
+  const revealScript = (verifier: ScriptedStep[]) =>
+    roleModels({
+      ...threeTurns(),
+      END_JUDGE: [{ structured: { last_turn_verdict: told("paid-app"), canvas_matches: [] } }],
+      FEEDBACK: [{ structured: { claims: [] } }],
+      VERIFIER: verifier,
+      EVAL_LEAK_JUDGE: [NO_FINDINGS],
+    });
+
+  it("ends with the three reveal calls, the end judge giving the last turn its verdict in place of the turn judge", async () => {
+    const models = revealScript([verifierReply(10, ["V2"])]);
+
+    const result = await runEpisode(chiThu, { ...good(3), reveal: true }, options(models));
+
+    const turnCalls = ["EVAL_INTERVIEWER", "ANALYSIS", "PERSONA"];
+    expect(models.records.map((record) => record.role)).toEqual([...turnCalls, ...turnCalls, ...turnCalls, "END_JUDGE", "FEEDBACK", "VERIFIER", "EVAL_LEAK_JUDGE"]);
+    expect(models.records.every((record) => record.scope === "eval" && record.attemptId === RUN_ID)).toBe(true);
+    expect(models.calls("REPLAY_JUDGE")).toHaveLength(0);
+    // Nobody took notes in a simulated interview.
+    expect(models.prompts("END_JUDGE")[0]).toContain("<ghi_chu>\n(trống)\n</ghi_chu>");
+    // Two unlocks (V1, V2) and two told verdicts (V3, V4): the verifier disagreed with one unlock.
+    expect(result.verifier).toEqual({ unlock: { agree: 1, disagree: 1 }, disclosure: { agree: 2, disagree: 0 } });
+    expect(result.openedItemIds).toEqual(["money-home", "paid-app"]);
+  });
+
+  it("fails the episode when a reveal call fails after its retries, as a failed turn judge does", async () => {
+    const models = revealScript(repeat(3, { error: new Error("down") }));
+    await expect(runEpisode(chiThu, { ...good(3), reveal: true }, options(models))).rejects.toBeInstanceOf(LlmCallError);
+    // Nothing is reported as measured.
+    expect(models.calls("EVAL_LEAK_JUDGE")).toHaveLength(0);
+  });
+
+  it("waits out a rate limit on a reveal call and does not repeat the calls already made", async () => {
+    const limited = Object.assign(new Error("429 Too Many Requests"), { status: 429 });
+    const models = revealScript([...repeat(3, { error: limited }), verifierReply(10)]);
+    const waits: number[] = [];
+
+    const result = await runEpisode(chiThu, { ...good(3), reveal: true }, { ...options(models), rateLimitDelaysMs: [7], sleep: async (ms) => void waits.push(ms) });
+
+    expect(waits).toEqual([7]);
+    expect(models.calls("END_JUDGE")).toHaveLength(1);
+    expect(models.calls("FEEDBACK")).toHaveLength(1);
+    expect(models.calls("VERIFIER")).toHaveLength(4);
+    expect(result.verifier).toEqual({ unlock: { agree: 2, disagree: 0 }, disclosure: { agree: 2, disagree: 0 } });
+  });
+
+  it("leaves an episode without the reveal as it was: no verifier field", async () => {
+    const result = await runEpisode(chiThu, good(3), options(threeTurnScript()));
+    expect("verifier" in result).toBe(false);
+  });
+
+  it("only a full run asks for the reveal, and never of a baseline episode", () => {
+    expect(episodeSpecs("full").filter((spec) => spec.reveal).map((spec) => spec.kind)).toEqual([...Array(3).fill("good"), ...Array(3).fill("bad"), ...Array(20).fill("adversarial")]);
+    expect(episodeSpecs("full").filter((spec) => spec.kind === "baseline").some((spec) => spec.reveal)).toBe(false);
+    for (const profile of ["quick", "reduced"] as const) expect(episodeSpecs(profile).some((spec) => spec.reveal)).toBe(false);
   });
 });

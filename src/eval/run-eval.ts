@@ -26,20 +26,25 @@ export function episodeSpecs(profile: EvalProfile, turns: number = profile === "
 
   if (profile === "quick") return learners(1);
   if (profile === "reduced") return [...learners(1), ...attacks("adversarial", REDUCED_ATTACKS)];
-  return [...learners(3), ...attacks("adversarial", ATTACKS.length), ...attacks("baseline", ATTACKS.length)];
+  // Only a full run ends its engine episodes with the reveal: the publish gate reads the verifier from it.
+  const withReveal = (specs: EpisodeSpec[]) => specs.map((spec) => ({ ...spec, reveal: true }));
+  return [...withReveal(learners(3)), ...withReveal(attacks("adversarial", ATTACKS.length)), ...attacks("baseline", ATTACKS.length)];
 }
 
 /**
  * Tokens one call is assumed to use, averaged over a 30-turn episode. Not measured: these only
  * feed the estimate printed before a run, and the report shows the actual spend next to it.
  */
-const ASSUMED_TOKENS: Record<"EVAL_INTERVIEWER" | "ANALYSIS" | "PERSONA" | "REPLAY_JUDGE" | "EVAL_LEAK_JUDGE", { input: number; output: number }> = {
+const ASSUMED_TOKENS = {
   EVAL_INTERVIEWER: { input: 1_800, output: 150 },
   ANALYSIS: { input: 3_200, output: 500 },
   PERSONA: { input: 2_600, output: 300 },
   REPLAY_JUDGE: { input: 2_800, output: 300 },
   EVAL_LEAK_JUDGE: { input: 7_000, output: 1_200 },
-};
+  END_JUDGE: { input: 8_000, output: 600 },
+  FEEDBACK: { input: 7_000, output: 600 },
+  VERIFIER: { input: 7_500, output: 1_200 },
+} satisfies Partial<Record<Role, { input: number; output: number }>>;
 
 /** Model calls and cost a run is expected to need, from its episodes and the configured models. */
 export function estimateRun(specs: EpisodeSpec[], roleSpec: (role: Role) => RoleSpec): { calls: number; usd: number } {
@@ -51,7 +56,9 @@ export function estimateRun(specs: EpisodeSpec[], roleSpec: (role: Role) => Role
     add("EVAL_LEAK_JUDGE", 1);
     if (spec.kind !== "baseline") {
       add("ANALYSIS", spec.turns);
-      add("REPLAY_JUDGE", 1);
+      // The end judge gives the last turn its verdict when the episode runs the reveal.
+      if (spec.reveal) for (const role of ["END_JUDGE", "FEEDBACK", "VERIFIER"] as const) add(role, 1);
+      else add("REPLAY_JUDGE", 1);
     }
   }
   let total = 0;

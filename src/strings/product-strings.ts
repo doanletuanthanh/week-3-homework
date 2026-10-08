@@ -32,6 +32,51 @@ export const FOOTER_DATA_NOTE =
   "quản trị viên InterviewLab xem được buổi luyện để kiểm tra chất lượng. Bạn xóa được tài khoản và toàn bộ dữ liệu trong Buổi của tôi.";
 
 /**
+ * The strings below are templates: `{persona}` is the persona's form of address ("chị Thu"),
+ * `{Persona}` the same at the start of a sentence, `{turn}` a turn number and `{turns}` one or more
+ * turns written out ("Lượt 2, 9"). `fillTemplate` puts the values in; where a turn is a link, the
+ * screen puts the link in its place.
+ */
+
+/** FR-48a: the one sentence under a marked stretch of the notes. The end judge's own reason is never shown. */
+export const CANVAS_EXPLANATION = {
+  told: "{Persona} đã kể điều này ở lượt {turn}.",
+  unconfirmed: "Bạn đoán đúng, nhưng {persona} chưa xác nhận — trong buổi thật, bạn sẽ không biết mình đúng.",
+  unrevealed: "{Persona} chưa nói gì gợi tới điều này. Đây là phỏng đoán, chưa được xác nhận.",
+  never_said: "{Persona} chưa từng nói điều này. Ghi chú này là giả định của bạn, không phải điều bạn nghe được.",
+} as const;
+
+/** Màn 6 item 2: the line a replay offer opens with, chosen by `engine/diagnosis.ts`. */
+export const DIAGNOSIS = {
+  heard_not_followed: "Bạn nghe được, nhưng chưa hỏi tiếp.",
+  changed_topic: "Lượt {turn}: {persona} vừa nhắc tới một điều. Bạn đã chuyển chủ đề.",
+  try_from_here: "Lượt {turn}: {persona} vừa nhắc tới một điều. Thử hỏi lại từ đây.",
+  added_own_idea: "Lượt {turn}: bạn đã thêm ý của mình vào câu hỏi. Thử hỏi lại mà không dẫn dắt.",
+  try_differently: "Lượt {turn}: thử hỏi lại câu này theo cách khác.",
+} as const;
+
+/** Màn 6 item 4: how a missed item could have been opened. */
+export const PATH_LABEL = {
+  follow_up: "Hỏi tiếp chi tiết",
+  past_story: "Kéo về một lần cụ thể",
+  trust: "Tạo tin tưởng",
+  surface: "Hỏi thẳng",
+} as const;
+
+/** Màn 6 item 4, a missed trust item: code fills the turns from the ledger. */
+export const TRUST_MISSED = {
+  not_enough: "{Persona} chưa đủ tin để kể.",
+  turns: "{turns} làm {persona} dè dặt hơn.",
+} as const;
+
+/** FR-19: follows the words the learner added, only when the verifier agreed they were new. */
+export const LEADING_NEVER_SAID = "{persona} chưa từng nói điều này.";
+
+export function fillTemplate(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/gu, (whole, key: string) => (key in values ? String(values[key]) : whole));
+}
+
+/**
  * Every product-level fixed string by key, for the fixed-string check and its approval
  * (`il check-strings product`, `il approve-strings product`). A string added above must be added
  * here, or it ships unchecked.
@@ -42,5 +87,10 @@ export function productStrings(): { key: string; text: string }[] {
     { key: "session_cap_reached", text: SESSION_CAP_REACHED },
     { key: "persona_being_updated", text: PERSONA_BEING_UPDATED },
     { key: "footer_data_note", text: FOOTER_DATA_NOTE },
+    ...Object.entries(CANVAS_EXPLANATION).map(([name, text]) => ({ key: `canvas_explanation.${name}`, text })),
+    ...Object.entries(DIAGNOSIS).map(([name, text]) => ({ key: `diagnosis.${name}`, text })),
+    ...Object.entries(PATH_LABEL).map(([name, text]) => ({ key: `path_label.${name}`, text })),
+    ...Object.entries(TRUST_MISSED).map(([name, text]) => ({ key: `trust_missed.${name}`, text })),
+    { key: "leading_never_said", text: LEADING_NEVER_SAID },
   ];
 }

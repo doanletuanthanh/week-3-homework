@@ -1,3 +1,4 @@
+import type { CheckKind } from "@/engine/reveal-types";
 import type { Label, QuestionType } from "@/engine/types";
 
 export const EVAL_PROFILES = ["quick", "full", "reduced"] as const;
@@ -11,7 +12,17 @@ export const EPISODE_KINDS = ["good", "bad", "adversarial", "baseline"] as const
 export type EpisodeKind = (typeof EPISODE_KINDS)[number];
 
 /** One episode a run must play. `key` names it inside the run ("good-1", "adversarial-07"). */
-export type EpisodeSpec = { key: string; kind: EpisodeKind; attackId?: string; turns: number };
+export type EpisodeSpec = {
+  key: string;
+  kind: EpisodeKind;
+  attackId?: string;
+  turns: number;
+  /** The episode ends with the three reveal calls, so the verifier's disagreement can be measured (NFR-8). */
+  reveal?: boolean;
+};
+
+/** How often the verifier agreed and disagreed, per kind of check. */
+export type VerifierCounts = Partial<Record<CheckKind, { agree: number; disagree: number }>>;
 
 export type EpisodeTurn = {
   index: number;
@@ -54,6 +65,8 @@ export type EpisodeResult = {
   openedItemIds: string[];
   flags: LeakFlagDraft[];
   contradictions: Contradiction[];
+  /** Set for an episode that ran the reveal; null when its verifier call failed. */
+  verifier?: VerifierCounts | null;
   costUsd: number;
 };
 
@@ -74,8 +87,13 @@ export type EvalReport = {
   leaks: { learner: LeakStat; adversarial: LeakStat; baseline: LeakStat };
   hookTransmission: { selected: number; dropped: number; rate: number | null };
   contradictions: { count: number; openedItems: number; rate: number | null };
-  /** Added with the reveal pipeline; until then the gate treats it as not met. */
+  /**
+   * NFR-8: the share of unlocks and "told" verdicts the verifier disagreed with, over the episodes
+   * that ran the reveal. Null when none was measured, which the gate treats as not met.
+   */
   verifierDisagreement: number | null;
+  /** The same counts for every kind of check, to see where the verifier disagrees. */
+  verifierByKind?: VerifierCounts;
   thresholds: Threshold[];
   cost: { estimateUsd: number; actualUsd: number };
 };

@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { signInAsNewLearner, uniqueEmail } from "./helpers/auth";
 import { ask, composer, expectReply, sendButton } from "./helpers/chat";
 import { db } from "./helpers/db";
+import { endedHeading } from "./helpers/interview";
 import { postTurn, turnOutcome } from "./helpers/turn-api";
 
 /** A consenting learner inside a fresh session with the persona. */
@@ -339,7 +340,7 @@ test.describe("the end of a session", () => {
     expect(await db.llmCallsOf(sessionId)).toHaveLength(0);
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Buổi luyện đã kết thúc." })).toBeVisible();
+    await expect(endedHeading(page)).toBeVisible();
     await expect(composer(page)).toHaveCount(0);
     await expect(sendButton(page)).toHaveCount(0);
   });
@@ -358,7 +359,7 @@ test.describe("the end of a session", () => {
     await composer(page).fill("Câu cuối cùng của em ạ");
     await sendButton(page).click();
     // The session ends by itself: the page moves on without the learner pressing anything.
-    await expect(page.getByRole("heading", { name: "Buổi luyện đã kết thúc." })).toBeVisible();
+    await expect(endedHeading(page)).toBeVisible();
     await expect(composer(page)).toHaveCount(0);
     expect((await db.turnsOf(sessionId)).at(-1)).toMatchObject({ index: 30, personaText: "Chị trả lời câu thứ 30 (trong khối dữ liệu)." });
 
@@ -367,9 +368,11 @@ test.describe("the end of a session", () => {
     expect(extra.json).toEqual({ error: "session_ended" });
     expect(await db.turnsOf(sessionId)).toHaveLength(31);
 
-    // Two logical calls for each of the 30 turns.
+    // Two logical calls for each of the 30 turns, then exactly the three reveal calls the end started.
+    await expect.poll(async () => (await db.session(sessionId)).revealReadyAt).not.toBeNull();
     const calls = (await db.llmCallsOf(sessionId)).filter((call) => call.attempt === 1);
-    expect(calls).toHaveLength(60);
+    expect(calls.filter((call) => call.turnIndex === null).map((call) => call.role)).toEqual(["END_JUDGE", "FEEDBACK", "VERIFIER"]);
+    expect(calls).toHaveLength(63);
     for (let turn = 1; turn <= 30; turn += 1) {
       expect(calls.filter((call) => call.turnIndex === turn).map((call) => call.role)).toEqual(["ANALYSIS", "PERSONA"]);
     }

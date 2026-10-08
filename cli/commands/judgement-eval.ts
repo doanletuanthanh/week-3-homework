@@ -3,14 +3,19 @@ import { basename } from "node:path";
 import {
   SET_KINDS,
   TestSetError,
+  canvasCaseSchema,
   formatScore,
   judgementExitCode,
   labelCaseSchema,
+  noveltyCaseSchema,
   parseTestSet,
+  runCanvasSet,
   runLabelSet,
+  runNoveltySet,
   runVerdictSet,
   verdictCaseSchema,
   type SetKind,
+  type SetScore,
 } from "@/eval/judgement-eval";
 import type { CallModelDeps } from "@/llm/call-model";
 import { validateScenario } from "@/scenario/validate";
@@ -48,10 +53,13 @@ export function runJudgementEval(args: string[], io: CliIo, llmDeps?: Partial<Ca
 
     const options = { scope: { scope: "eval" as const }, llmDeps };
     try {
-      const score =
-        kind === "label-classifier"
-          ? await runLabelSet(scenario, parseTestSet(raw, labelCaseSchema), options)
-          : await runVerdictSet(scenario, parseTestSet(raw, verdictCaseSchema), options);
+      const runs: Record<SetKind, () => Promise<SetScore>> = {
+        "label-classifier": () => runLabelSet(scenario, parseTestSet(raw, labelCaseSchema), options),
+        "turn-verdict": () => runVerdictSet(scenario, parseTestSet(raw, verdictCaseSchema), options),
+        "canvas-judge": () => runCanvasSet(scenario, parseTestSet(raw, canvasCaseSchema), options),
+        "leading-novelty": () => runNoveltySet(scenario, parseTestSet(raw, noveltyCaseSchema), options),
+      };
+      const score = await runs[kind]();
       io.out(`Bộ thử ${kind}: ${score.size} ca, kịch bản ${scenario.persona_id}`);
       for (const line of formatScore(score)) io.out(line);
       return judgementExitCode(score);

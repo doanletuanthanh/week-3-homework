@@ -10,7 +10,7 @@ type Usage = { input: number; output: number; cached?: number; reasoning?: numbe
  */
 export type ScriptedStep =
   | { text: string; usage?: Usage; failAfterChunks?: number; before?: () => Promise<void> }
-  | { structured: unknown; usage?: Usage }
+  | { structured: unknown; usage?: Usage; before?: () => Promise<void> }
   | { error: Error }
   | { hang: true };
 
