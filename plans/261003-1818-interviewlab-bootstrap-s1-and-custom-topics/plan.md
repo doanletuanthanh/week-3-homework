@@ -39,7 +39,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 4 | [Eval harness and operator CLI](./phase-04-eval-harness-and-operator-cli.md) | In review: code and tests done, quick eval recorded; full run, second adjudicator and hand-labelled sets open | 3 | 5d |
 | 5 | [Interview screen and notes canvas](./phase-05-interview-screen-and-notes-canvas.md) | In review: code and tests done; real phones and a sweep for abandoned sessions open | 3 | 2.5d |
 | 6 | [Reveal pipeline and screen](./phase-06-reveal-pipeline-and-screen.md) | In review: code and tests done; real models, the two hand-labelled sets and measured reveal latency open | 5 | 6d |
-| 7 | [Replay](./phase-07-replay.md) | Pending | 6 | 2.5d |
+| 7 | [Replay](./phase-07-replay.md) | In review: code and tests done; a full session with real models open | 6 | 2.5d |
 | 8 | [My sessions, account, system states](./phase-08-my-sessions-account-and-system-states.md) | Pending | 7 | 2.5d |
 | 9 | [Custom topics](./phase-09-custom-topics.md) | Pending | 4, 8 | 7d |
 | 10 | [Hardening, docs, launch checks](./phase-10-hardening-docs-and-launch-checks.md) | Pending | 9 | 2d |
