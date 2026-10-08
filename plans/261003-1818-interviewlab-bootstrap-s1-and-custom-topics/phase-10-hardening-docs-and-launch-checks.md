@@ -25,6 +25,8 @@ Measure what the PRD asks to be measured on the deployed app, close the cap and 
 - [ ] `/phuong-phap` returns 404 and the footer has no link to it.
 - [ ] CI runs typecheck, lint, unit tests and build on every push.
 - [ ] Docs: setup, operations, and the launch checklist.
+- [ ] What Supabase Auth keeps about a deleted account is checked on the deployed project (checklist below), and the launch checklist records the answer.
+- [ ] Accessibility notes carried over from the phase 8 review are closed (list below).
 
 ## Architecture
 
@@ -68,6 +70,49 @@ Measure what the PRD asks to be measured on the deployed app, close the cap and 
 - [ ] §12.2 items 1 (without library screens), 8 (turn and reveal; custom-path number from phase 9), 11 (the "p95 ≤ 6 s while a full eval runs" bullet is measured whenever eval shares an API key with live turns; with a separate batch key it is recorded as not applicable), 15.
 - [ ] CI green on the branch.
 - [ ] A person following `docs/setup.md` on a clean machine reaches a running local app.
+
+## Carried over from phase 8
+
+### After an account is deleted: what the auth server still holds
+
+`deleteAccount` removes the row of `auth.users`, and with it the identities and login sessions. Supabase Auth also writes tables the app never touches. Run this on the deployed project, as part of the deploy, with a throwaway Google account: sign in, start a session, delete the account in Buổi của tôi, then run the queries with the account's address and id.
+
+```sql
+-- 1. The account and what hangs on it are gone. Expect 0 in every column.
+SELECT
+  (SELECT count(*) FROM auth.users          WHERE id = :'user_id')      AS users,
+  (SELECT count(*) FROM auth.identities     WHERE user_id = :'user_id') AS identities,
+  (SELECT count(*) FROM auth.sessions       WHERE user_id = :'user_id') AS sessions,
+  (SELECT count(*) FROM auth.refresh_tokens WHERE user_id = :'user_id'::text) AS refresh_tokens,
+  (SELECT count(*) FROM auth.mfa_factors    WHERE user_id = :'user_id') AS mfa_factors,
+  (SELECT count(*) FROM auth.one_time_tokens WHERE user_id = :'user_id') AS one_time_tokens;
+
+-- 2. The audit log: rows that still name the account, with what they hold.
+SELECT id, created_at, ip_address, payload
+FROM auth.audit_log_entries
+WHERE payload::text ILIKE '%' || :'email' || '%' OR payload::text LIKE '%' || :'user_id' || '%'
+ORDER BY created_at;
+
+-- 3. Sign-in flows left half way (PKCE): rows of the account.
+SELECT id, created_at, provider_type, authentication_method
+FROM auth.flow_state
+WHERE user_id = :'user_id';
+
+-- 4. That the role the app connects as may delete the account at all. Expect true.
+SELECT has_table_privilege(current_user, 'auth.users', 'DELETE');
+```
+
+- [ ] Query 1 returns zeros.
+- [ ] Query 2: if rows remain, decide between removing them in `deleteAccount` (`DELETE FROM auth.audit_log_entries WHERE payload::text LIKE …`, inside the same transaction) and naming the audit log in the data notice and the delete dialog. Either way the launch checklist says which.
+- [ ] Query 3: if rows remain, delete them in `deleteAccount` by `user_id`.
+- [ ] The app tables hold nothing either: `SELECT count(*) FROM "user" WHERE id = :'user_id'` is 0, and `quota_tombstone` has one more row.
+
+### Accessibility notes from the phase 8 review
+
+- [ ] The delete dialog (and the stop, skip and end dialogs of phases 5 and 7) tie their consequence sentence to the dialog with `aria-describedby`; `Dialog` takes the id.
+- [ ] The skeletons' `aria-busy` and label sit on an element with a role (`role="status"`), so the wait is announced.
+- [ ] Rows added by "Tải thêm" are announced (a polite live line with how many were added), and focus stays on the first new row.
+- [ ] `WithdrawnScreen` and the transcript drawer share one transcript row component.
 
 ## Risk assessment
 

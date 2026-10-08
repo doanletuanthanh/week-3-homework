@@ -55,6 +55,11 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 - **LangSmith receives full prompts and replies in production** (user decision 2026-10-03). The data notice names the tracing service as a recipient; traces are not removed by account deletion and expire with LangSmith retention (14 days on the free plan).
 - **The persona reply is streamed** (user decision 2026-10-05; the PRD addendum §7 deferred streaming). Only Call 2 streams, after Call 1 and the unlock decision are done. A stream that fails midway writes no turn and the browser drops the partial text. Nothing is retracted for content: locked item content never enters Call 2 (invariant 2), so a stream cannot leak what the call was not given. Invariant 6 holds: the stream carries persona text, then the turn count or an error state.
 
+- **The sign-in account is deleted with the app data, in one database transaction** (user-approved 2026-10-08), not through the auth admin API afterwards.
+- **After an account is deleted, the row that is kept holds the personas it played** (user-approved 2026-10-08), keyed by a keyed hash of the Google account. A returning account cannot start a session with one of them and is told why. The custom-topic counters join the row in phase 9.
+- **A non-demo account with no Google identity on the auth server cannot start a session** (user decision 2026-10-08).
+- **Skeletons are boundaries inside each page, after its sign-in and ownership checks** (user-approved 2026-10-08), so "not found" and the way to sign-in keep their own status. There are no route-level loading files.
+
 ## User tasks the build cannot do
 
 - Create the Supabase project, Google OAuth client, Gemini/OpenAI/LangSmith keys, and Vercel project (phase 1 walks through each).

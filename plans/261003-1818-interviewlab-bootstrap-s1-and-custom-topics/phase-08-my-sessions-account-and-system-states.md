@@ -115,12 +115,37 @@ Differences from the text above:
 Left open:
 
 - **`seed-demo` has not run with real models**, so nobody knows whether `evalsets/demo/chi-thu-transcript.json` lands on an ignored hook. The home page still shows the placeholder: its reveal screenshot needs one real seeded session.
-- **Supabase Auth's own tables on the real project.** `DELETE FROM auth.users` removes the account, its identities and its login sessions. Whether `auth.audit_log_entries` (which can hold an address and an IP) or `auth.flow_state` keep rows about a deleted account has to be looked at there; the tests insert their sign-in rows with SQL and cannot show it. Also to confirm there: that the app's database role may delete from `auth.users`.
-- **A session with no question yet opens Màn 4**, as since phase 5. PRD §7 says Màn 3 with "Tiếp tục buổi luyện". Not in the list of accepted deviations.
-- A model call that finishes after its account was deleted cannot write its `llm_call` row (the session is gone), so that one call's cost is missing from the day's cap.
-- `src/app/error.tsx` and `global-error.tsx` have no test: nothing in the suite can make a page fail on the server. The retry there uses `reset()` with `router.refresh()`. The Next 16 guides in `node_modules/next/dist/docs` could not be read (a local hook blocks the folder), so a newer retry prop, if 16.3 has one, is not used.
-- The count of failed retries on the error page lasts until a full page load, so a page that failed three times, worked, and fails again shows the incident line at once.
-- The delete dialog names its question but does not tie the consequence sentences to it (`aria-describedby`), as the dialogs of phase 7.
 - `generating` and `failed_eval` have a label in the list and no screen of their own yet (phase 9).
 - The server log of the Playwright run shows "The destination stream closed early" when a browser leaves a page whose content is still arriving. No test fails by it.
 - Mutation check, one change at a time against the new tests: 22 ways of breaking the new code, 21 caught at first. Not caught: the ledger day taken in UTC instead of Vietnam time; a test with a call at 00:30 Vietnam time was added and catches it.
+
+## Decisions after review (user, 2026-10-08)
+
+- **The four differences from the phase text are accepted**: the sign-in account deleted inside the transaction, `/api/account`, skeletons as in-page boundaries instead of `loading.tsx`, and a kept row that holds played personas only until phase 9.
+- **A returning account stays blocked from a persona it already played, with the line that says so** (`PLAYED_BEFORE_DELETION`). Considered and dropped the same evening: letting it play again like a new account.
+- **A session with no question yet opens Màn 3** (PRD §7), with "Tiếp tục buổi luyện" leading into Màn 4. This ends the behaviour kept since phase 5.
+- **A non-demo account the auth server holds no Google identity for cannot start a session.** Without the identity the one-session rule cannot be checked against deleted accounts, so the start is refused (`no_identity`) and Màn 3 shows the standard error. A session that exists already still opens.
+- The remaining accessibility notes of the review, and the check of what Supabase Auth keeps about a deleted account, go to phase 10.
+
+## What changed after those decisions (2026-10-08)
+
+Verified: typecheck, lint, 825 unit, 429 integration, 197 Playwright tests (desktop and mobile, LLM stub; 2 more are the `fixme` rows below), each suite run on its own. The full Playwright run had two failures, both in tests: one still expected Màn 4 for a session with no question in a second browser, one raced the list's own refresh. Both were corrected and their two spec files run again in full.
+
+- **Màn 3 for a session with no question.** The session's state cannot tell Màn 3 from Màn 4, so pressing "Bắt đầu" or "Tiếp tục buổi luyện" is remembered for that browser in a session cookie (`il_entered`, httpOnly). Without it, the session URL answers with a redirect to Màn 3. On Màn 3 the button of such a session is a form (`continueSession`), not a link. Once a question exists, or the session ended or was withdrawn, the URL shows that state's screen in any browser. `tests/e2e/session-states.spec.ts` is the table of PRD §7: one row per state, each opened by its URL in a browser that pressed nothing, `withdrawn` included (with and without a question). `generating` and `failed_eval` are two `fixme` rows there: their screen is Màn 11 of phase 9, and no session can reach them before it.
+- **Error pages.** Both use `retry()`, stable since Next 16.3.0 (checked on nextjs.org). The count of failed retries starts again once the page has loaded. The tests bring the pages up with a cookie that fails a render (`src/server/test-faults.ts`): it does something only when `E2E_TEST_FAULTS=true` and the model provider is the local stub, which a deployed app never has.
+- **A model call that finishes after its account was deleted** is recorded without the session, so its cost still counts for the day's cap.
+- `QUOTA_HASH_SECRET` shorter than 32 characters is refused wherever it is read, and `seed-demo` reads the environment through `getEnv()` like the app.
+- A delete asked for when the account is already gone signs the browser out and sends it to sign-in.
+- Buổi của tôi asks the server again each time it is shown, so the back button shows the session as it is now.
+
+Left open after this:
+
+- `seed-demo` with real models, and the home page screenshot that needs it.
+- The answer of `DELETE /api/account` for an account already gone is covered at the service level only: two deletes at the same moment cannot be staged through a browser.
+- A learner who opens a session with no question in a second browser sees Màn 3 there even while the first browser is on Màn 4. Both lead to the same session.
+
+## Real database (2026-10-08, with the user's permission)
+
+- `pnpm db:migrate` applied `0009_quota-tombstone`; `0000`–`0008` were already applied. The table `quota_tombstone` exists.
+- Read-only check, on both the pooled and the direct connection: the app connects as `postgres`, which may `DELETE` from `auth.users` and `SELECT` from `auth.identities`. The in-transaction delete therefore works there as on the local stack.
+- What the auth server's audit tables keep about a deleted account is the phase 10 checklist.
