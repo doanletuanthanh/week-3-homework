@@ -38,7 +38,7 @@ function engineProvidedPrompt(subject: CallContext): string {
     case "PERSONA":
       return text(buildPersonaMessages({ ...subject.context, transcript: [], question: "" }));
     case "REPLAY_JUDGE":
-      return text(buildTurnJudgeMessages({ ...subject.context, transcript: [] }));
+      return text(buildTurnJudgeMessages({ ...subject.context, transcript: [], question: subject.context.question && { text: "", tokens: [] } }));
   }
 }
 

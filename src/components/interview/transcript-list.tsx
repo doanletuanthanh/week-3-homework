@@ -1,4 +1,10 @@
-export type Turn = { index: number; learnerText: string | null; personaText: string };
+export type Turn = {
+  index: number;
+  learnerText: string | null;
+  personaText: string;
+  /** A system line under the reply, e.g. that a replay turn could not be checked. Not part of what was said. */
+  note?: string;
+};
 
 /** The question being answered, and as much of the reply as has arrived. */
 export type PendingTurn = { index: number; text: string; reply: string };
@@ -36,7 +42,7 @@ function PersonaLine({ name, text, streaming }: { name: string; text: string; st
 
 /**
  * The conversation so far. All text is rendered as text nodes, so learner input is always
- * escaped. Nothing but the two speakers' words and the turn number is shown.
+ * escaped. Nothing but the two speakers' words, the turn number and a turn's system note is shown.
  */
 export function TranscriptList({ turns, pending, personaName }: Props) {
   return (
@@ -45,6 +51,7 @@ export function TranscriptList({ turns, pending, personaName }: Props) {
         <li key={turn.index} className="chat-turn">
           {turn.learnerText !== null && <LearnerLine index={turn.index} text={turn.learnerText} />}
           <PersonaLine name={personaName} text={turn.personaText} />
+          {turn.note && <p className="body-sm c-outline turn-note">{turn.note}</p>}
         </li>
       ))}
       {pending !== null && (

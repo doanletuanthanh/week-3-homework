@@ -26,6 +26,13 @@ export const analysisSchema = z.object({
 /** The turn judge (addendum §2.6): a verdict for the persona turn that has no later Call 1. */
 export const turnJudgeSchema = z.object({ prev_turn_verdict: verdictSchema });
 
+/** The replay judge of a leading-question replay: the verdict, and its own label for the learner's question. */
+export const replayJudgeSchema = z.object({
+  prev_turn_verdict: verdictSchema,
+  label: z.enum(LABELS),
+  introduced_span: z.array(z.number().int()).nullable(),
+});
+
 /** Reveal call 1, the end judge (addendum §2.3). */
 export const endJudgeSchema = z.object({
   last_turn_verdict: verdictSchema,

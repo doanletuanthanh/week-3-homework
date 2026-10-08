@@ -587,6 +587,49 @@ dialog.drawer::backdrop{background:rgba(15,23,42,.35)}
 .drawer-body{flex:1;min-height:0;overflow-y:auto;padding-top:4px}
 .drawer-body ol{list-style:none;margin:0;padding:0}
 .drawer-skel{padding:20px;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+/* replay (Màn 7): the interview's one-screen layout under its own bar */
+.rbar{flex:none;display:flex;align-items:center;gap:14px;padding:12px 32px;background:#fff;border-bottom:1px solid var(--surface-container)}
+.rbar-icon{width:40px;height:40px;background:var(--primary-fixed);color:var(--on-primary-fixed)}
+.rbar-title{flex:1;min-width:0}
+.rbar-title h1{margin:0}
+.rbar-meta{display:flex;align-items:center;gap:20px}
+.rbar-turns{display:flex;align-items:center;gap:10px}
+.rbar-turns .seg{width:96px}
+.rp-col{width:100%;max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.rp-col .chat-log{max-width:none}
+.rp-earlier{align-self:center;text-decoration:none}
+.fork .pill{gap:6px}
+.turn-note{margin-top:-12px}
+.rp-checking{display:flex;align-items:center;gap:10px}
+.rp-checking .spin{width:16px;height:16px;border-width:2px}
+.dlg-text{margin:-12px 0 24px}
+
+/* what a finished replay says: under the last replay turn, and as the result card of the reveal */
+.rr-row{display:flex;gap:16px;align-items:flex-start}
+.rr-mark{flex:none}
+.sealed.rr-mark{width:44px;height:44px;border-radius:10px}
+.check.rr-mark{width:36px;height:36px}
+.rr-warn{width:36px;height:36px;border-radius:10px;background:var(--error-container);color:var(--error);display:grid;place-items:center}
+.rr-plain{padding:26px 28px;display:flex;flex-direction:column;gap:16px}
+.rr-plain .eyebrow{margin-bottom:6px}
+.rr-plain > .eyebrow{margin-bottom:0;color:var(--outline)}
+.rr-plain .headline-sm{padding-top:6px}
+.rr-plain .headline-md,.rr-plain .headline-sm,.rr-unlocked .headline-md{overflow-wrap:anywhere}
+.rr-indent{margin-left:60px}
+.rr-actions{display:flex;justify-content:flex-end;align-items:center;gap:16px;flex-wrap:wrap}
+.rr-about{margin-right:auto;display:flex;align-items:center;gap:6px}
+.rr-unlocked{border-radius:12px;background:var(--tertiary-container);color:#fff;box-shadow:var(--shadow-md);overflow:hidden}
+.rr-pad{padding:26px 28px}
+.rr-open{width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.14);display:grid;place-items:center;flex:none}
+.rr-unlocked .eyebrow{color:var(--on-tertiary-container);margin-bottom:6px}
+.rr-note{color:#e1e0ff;margin-top:4px}
+.rr-foot{display:flex;align-items:center;justify-content:flex-end;gap:16px;flex-wrap:wrap;padding:14px 28px;background:rgba(0,0,0,.14)}
+.rr-sample{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 auto 0 0}
+.rr-sample .label-sm{color:var(--on-tertiary-container)}
+.btn.rr-back{background:#fff;color:var(--tertiary)}
+.cv-replay{display:flex;align-items:center;gap:6px;color:var(--tertiary)}
+.replay-error{margin-top:16px;color:#ffdad6}
+
 .turn{transition:background-color .3s}
 .turn-k{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 .tl{font:400 14px/22px var(--sans);color:var(--on-surface);white-space:pre-wrap;overflow-wrap:anywhere}
@@ -640,6 +683,19 @@ dialog.drawer::backdrop{background:rgba(15,23,42,.35)}
   .iv[data-notes-open="true"] .iv-compose{display:none}
   .iv[data-notes-open="true"] .iv-chat{flex:0 1 auto;min-height:72px;max-height:38%}
   .iv[data-notes-open="true"] .iv-scroll{padding-bottom:12px}
+
+  /* replay: the bar wraps, and the result blocks lose their indent */
+  .rbar{flex-wrap:wrap;gap:10px;padding:10px 16px 12px}
+  .rbar-icon{width:32px;height:32px}
+  .rbar-meta{order:3;width:100%;justify-content:space-between;gap:10px}
+  .rbar-turns{flex:1;min-width:0}
+  .rp-col{gap:14px}
+  .turn-note{margin-top:-6px}
+  .rr-plain,.rr-pad{padding:20px 18px}
+  .rr-foot{padding:12px 18px}
+  .rr-indent{margin-left:0}
+  .rr-actions{justify-content:stretch}
+  .rr-actions .btn,.rr-foot .btn{flex:1}
 
   /* guess and reveal */
   .guess-card{padding:28px 20px 32px}

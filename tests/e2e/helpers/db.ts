@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { config, evalRuns, events, llmCalls, pendingActions, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
+import { branches, config, evalRuns, events, llmCalls, pendingActions, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
 import { LOCAL_DATABASE_URL } from "../../helpers/local-stack";
 
 process.env.DATABASE_URL = LOCAL_DATABASE_URL;
@@ -14,6 +14,10 @@ export const db = {
   session: async (id: string) => (await getDb().select().from(sessions).where(eq(sessions.id, id)))[0],
   sessionsOf: (userId: string) => getDb().select().from(sessions).where(eq(sessions.userId, userId)),
   turnsOf: (sessionId: string) => getDb().select().from(turns).where(eq(turns.sessionId, sessionId)).orderBy(turns.index),
+  /** The session's replay branch, when it has one. */
+  replayOf: async (sessionId: string) => (await getDb().select().from(branches).where(and(eq(branches.sessionId, sessionId), eq(branches.kind, "replay"))))[0],
+  /** Turns of one branch, in order. */
+  turnsOfBranch: (branchId: string) => getDb().select().from(turns).where(eq(turns.branchId, branchId)).orderBy(turns.index),
   snapshotsOf: (sessionId: string) =>
     getDb().select().from(snapshots).where(eq(snapshots.sessionId, sessionId)).orderBy(snapshots.index),
   eventsOf: (sessionId: string) => getDb().select().from(events).where(eq(events.sessionId, sessionId)).orderBy(events.at),

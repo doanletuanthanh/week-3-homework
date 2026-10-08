@@ -17,7 +17,7 @@ export const LLM_ATTEMPT_TIMEOUT_MS = 45_000;
 export const LLM_MAX_RETRIES = 2;
 
 /**
- * One turn (both model calls with their retries) is abandoned after this long. Shorter than the
+ * One turn (its model calls with their retries: two, or three on a replay) is abandoned after this long. Shorter than the
  * claim below, so a running turn never loses its claim to a second request.
  */
 export const TURN_TIME_BUDGET_MS = 110_000;

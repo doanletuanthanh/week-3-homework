@@ -16,7 +16,8 @@ import {
 } from "drizzle-orm/pg-core";
 import type { TurnDecision } from "@/engine/plan-turn";
 import type { RevealJson, RevealParts } from "@/engine/reveal-types";
-import type { HookEntry, RawAnalysis, UnlockedItem, Verdict } from "@/engine/types";
+import { REPLAY_RESULTS } from "@/engine/replay-result";
+import { LABELS, type HookEntry, type RawAnalysis, type UnlockedItem, type Verdict } from "@/engine/types";
 import type { EpisodeResult, EvalReport, LeakKind } from "@/eval/types";
 import type { Scenario } from "@/scenario/schema";
 
@@ -147,7 +148,10 @@ export const sessions = pgTable(
   ],
 );
 
-/** A line of play inside a session: the main interview, and later one replay. */
+/**
+ * A line of play inside a session: the main interview, and later one replay. The replay columns
+ * are empty on the main branch.
+ */
 export const branches = pgTable(
   "branch",
   {
@@ -156,9 +160,20 @@ export const branches = pgTable(
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ["main", "replay"] }).notNull(),
+    /** The last main turn the replay shares with the interview; its own turns are numbered from the next one. */
+    forkAfterTurn: integer("fork_after_turn"),
+    /** The item a primary replay is about. Sealed until the replay has ended. */
+    targetItemId: text("target_item_id"),
+    fallbackLevel: text("fallback_level", { enum: ["primary", "fallback1"] }),
+    /** How the replay ended. Empty while it runs; written once, with the session's move to `done`. */
+    result: text("result", { enum: REPLAY_RESULTS }),
     createdAt,
   },
-  (table) => [uniqueIndex("branch_session_main_key").on(table.sessionId).where(sql`${table.kind} = 'main'`)],
+  (table) => [
+    uniqueIndex("branch_session_main_key").on(table.sessionId).where(sql`${table.kind} = 'main'`),
+    // One replay per session, whichever way it was started or skipped.
+    uniqueIndex("branch_session_replay_key").on(table.sessionId).where(sql`${table.kind} = 'replay'`),
+  ],
 );
 
 export const turns = pgTable(
@@ -189,6 +204,8 @@ export const turns = pgTable(
     hookSelected: text("hook_selected"),
     /** True when the verdict found a do-not-assert violation in this persona turn. */
     flagged: boolean("flagged").notNull().default(false),
+    /** Replay turns of a leading-question replay: the judge's own label for the learner's question. */
+    judgeLabel: text("judge_label", { enum: LABELS }),
     latencyMs: integer("latency_ms"),
     createdAt,
   },
@@ -248,6 +265,8 @@ export const llmCalls = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     scope: text("scope", { enum: LLM_SCOPES }).notNull(),
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "set null" }),
+    /** Set for the calls of a replay turn, whose turn numbers repeat those of the main interview. */
+    branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
     /** The turn the call belongs to, so the calls of one turn can be counted. */
     turnIndex: integer("turn_index"),
     attemptId: uuid("attempt_id"),

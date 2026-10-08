@@ -72,6 +72,26 @@ export const TRUST_MISSED = {
 /** FR-19: follows the words the learner added, only when the verifier agreed they were new. */
 export const LEADING_NEVER_SAID = "{persona} chưa từng nói điều này.";
 
+/** FR-48a, added under the note about the replay target once the replay opened that item. */
+export const CANVAS_REPLAY_OPENED = "Trong buổi chính {persona} chưa xác nhận; ở lần luyện lại bạn đã mở được nó.";
+
+/**
+ * Màn 7, and the result card of Màn 6: what a finished replay says. `{item}` is an item's own
+ * text, which ends its sentence; `{count}` a number of questions; `{words}` the learner's own words.
+ */
+export const REPLAY_RESULT = {
+  unlocked: "Đã mở khóa: {item}",
+  unlocked_note: "Đây chính là điều bạn bỏ lỡ.",
+  other_item: "Bạn mở được một điều khác: {item}",
+  held_back: "Điều {persona} đã giữ lại",
+  opening_question: "Một câu đã mở được nó",
+  no_leading: "Ba câu không dẫn dắt, có {count} câu bám vào lời {persona}.",
+  still_leading: "Lượt {turn} vẫn thêm ý của bạn: “{words}”.",
+  stopped_grounded: "Có {count} câu bám vào lời {persona} trước khi bạn dừng.",
+  none_grounded: "Lần này chưa có câu nào bám vào lời {persona}.",
+  unchecked: "Chưa kiểm được lượt này.",
+} as const;
+
 export function fillTemplate(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/gu, (whole, key: string) => (key in values ? String(values[key]) : whole));
 }
@@ -92,5 +112,7 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(PATH_LABEL).map(([name, text]) => ({ key: `path_label.${name}`, text })),
     ...Object.entries(TRUST_MISSED).map(([name, text]) => ({ key: `trust_missed.${name}`, text })),
     { key: "leading_never_said", text: LEADING_NEVER_SAID },
+    { key: "canvas_replay_opened", text: CANVAS_REPLAY_OPENED },
+    ...Object.entries(REPLAY_RESULT).map(([name, text]) => ({ key: `replay_result.${name}`, text })),
   ];
 }

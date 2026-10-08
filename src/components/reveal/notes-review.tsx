@@ -1,6 +1,7 @@
+import { UnlockIcon } from "@/components/icons";
 import type { CanvasMatchKind } from "@/engine/reveal-types";
 import type { NoteSegment } from "@/engine/seal";
-import { CANVAS_EXPLANATION, fillTemplate } from "@/strings/product-strings";
+import { CANVAS_EXPLANATION, CANVAS_REPLAY_OPENED, fillTemplate } from "@/strings/product-strings";
 import { TurnRef } from "./turn-ref";
 
 type Persona = { displayName: string; displayNameCapitalized: string };
@@ -86,6 +87,12 @@ export function NotesReview({ notes, ungraded, persona }: Props) {
               </div>
               {segment.match.itemContent && <p className="cv-item">{segment.match.itemContent}</p>}
               <Explanation match={segment.match} persona={persona} />
+              {segment.match.openedInReplay && (
+                <p className="cv-why cv-replay">
+                  <UnlockIcon size={14} />
+                  {fillTemplate(CANVAS_REPLAY_OPENED, { persona: persona.displayName })}
+                </p>
+              )}
             </div>
           ),
         )}

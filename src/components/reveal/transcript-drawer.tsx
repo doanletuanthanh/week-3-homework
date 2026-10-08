@@ -10,6 +10,12 @@ type Props = {
   /** The turn to show, or null while the drawer is closed. */
   turn: number | null;
   onClose: () => void;
+  /** `replay`: the turns of the replay instead of the main interview. */
+  branch?: "main" | "replay";
+  /** Main transcript only: show turns up to this one and no later (the fork of a running replay). */
+  upTo?: number;
+  /** Where the drawer's own way back leads: the result by default. */
+  backLabel?: string;
 };
 
 /** How long the turn the learner jumped to stays highlighted. */
@@ -38,9 +44,12 @@ function LearnerText({ turn }: { turn: BrowserTurn }) {
  * the whole screen under 768px. It scrolls to the turn asked for and highlights it for two
  * seconds. It is a native modal dialog, so focus stays inside it, Esc closes it, and focus goes
  * back to the link that opened it. The turns come from the server already filtered: a mark that
- * is not in the response cannot be shown here.
+ * is not in the response cannot be shown here. With `branch="replay"` it is the replay's turns
+ * under their own title, so the two are never read as one conversation.
  */
-export function TranscriptDrawer({ sessionId, personaName, turn, onClose }: Props) {
+export function TranscriptDrawer({ sessionId, personaName, turn, onClose, branch = "main", upTo, backLabel = "Về kết quả" }: Props) {
+  const replay = branch === "replay";
+  const title = replay ? "Các lượt luyện lại" : "Transcript buổi chính";
   const dialog = useRef<HTMLDialogElement>(null);
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [highlighted, setHighlighted] = useState<number | null>(null);
@@ -49,15 +58,16 @@ export function TranscriptDrawer({ sessionId, personaName, turn, onClose }: Prop
   const fetchTurns = useCallback(async () => {
     setLoad({ state: "loading" });
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/transcript`, { cache: "no-store" });
+      const response = await fetch(`/api/sessions/${sessionId}/transcript${replay ? "?branch=replay" : ""}`, { cache: "no-store" });
       const body = await response.json();
       if (body.redirectTo) return window.location.assign(body.redirectTo);
       if (!response.ok) throw new Error("transcript failed");
-      setLoad({ state: "ready", turns: body.turns });
+      const turns = body.turns as BrowserTurn[];
+      setLoad({ state: "ready", turns: upTo === undefined ? turns : turns.filter((entry) => entry.index <= upTo) });
     } catch {
       setLoad({ state: "error" });
     }
-  }, [sessionId]);
+  }, [sessionId, replay, upTo]);
 
   useEffect(() => {
     const element = dialog.current;
@@ -91,7 +101,8 @@ export function TranscriptDrawer({ sessionId, personaName, turn, onClose }: Prop
     <dialog
       ref={dialog}
       className="drawer"
-      aria-label="Transcript buổi chính"
+      data-branch={branch}
+      aria-label={title}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -105,13 +116,14 @@ export function TranscriptDrawer({ sessionId, personaName, turn, onClose }: Prop
         <header className="drawer-h">
           <button type="button" className="btn btn-tonal btn-sm drawer-back" onClick={onClose}>
             <ArrowLeftIcon size={16} />
-            Về kết quả
+            {backLabel}
           </button>
           <div>
-            <p className="label-lg">Transcript buổi chính</p>
+            <p className="label-lg">{title}</p>
             {load.state === "ready" && (
               <p className="body-sm c-variant">
-                {personaName} · {Math.max(0, load.turns.length - 1)} lượt
+                {/* The main transcript opens with the persona's line, which is not a turn of the learner. */}
+                {personaName} · {replay ? load.turns.length : Math.max(0, load.turns.length - 1)} lượt
               </p>
             )}
           </div>

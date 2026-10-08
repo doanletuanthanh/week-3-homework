@@ -1,8 +1,14 @@
+import type { LoadedReplay } from "@/db/repo/replay";
 import type { ScenarioRow, SessionRow } from "@/db/repo/sessions";
+import type { ReplayLevel, ReplayOutcome } from "@/engine/replay-result";
 import { toBrowserReveal, type BrowserReveal } from "@/engine/seal";
 import { personaCard } from "@/scenario/persona-card";
+import { replayOutcomeOf } from "./replay-outcome";
 
 export type ViewTurn = { index: number; learnerText: string | null; personaText: string };
+
+/** A replay turn on its screen. `unchecked`: the judge failed, so the turn counts with nothing told. */
+export type ReplayViewTurn = ViewTurn & { unchecked: boolean };
 
 /** The small line over a result: who, when, how long. */
 export type RevealHeader = { personaName: string; date: string; turnCount: number };
@@ -37,6 +43,20 @@ export type SessionView =
       waitlisted: boolean;
       /** What the printed takeaway is headed with, and the name its PDF is saved under. */
       print: { topicTitle: string; date: string; fileName: string };
+      /** How the replay ended, with how many questions it had. Set for a `done` session that had a replay moment. */
+      replay: { outcome: ReplayOutcome; turnCount: number } | null;
+    }
+  | {
+      screen: "replay";
+      sessionId: string;
+      persona: Persona;
+      /** The day the session started, as "dd/mm". */
+      date: string;
+      level: ReplayLevel;
+      forkAfterTurn: number;
+      /** The last two turns before the fork, ending on what the persona said there. */
+      contextTurns: ViewTurn[];
+      replayTurns: ReplayViewTurn[];
     }
   /** A state no screen exists for yet. */
   | { screen: "ended" };
@@ -59,8 +79,11 @@ export function buildSessionView(input: {
   topicTitle: string;
   turns: ViewTurn[];
   waitlisted: boolean;
+  /** The session's replay branch with its turns, when it has one. */
+  replay?: LoadedReplay | null;
 }): SessionView {
   const { session, scenario, topicTitle, waitlisted } = input;
+  const replay = input.replay ?? null;
   const card = personaCard(scenario.content);
   const persona: Persona = { displayName: card.displayName, displayNameCapitalized: card.displayNameCapitalized };
   const turns = input.turns.map((turn) => ({ index: turn.index, learnerText: turn.learnerText, personaText: turn.personaText }));
@@ -86,8 +109,36 @@ export function buildSessionView(input: {
     };
   }
 
+  // Màn 7 shows the two speakers' words up to the fork and on the branch, and nothing of the result.
+  if (session.status === "replaying" && replay && replay.branch.result === null && replay.branch.fallbackLevel !== null && replay.branch.forkAfterTurn !== null) {
+    const forkAfterTurn = replay.branch.forkAfterTurn;
+    return {
+      screen: "replay",
+      sessionId,
+      persona,
+      date: header.date,
+      level: replay.branch.fallbackLevel,
+      forkAfterTurn,
+      contextTurns: turns.filter((turn) => turn.index <= forkAfterTurn).slice(-2),
+      replayTurns: replay.turns.map((turn) => ({
+        index: turn.index,
+        learnerText: turn.learnerText,
+        personaText: turn.personaText,
+        unchecked: turn.verdictJson === null,
+      })),
+    };
+  }
+
   if (session.status === "revealed" || session.status === "replaying" || session.status === "done") {
-    const reveal = toBrowserReveal({ status: session.status, guess: session.guess, canvasText: session.canvasText, reveal: session.revealJson });
+    // What the replay held is in its outcome, so the outcome exists for a `done` session only.
+    const outcome = session.status === "done" && replay ? replayOutcomeOf(scenario.content, replay) : null;
+    const reveal = toBrowserReveal({
+      status: session.status,
+      guess: session.guess,
+      canvasText: session.canvasText,
+      reveal: session.revealJson,
+      replaySucceeded: outcome?.level === "primary" && outcome.result === "success",
+    });
     if (reveal) {
       return {
         screen: "reveal",
@@ -101,6 +152,7 @@ export function buildSessionView(input: {
           date: `${day}/${month}/${year}`,
           fileName: `thoi-quen-hoi-${scenario.personaId}-${year}-${month}-${day}`,
         },
+        replay: outcome && replay ? { outcome, turnCount: replay.turns.length } : null,
       };
     }
     if (session.guess !== null && session.revealReadyAt === null) return { screen: "computing", sessionId, guess: session.guess, header };

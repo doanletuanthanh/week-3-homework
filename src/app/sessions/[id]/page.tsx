@@ -6,8 +6,10 @@ import { GuessScreen } from "@/components/guess/guess-screen";
 import { InterviewScreen } from "@/components/interview/interview-screen";
 import { TranscriptList } from "@/components/interview/transcript-list";
 import { RevealComputing } from "@/components/reveal/reveal-computing";
+import { ReplayScreen } from "@/components/replay/replay-screen";
 import { RevealScreen } from "@/components/reveal/reveal-screen";
 import { getDb } from "@/db/client";
+import { loadReplay } from "@/db/repo/replay";
 import { getSession, listTurns } from "@/db/repo/sessions";
 import { isOnWaitlist } from "@/db/repo/waitlist";
 import { personaCard } from "@/scenario/persona-card";
@@ -66,7 +68,7 @@ function SessionWithdrawn({ turns, personaName }: { turns: ViewTurn[]; personaNa
 /**
  * One URL per session. It renders the screen of the session's current state, never the screen
  * that was open before (PRD §7): the interview, the guess, the reveal being computed, the reveal,
- * or the read-only transcript of a withdrawn session.
+ * the replay at the turn it stopped at, or the read-only transcript of a withdrawn session.
  */
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -90,6 +92,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     topicTitle: topic.title,
     turns: await listTurns(db, user.id, id),
     waitlisted: await isOnWaitlist(db, user.id, "no_more_personas"),
+    replay: session.status === "replaying" || session.status === "done" ? await loadReplay(db, id) : null,
   });
 
   switch (view.screen) {
@@ -111,7 +114,27 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       return <RevealComputing sessionId={view.sessionId} guess={view.guess} header={view.header} />;
     case "reveal":
       return (
-        <RevealScreen sessionId={view.sessionId} persona={view.persona} header={view.header} reveal={view.reveal} waitlisted={view.waitlisted} print={view.print} />
+        <RevealScreen
+          sessionId={view.sessionId}
+          persona={view.persona}
+          header={view.header}
+          reveal={view.reveal}
+          waitlisted={view.waitlisted}
+          print={view.print}
+          replay={view.replay}
+        />
+      );
+    case "replay":
+      return (
+        <ReplayScreen
+          sessionId={view.sessionId}
+          persona={view.persona}
+          date={view.date}
+          level={view.level}
+          forkAfterTurn={view.forkAfterTurn}
+          contextTurns={view.contextTurns}
+          replayTurns={view.replayTurns}
+        />
       );
     case "ended":
       return <SessionEnded />;

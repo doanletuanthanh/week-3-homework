@@ -12,7 +12,7 @@ import { costUsd, ZERO_USAGE, type TokenUsage } from "./pricing";
 import type { Role, RoleSpec } from "./roles";
 
 /** Which budget a call belongs to, and the row it is attributed to. */
-export type CallScope = { scope: LlmScope; sessionId?: string; turnIndex?: number; attemptId?: string };
+export type CallScope = { scope: LlmScope; sessionId?: string; branchId?: string; turnIndex?: number; attemptId?: string };
 
 export type CallModelOptions<T> = {
   /** When set, the reply is structured output that must parse with this schema. */
@@ -179,6 +179,7 @@ export async function callModel<T>(
           .recordCall({
             scope: scope.scope,
             sessionId: scope.sessionId,
+            branchId: scope.branchId,
             turnIndex: scope.turnIndex,
             attemptId: scope.attemptId,
             role,

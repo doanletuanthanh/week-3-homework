@@ -35,6 +35,12 @@ export const LockIcon = icon(
     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </>,
 );
+export const UnlockIcon = icon(
+  <>
+    <rect x="5" y="11" width="14" height="9" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 7.6-1.8" />
+  </>,
+);
 export const ShieldIcon = icon(
   <>
     <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />

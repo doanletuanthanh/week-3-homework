@@ -1,8 +1,15 @@
-import { CheckIcon, EyeIcon, LockIcon } from "@/components/icons";
+import { CheckIcon, EyeIcon, LockIcon, UnlockIcon } from "@/components/icons";
 import type { BrowserReveal } from "@/engine/seal";
 import type { RevealHeader } from "@/server/session-view";
 
-type Props = { header: RevealHeader; reveal: BrowserReveal };
+type Props = {
+  header: RevealHeader;
+  reveal: BrowserReveal;
+  /** What the replay target is called in the tally: held while the replay is ahead, opened after it. */
+  heldLabel: string;
+  /** The replay has ended, so the target is no longer sealed. */
+  heldOpen: boolean;
+};
 
 /** NHẬN BIẾT as a line. Empty notes are never shown as a zero (FR-49); a failed judge shows no line. */
 function Recognized({ recognized }: { recognized: BrowserReveal["recognized"] }) {
@@ -34,7 +41,7 @@ function Recognized({ recognized }: { recognized: BrowserReveal["recognized"] })
 }
 
 /** Màn 6 item 1: the guess against what the persona told, and what the notes caught. */
-export function TwoNumbers({ header, reveal }: Props) {
+export function TwoNumbers({ header, reveal, heldLabel, heldOpen }: Props) {
   const { told, total, held, missed } = reveal;
   const share = (count: number) => `${(count / total) * 100}%`;
   return (
@@ -62,8 +69,8 @@ export function TwoNumbers({ header, reveal }: Props) {
           </span>
           {held > 0 && (
             <span className="c-tertiary">
-              <LockIcon size={14} />
-              {held} Giữ lại
+              {heldOpen ? <UnlockIcon size={14} /> : <LockIcon size={14} />}
+              {held} {heldLabel}
             </span>
           )}
           <span className="c-amber">{missed} Bỏ lỡ</span>

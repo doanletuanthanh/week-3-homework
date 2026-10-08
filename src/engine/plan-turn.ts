@@ -9,6 +9,8 @@ import { tokenize } from "./tokens";
 import type { CheckedAnalysis, Correction, EngineState, RawAnalysis, RuleRun, Verdict } from "./types";
 import { decideUnlock } from "./unlock";
 
+const NO_VERDICT: Verdict = { hook_dropped: false, disclosed_item_ids: [], violations: [] };
+
 export type TurnPlan = {
   turnIndex: number;
   /** The verdict about turn t-1, cut down to what code accepted. */
@@ -49,13 +51,20 @@ export function planTurn(input: {
   question: string;
   /** Replay only: the target item wins when several items could open. */
   priorityItemId?: string;
+  /**
+   * Replay only: the verdict in Call 1's output is not read. The replay judge already gave the
+   * verdict about turn t-1, and the stored snapshot holds it.
+   */
+  ignoreVerdict?: boolean;
 }): TurnPlan {
   const { scenario, state, transcript, question, priorityItemId } = input;
   const turnIndex = state.turnIndex + 1;
 
   const { resolved, corrections: aliasCorrections } = resolveAliases(scenario, input.analysis);
   // The verdict goes in first, so a hook dropped at t-1 can be picked up at t.
-  const { state: previousState, applied: verdict } = applyVerdict(scenario, state, resolved.verdict);
+  const { state: previousState, applied: verdict } = input.ignoreVerdict
+    ? { state, applied: NO_VERDICT }
+    : applyVerdict(scenario, state, resolved.verdict);
   const { checked, corrections } = checkAnalysis(resolved, {
     state: previousState,
     turnIndex,

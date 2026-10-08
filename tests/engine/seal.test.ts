@@ -178,7 +178,7 @@ describe("what the primary fixtures seal, case by case", () => {
     ]);
     expect(payload.notes).toEqual([
       { text: "app trả phí bỏ không\n", match: null },
-      { text: "khoản lặt vặt không ghi", match: { kind: "unconfirmed", itemContent: itemOf("small-spend").content, turn: 2 } },
+      { text: "khoản lặt vặt không ghi", match: { kind: "unconfirmed", itemContent: itemOf("small-spend").content, turn: 2, openedInReplay: false } },
     ]);
   });
 
@@ -257,12 +257,12 @@ describe("toBrowserReveal: the offer screen of the main fixture", () => {
   it("gives each marked note what its FR-48a sentence needs: the kind, the item, and a turn to link to", () => {
     expect(payload.notes).toEqual([
       { text: "kế toán, ở trọ với bạn\n", match: null },
-      { text: "mỗi tháng gửi ba mẹ 3 triệu", match: { kind: "told", itemContent: itemOf("money-home").content, turn: 1 } },
+      { text: "mỗi tháng gửi ba mẹ 3 triệu", match: { kind: "told", itemContent: itemOf("money-home").content, turn: 1, openedInReplay: false } },
       // The target's note, as plain text.
       { text: "\nđang trả phí cho một app mà không dùng?\n", match: null },
-      { text: "chắc có nợ thẻ tín dụng", match: { kind: "unrevealed", itemContent: itemOf("installment").content, turn: null } },
+      { text: "chắc có nợ thẻ tín dụng", match: { kind: "unrevealed", itemContent: itemOf("installment").content, turn: null, openedInReplay: false } },
       { text: "\n", match: null },
-      { text: "lương thấp nên khó để dành", match: { kind: "never_said", itemContent: null, turn: null } },
+      { text: "lương thấp nên khó để dành", match: { kind: "never_said", itemContent: null, turn: null, openedInReplay: false } },
     ]);
   });
 

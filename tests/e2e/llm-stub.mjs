@@ -17,6 +17,12 @@
 //   [stub:verifier-disagree=a,b]    the verifier disagrees with every check of these kinds
 //   [stub:fail-reveal=judge]        that reveal call gets HTTP 500 (judge, generator, verifier or all)
 //   [stub:slow-reveal]              the judge waits before answering, so a test can watch the wait
+// It answers the replay judge too (the third call of a replay turn), told apart by the first
+// sentence of its prompt: a neutral verdict, and the label "open" for the learner's question.
+// Markers in the newest learner line of the transcript the judge is given steer it:
+//   [stub:replay-judge={...}]       JSON (no spaces) merged over the judge's neutral reply
+//   [stub:fail-judge]               the judge gets HTTP 500, so the turn counts unchecked
+//   [stub:slow-judge]               the judge waits before answering, so a test can watch the wait
 // GET /requests returns every request body received so far, so tests can read what the app sent.
 import { createServer } from "node:http";
 
@@ -67,6 +73,18 @@ const REVEAL_ROLES = [
 /** Which reveal call this is, or null for a call of a turn. */
 function revealRole(text) {
   return REVEAL_ROLES.find(([, phrase]) => text.includes(phrase))?.[0] ?? null;
+}
+
+const isReplayJudge = (text) => text.includes("người phán đoán của một buổi luyện phỏng vấn");
+
+/** The learner line of the turn the replay judge is asked about: the last one of its transcript. */
+function judgedQuestion(text) {
+  return [...text.matchAll(/^\[lượt \d+\] người hỏi: (.*)$/gm)].at(-1)?.[1] ?? "";
+}
+
+function replayJudgeReply(question) {
+  const match = /\[stub:replay-judge=(\{\S*\})\]/.exec(question);
+  return { prev_turn_verdict: NEUTRAL_ANALYSIS.prev_turn_verdict, label: "open", introduced_span: null, ...(match ? JSON.parse(match[1]) : {}) };
 }
 
 const NEEDS_QUESTION = new Set(["leading", "hypothetical_future", "heard_not_followed"]);
@@ -231,6 +249,13 @@ createServer(async (request, reply) => {
     return;
   }
   if (reveal === "judge" && prompt.includes("[stub:slow-reveal]")) await sleep(2500);
+  const judged = !reveal && isReplayJudge(prompt) ? judgedQuestion(prompt) : null;
+  if (judged?.includes("[stub:fail-judge]")) {
+    reply.writeHead(500, { "content-type": "application/json" });
+    reply.end(JSON.stringify({ error: { message: "stubbed provider failure", type: "server_error" } }));
+    return;
+  }
+  if (judged?.includes("[stub:slow-judge]")) await sleep(2000);
   if (question.includes("[stub:fail]") || (!structured && question.includes("[stub:fail-persona]"))) {
     reply.writeHead(500, { "content-type": "application/json" });
     reply.end(JSON.stringify({ error: { message: "stubbed provider failure", type: "server_error" } }));
@@ -238,7 +263,13 @@ createServer(async (request, reply) => {
   }
 
   const isResponses = request.url.endsWith("/responses");
-  const text = reveal ? JSON.stringify(revealReply(reveal, prompt)) : structured ? JSON.stringify(analysisFor(question)) : personaLine(body);
+  const text = reveal
+    ? JSON.stringify(revealReply(reveal, prompt))
+    : judged !== null
+      ? JSON.stringify(replayJudgeReply(judged))
+      : structured
+        ? JSON.stringify(analysisFor(question))
+        : personaLine(body);
   if (body.stream) {
     await streamReply(reply, {
       model: body.model,

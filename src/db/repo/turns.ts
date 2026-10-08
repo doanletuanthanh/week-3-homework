@@ -7,13 +7,14 @@ import { adminAccessLog, branches, scenarios, sessions, snapshots, turns, type D
 type TurnInsert = typeof turns.$inferInsert;
 type SnapshotInsert = typeof snapshots.$inferInsert;
 
-/** The reply already stored for a question the browser is sending again. */
+/** The main-interview reply already stored for a question the browser is sending again. */
 export async function findTurnByKey(db: Executor, userId: string, sessionId: string, turnKey: string) {
   const [row] = await db
     .select({ personaText: turns.personaText, index: turns.index })
     .from(turns)
     .innerJoin(sessions, eq(sessions.id, turns.sessionId))
-    .where(and(eq(turns.sessionId, sessionId), eq(sessions.userId, userId), eq(turns.turnKey, turnKey)))
+    .innerJoin(branches, eq(branches.id, turns.branchId))
+    .where(and(eq(turns.sessionId, sessionId), eq(sessions.userId, userId), eq(turns.turnKey, turnKey), eq(branches.kind, "main")))
     .limit(1);
   return row ?? null;
 }

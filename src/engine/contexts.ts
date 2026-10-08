@@ -39,7 +39,13 @@ export type AnalysisContext = VerdictMaterial & {
   question: { text: string; tokens: string[] };
 };
 
-export type JudgeContext = VerdictMaterial;
+export type JudgeContext = VerdictMaterial & {
+  /**
+   * The learner's question of the judged turn, when the judge is also asked for its label (the
+   * replay of a leading question). Null everywhere else.
+   */
+  question: { text: string; tokens: string[] } | null;
+};
 
 /** `state` is the stored snapshot of the turn being judged, before its verdict. */
 function verdictMaterial(scenario: Scenario, state: EngineState, transcript: TranscriptLine[]): VerdictMaterial {
@@ -84,9 +90,18 @@ export function buildAnalysisContext(
   };
 }
 
-/** The turn judge: Call 1 without a new learner question. Judges the turn `state` belongs to. */
-export function buildJudgeContext(scenario: Scenario, state: EngineState, transcript: TranscriptLine[]): JudgeContext {
-  return verdictMaterial(scenario, state, transcript);
+/**
+ * The turn judge: Call 1 without a new learner question. Judges the turn `state` belongs to, the
+ * last one of the transcript. With `labelQuestion` it is also handed that turn's question to label.
+ */
+export function buildJudgeContext(
+  scenario: Scenario,
+  state: EngineState,
+  transcript: TranscriptLine[],
+  options: { labelQuestion?: boolean } = {},
+): JudgeContext {
+  const asked = options.labelQuestion ? (transcript.at(-1)?.learnerText ?? null) : null;
+  return { ...verdictMaterial(scenario, state, transcript), question: asked === null ? null : { text: asked, tokens: tokenize(asked) } };
 }
 
 export type PersonaItemMode = "tell_now" | "tell_when_fitting" | "already_told";

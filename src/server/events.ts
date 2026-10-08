@@ -1,5 +1,6 @@
 import type { Executor } from "@/db/client";
 import { events, type DeviceClass } from "@/db/schema";
+import type { ReplayLevel, ReplayResult } from "@/engine/replay-result";
 
 /** FR-38 events this slice writes so far. Later phases add theirs. */
 export type AppEvent =
@@ -23,7 +24,10 @@ export type AppEvent =
         replay_level: "primary" | "fallback1" | "none";
         latency_ms: number;
       };
-    };
+    }
+  | { name: "replay_started"; props: { level: ReplayLevel } }
+  /** Written when a replay ends, however it ends. `turns` is how many replay questions were answered. */
+  | { name: "replay_result"; props: { level: ReplayLevel; result: ReplayResult; turns: number } };
 
 /**
  * Writes one event on the server, inside the caller's transaction when given one, so an event

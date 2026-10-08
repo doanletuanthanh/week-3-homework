@@ -26,7 +26,13 @@ export type BrowserClaim = {
 export type NoteSegment = {
   text: string;
   /** Set for a stretch that was matched; plain text has none. */
-  match: { kind: CanvasMatchKind; itemContent: string | null; turn: number | null } | null;
+  match: {
+    kind: CanvasMatchKind;
+    itemContent: string | null;
+    turn: number | null;
+    /** The note is about the replay target, and the replay opened it (FR-48a, the added sentence). */
+    openedInReplay: boolean;
+  } | null;
 };
 
 export type BrowserRecognized = { state: "count"; value: number } | { state: "empty" } | { state: "ungraded" };
@@ -99,7 +105,7 @@ function recognizedOf(reveal: RevealJson, exceptItemId?: string): BrowserRecogni
   return { state: "count", value: recognizedCount(reveal.canvasMatches, exceptItemId) };
 }
 
-function notesOf(canvasText: string, reveal: RevealJson, heldItemId: string | null): NoteSegment[] | null {
+function notesOf(canvasText: string, reveal: RevealJson, heldItemId: string | null, openedItemId: string | null): NoteSegment[] | null {
   if (reveal.canvasEmpty) return null;
   const offsets = tokenOffsets(canvasText);
   const itemOf = new Map(reveal.items.map((item) => [item.id, item]));
@@ -115,7 +121,12 @@ function notesOf(canvasText: string, reveal: RevealJson, heldItemId: string | nu
     const item = match.itemId === null ? undefined : itemOf.get(match.itemId);
     segments.push({
       text: canvasText.slice(start, end),
-      match: { kind: match.kind, itemContent: item?.content ?? null, turn: match.kind === "told" ? (item?.toldTurn ?? null) : (item?.hook?.turn ?? null) },
+      match: {
+        kind: match.kind,
+        itemContent: item?.content ?? null,
+        turn: match.kind === "told" ? (item?.toldTurn ?? null) : (item?.hook?.turn ?? null),
+        openedInReplay: match.itemId !== null && match.itemId === openedItemId,
+      },
     });
     cursor = end;
   }
@@ -123,8 +134,17 @@ function notesOf(canvasText: string, reveal: RevealJson, heldItemId: string | nu
   return segments;
 }
 
-/** What a browser may see of a session's reveal; null when it may see none of it yet. */
-export function toBrowserReveal(input: { status: string; guess: number | null; canvasText: string; reveal: RevealJson | null }): BrowserReveal | null {
+/**
+ * What a browser may see of a session's reveal; null when it may see none of it yet.
+ * `replaySucceeded` says the replay opened its target; it is read for a `done` session only.
+ */
+export function toBrowserReveal(input: {
+  status: string;
+  guess: number | null;
+  canvasText: string;
+  reveal: RevealJson | null;
+  replaySucceeded?: boolean;
+}): BrowserReveal | null {
   const { status, guess, canvasText, reveal } = input;
   const access = accessOf(status);
   if (access === "none" || reveal === null || guess === null) return null;
@@ -180,7 +200,7 @@ export function toBrowserReveal(input: { status: string; guess: number | null; c
       hook: item.hook,
       trustTurns: item.trustTurns.filter((turn) => !hidden.includes(turn)),
     })),
-    notes: notesOf(canvasText, reveal, open ? null : (held?.id ?? null)),
+    notes: notesOf(canvasText, reveal, open ? null : (held?.id ?? null), open && input.replaySucceeded ? (held?.id ?? null) : null),
     takeaway: {
       praise: praise ? toClaim(praise) : null,
       comments,
