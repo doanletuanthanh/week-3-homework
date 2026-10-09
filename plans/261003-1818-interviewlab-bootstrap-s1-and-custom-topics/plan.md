@@ -41,12 +41,13 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 6 | [Reveal pipeline and screen](./phase-06-reveal-pipeline-and-screen.md) | In review: code and tests done; real models, the two hand-labelled sets and measured reveal latency open | 5 | 6d |
 | 7 | [Replay](./phase-07-replay.md) | In review: code and tests done; a full session with real models open | 6 | 2.5d |
 | 8 | [My sessions, account, system states](./phase-08-my-sessions-account-and-system-states.md) | In review: code and tests done; a real `seed-demo` run, the home screenshot and the auth tables of the real project open | 7 | 2.5d |
-| 9 | [Custom topics](./phase-09-custom-topics.md) | Pending | 4, 8 | 7d |
+| 9 | [Custom topics](./phase-09-custom-topics.md) | In review: redesigned 2026-10-09 (no reduced eval, resumable runs); code and tests done, 3 of 3 real topics pass; Vercel and the real database open | 4, 8 | 7d |
 | 10 | [Hardening, docs, launch checks](./phase-10-hardening-docs-and-launch-checks.md) | Pending | 9 | 2d |
 
 ## Accepted deviations from the PRD
 
-- Custom-scenario hard timeout ~270 s instead of 10 min (Vercel Hobby cap; user-approved 2026-10-03).
+- ~~Custom-scenario hard timeout ~270 s instead of 10 min~~ Replaced 2026-10-09: an attempt has the PRD's 10 minutes again, as up to three runs of at most 270 s each, each going on from what the one before stored.
+- **Deliberate deviation from FR-54: the reduced eval is dropped, and a custom scenario is only "kiểm tra nhẹ" (lightly checked).** A generated scenario is not played before the learner gets it (user decision 2026-10-09, after 0 of 10 sample topics passed the reduced gate at ~0.45 USD and ~3 min each). FR-54's reduced eval and its pass rule are dropped: the pipeline is generate → `validate` → output safety check. Màn 10's information block says "nó chưa được chạy thử lần nào" in place of the PRD's sentence about short automatic runs.
 - No worker process: reveal and generation run in `after()`; full eval runs from the local CLI.
 - No Review Console. Operator actions the PRD puts in C8/C10 that S1 or custom topics need (unpublish, take down a custom scenario, refund the free scenario, config and kill switch) are CLI commands.
 - No library (Màn 2/2b): home links to the one persona's prep screen; custom topics are reached from Buổi của tôi.
@@ -85,6 +86,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 5. LangSmith free plan is 5,000 traces/month and one session is up to ~70 traces. Sampling or a paid plan is needed beyond ~70 sessions a month.
 6. Where real eval runs, rulings and string approvals live: the integration and Playwright tests empty the local database the CLI writes them to (phase 4 notes).
 7. A good simulated run opens 36 % of chị Thu's items against the 50–75 % target, and the persona invents far more detail than its prompt allows (phase 4 notes).
+8. Nothing checks, before a learner plays it, that a generated persona keeps its items sealed (phase 9 redesign). The reduced gate that was meant to passed nothing; the labels and the report button are what is left. How generated personas behave in real sessions is unknown.
 
 ## Red Team Review
 
