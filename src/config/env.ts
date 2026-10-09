@@ -53,13 +53,17 @@ const envSchema = z
     LLM_END_JUDGE: roleSpec,
     LLM_FEEDBACK: roleSpec,
     LLM_VERIFIER: roleSpec,
+    // The custom-topic path: moderation, generation, and the safety check of what was generated.
+    LLM_MODERATION: roleSpec,
+    LLM_SCENARIO_GENERATOR: roleSpec,
+    LLM_SAFETY: roleSpec,
     // CLI-only roles: needed by the commands that call them, not by the app.
     LLM_EVAL_INTERVIEWER: optionalRoleSpec,
     LLM_EVAL_LEAK_JUDGE: optionalRoleSpec,
     LLM_STRING_CHECK: optionalRoleSpec,
     GOOGLE_API_KEY: optionalKey,
     OPENAI_API_KEY: optionalKey,
-    // Separate keys for evaluation, so batch load cannot rate-limit live turns.
+    // Separate keys for evaluation and scenario generation, so their load cannot rate-limit live turns.
     GOOGLE_API_KEY_BATCH: optionalKey,
     OPENAI_API_KEY_BATCH: optionalKey,
     LANGSMITH_TRACING: z.string().optional(),

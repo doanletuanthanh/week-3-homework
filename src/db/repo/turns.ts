@@ -65,7 +65,8 @@ export async function claimTurn(
     if (turnIndex > MAX_TURNS) return { ok: false, reason: "turn_limit" };
     if (input.expectedIndex !== turnIndex) return { ok: false, reason: "wrong_index" };
 
-    const [scenario] = await tx.select().from(scenarios).where(eq(scenarios.id, session.scenarioId));
+    // A session that is being interviewed has its scenario: a custom one gets it before it leaves `generating`.
+    const [scenario] = await tx.select().from(scenarios).where(eq(scenarios.id, session.scenarioId!));
     const claim: TurnClaim = { token: randomUUID(), at: now.toISOString() };
     const deviceClass = session.deviceClass ?? input.deviceClass ?? null;
     await tx.update(sessions).set({ turnClaim: claim, deviceClass }).where(eq(sessions.id, session.id));

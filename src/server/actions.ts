@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
-import { getScenarioByPersona, getSession } from "@/db/repo/sessions";
+import { getSession, getVisibleScenario } from "@/db/repo/sessions";
 import { acknowledgeNotice } from "@/db/repo/users";
 import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { getUser, noticePath, requireAckedUser, requireUser } from "./auth";
@@ -64,7 +64,7 @@ export async function startSession(formData: FormData): Promise<void> {
   }
 
   // A guest can reach this line, so nothing is stored for a persona that does not exist.
-  if (!(await getScenarioByPersona(getDb(), personaId))) redirect("/");
+  if (!(await getVisibleScenario(getDb(), personaId, user?.id ?? null))) redirect("/");
   await storePendingAction(user, { kind: "start_session", personaId });
   if (!user) await redirectToGoogle(RESUME_PATH);
   redirect(noticePath(RESUME_PATH));

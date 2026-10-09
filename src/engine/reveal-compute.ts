@@ -130,11 +130,20 @@ type Candidate = Omit<CommentSlot, "id">;
 /** Fewest turns a slot of this type still needs to be worth a comment. */
 const MIN_TURNS: Record<SlotType, number> = { praise: 1, leading: 1, hypothetical_future: 2, heard_not_followed: 1, habit: 1 };
 
+/** PRD §4: the fault a focus is about is commented on first, right after the praise. */
+const FOCUS_FIRST: Partial<Record<NonNullable<RevealBasis["focus"]>, SlotType>> = {
+  follow_up: "heard_not_followed",
+  past_story: "hypothetical_future",
+  trust: "leading",
+  no_leading: "leading",
+};
+
 /**
  * The comments code triggers from the ledger and the checked labels (addendum §3.3). The
  * generator writes their words and nothing else: it cannot add a comment or cite another turn.
  * Order: the grounded praise, then the faults by how many turns show them (ties: the earliest
- * turn first), three at most, each turn in one comment only; then the habit card. `basis` is settled.
+ * turn first), three at most, each turn in one comment only; then the habit card. In a custom
+ * session with a focus, the fault that focus is about comes before the other faults. `basis` is settled.
  */
 export function commentSlots(basis: RevealBasis, selection: ReplaySelection, matches: CanvasMatch[]): CommentSlot[] {
   const { scenario, state } = basis;
@@ -185,10 +194,13 @@ export function commentSlots(basis: RevealBasis, selection: ReplaySelection, mat
         ]
       : []),
   ];
+  // Array.sort is stable: equal counts and turns keep the order above.
+  faults.sort((a, b) => b.turns.length - a.turns.length || Math.min(...a.turns) - Math.min(...b.turns));
+  const focused = basis.focus ? FOCUS_FIRST[basis.focus] : undefined;
   const ordered: Candidate[] = [
     ...(best ? [{ type: "praise" as const, turns: [best.index] }] : []),
-    // Array.sort is stable: equal counts and turns keep the order above.
-    ...faults.sort((a, b) => b.turns.length - a.turns.length || Math.min(...a.turns) - Math.min(...b.turns)),
+    ...faults.filter((fault) => fault.type === focused),
+    ...faults.filter((fault) => fault.type !== focused),
   ];
 
   const used = new Set<number>();

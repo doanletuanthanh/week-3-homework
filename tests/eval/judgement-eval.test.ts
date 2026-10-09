@@ -243,7 +243,7 @@ describe("il judgement-eval", () => {
     for (const [args, message] of [
       [[], /Cách dùng/],
       [["evalsets/none.jsonl", "--kind", "turn-verdict"], /Không đọc được file/],
-      [["evalsets/turn-verdict.jsonl", "--kind", "moderation"], /Không biết loại bộ thử "moderation"/],
+      [["evalsets/turn-verdict.jsonl", "--kind", "persona-realism"], /Không biết loại bộ thử "persona-realism"/],
       [["package.json", "--kind", "turn-verdict"], /package\.json: Dòng 1: không phải JSON hợp lệ/],
       [["evalsets/turn-verdict.jsonl", "--scenario", "package.json"], /không qua validate/],
     ] as const) {

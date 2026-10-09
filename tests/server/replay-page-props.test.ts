@@ -52,6 +52,8 @@ function sessionOf(status: SessionRow["status"]): SessionRow {
     revealRunToken: null,
     revealRunAttempt: 1,
     revealHeartbeatAt: null,
+    focus: null,
+    problemReportedAt: null,
     startedAt: new Date("2026-09-25T15:30:00Z"),
     updatedAt: new Date("2026-09-25T16:00:00Z"),
   };
@@ -110,6 +112,7 @@ describe("Màn 7 in the page props: a replay that is running", () => {
   it("opens the replay screen at the turn it stopped at, with the two turns before the fork", () => {
     const rendered = view("replaying", replayOf({}, [NEUTRAL]));
     expect(rendered).toEqual({
+      custom: false,
       screen: "replay",
       sessionId: SESSION_ID,
       persona: { displayName: "chị Thu", displayNameCapitalized: "Chị Thu" },

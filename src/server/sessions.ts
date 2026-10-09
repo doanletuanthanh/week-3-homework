@@ -48,7 +48,7 @@ export async function openSession(db: Database, user: AppUser, personaId: string
     if ((await listPlayedPersonas(db, key)).includes(personaId)) return { ok: false, reason: "played_before" };
   }
 
-  const found = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"));
+  const found = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"), user.id);
   if (!found) return { ok: false, reason: "not_found" };
   if (!(await canStartSession(db, user.isDemo))) return { ok: false, reason: "cap_reached" };
 

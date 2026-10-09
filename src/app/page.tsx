@@ -52,6 +52,9 @@ export default async function HomePage() {
                 Bắt đầu luyện
                 <ArrowRightIcon />
               </Link>
+              <Link className="btn btn-tonal btn-lg hero-second" href="/custom-topic">
+                Tạo chủ đề của bạn
+              </Link>
               <p className="body-sm c-outline hint">
                 <GoogleIcon size={14} />
                 Đăng nhập Google khi bắt đầu

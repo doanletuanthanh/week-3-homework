@@ -129,7 +129,7 @@ describe("openSession: which version is playable", () => {
   it("starts on the newest draft while the publish gate is off (the default)", async () => {
     await importScenarioFile(getDb(), PERSONA_FILE); // version 2, a draft
     const session = await startSession(await createLearner("linh@example.com"));
-    expect(await versionOf(session.scenarioId)).toBe(2);
+    expect(await versionOf(session.scenarioId!)).toBe(2);
   });
 
   it("skips versions that were unpublished, archived or taken down", async () => {
@@ -140,7 +140,7 @@ describe("openSession: which version is playable", () => {
 
     const session = await startSession(await createLearner("linh@example.com"));
 
-    expect(await versionOf(session.scenarioId)).toBe(1);
+    expect(await versionOf(session.scenarioId!)).toBe(1);
   });
 
   it("starts only on a published version once require_published is on", async () => {
@@ -152,7 +152,7 @@ describe("openSession: which version is playable", () => {
 
     await setStatus(1, "published");
     const session = await startSession(learner);
-    expect(await versionOf(session.scenarioId)).toBe(1);
+    expect(await versionOf(session.scenarioId!)).toBe(1);
   });
 });
 

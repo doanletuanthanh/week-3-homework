@@ -22,9 +22,29 @@ function rowOf(overrides: Partial<SessionListRow>): SessionListRow {
     revealJson: null,
     displayName: "chị Thu",
     topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm",
+    customTopicText: null,
     ...overrides,
   };
 }
+
+describe("a custom session that has no scenario (PRD Màn 9)", () => {
+  it("shows the topic the learner typed in place of the persona's name, and no number", () => {
+    for (const status of ["generating", "failed_eval"] as const) {
+      const item = toListItem(rowOf({ status, displayName: null, topicTitle: null, customTopicText: "app hẹn hò trong khu dân cư đang sống", revealJson: reveal }));
+      expect(item).toMatchObject({
+        personaName: "app hẹn hò trong khu dân cư đang sống",
+        topicTitle: "Chủ đề tự tạo",
+        state: status === "generating" ? "preparing" : "failed_eval",
+        result: null,
+      });
+    }
+  });
+
+  it("shows the persona and the typed topic as its topic once the scenario exists", () => {
+    const item = toListItem(rowOf({ displayName: "anh Nam", topicTitle: "app hẹn hò trong khu dân cư đang sống", customTopicText: "app hẹn hò trong khu dân cư đang sống" }));
+    expect(item).toMatchObject({ personaName: "Anh Nam", topicTitle: "app hẹn hò trong khu dân cư đang sống", state: "in_progress" });
+  });
+});
 
 const sealedStrings = chiThu.items.flatMap((item) => [item.content, item.sample_question, item.topic_tag, item.hook_line, `"${item.id}"`]);
 

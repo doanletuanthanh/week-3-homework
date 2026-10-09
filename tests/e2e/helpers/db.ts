@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { branches, config, evalRuns, events, llmCalls, pendingActions, quotaTombstones, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
+import { branches, config, evalRuns, events, generationAttempts, llmCalls, pendingActions, quotaTombstones, scenarios, sessions, snapshots, stringApprovals, turns, users, waitlist } from "@/db/schema";
 import { LOCAL_DATABASE_URL } from "../../helpers/local-stack";
 
 process.env.DATABASE_URL = LOCAL_DATABASE_URL;
@@ -71,6 +71,37 @@ export const db = {
     await getDb().delete(evalRuns);
     await getDb().delete(stringApprovals);
     await getDb().update(scenarios).set({ status: "draft", interimGate: false });
+  },
+  /** The learner's requests for a custom topic, newest first. */
+  attemptsOf: (userId: string) => getDb().select().from(generationAttempts).where(eq(generationAttempts.userId, userId)).orderBy(sql`${generationAttempts.createdAt} DESC`),
+  scenarioById: async (id: string) => (await getDb().select().from(scenarios).where(eq(scenarios.id, id)))[0],
+  /** Turns the custom-topic path off, as `il config set custom_path_enabled false` does; `clearConfig` turns it on again. */
+  pauseCustomPath: () => getDb().insert(config).values({ key: "custom_path_enabled", value: false, updatedBy: "e2e" }),
+  /** Makes the runner of an attempt look dead: its heartbeat is older than the stale limit. */
+  stopAttemptHeartbeat: (attemptId: string) => getDb().update(generationAttempts).set({ heartbeatAt: sql`now() - interval '10 minutes'` }).where(eq(generationAttempts.id, attemptId)),
+  /** Moves an attempt past its ten minutes: the next look at it closes it as a system error. */
+  expireAttempt: (attemptId: string) => getDb().update(generationAttempts).set({ deadlineAt: sql`now() - interval '1 second'` }).where(eq(generationAttempts.id, attemptId)),
+  generationCallsOf: (attemptId: string) => getDb().select().from(llmCalls).where(eq(llmCalls.attemptId, attemptId)).orderBy(llmCalls.createdAt),
+  generatedScenariosOf: (userId: string) =>
+    getDb().execute(sql`SELECT s.id FROM scenario s JOIN topic t ON t.id = s.topic_id WHERE t.owner_user_id = ${userId} AND s.origin = 'generated'`),
+  /**
+   * Puts a passed attempt back to where a run that died after storing its draft leaves it: the
+   * scenario is on the attempt as a draft, the session is still being prepared, and the runner's
+   * heartbeat is old. What a browser cannot bring about: a function ended by the platform.
+   */
+  rewindToDraft: async (attemptId: string, sessionId: string) => {
+    await getDb().transaction(async (tx) => {
+      const [attempt] = await tx.select().from(generationAttempts).where(eq(generationAttempts.id, attemptId));
+      const [scenario] = await tx.select().from(scenarios).where(eq(scenarios.id, attempt.scenarioId!));
+      await tx.delete(branches).where(eq(branches.sessionId, sessionId));
+      await tx.update(sessions).set({ status: "generating", scenarioId: null, personaId: null }).where(eq(sessions.id, sessionId));
+      await tx
+        .update(generationAttempts)
+        .set({ outcome: "running", scenarioId: null, finishedAt: null, draft: scenario.content, runToken: attempt.id, heartbeatAt: sql`now() - interval '10 minutes'` })
+        .where(eq(generationAttempts.id, attemptId));
+      await tx.delete(scenarios).where(eq(scenarios.id, scenario.id));
+      await tx.update(users).set({ freeCustomUsed: false }).where(eq(users.id, attempt.userId));
+    });
   },
   endSession: (sessionId: string) => getDb().update(sessions).set({ endedAt: sql`now()` }).where(eq(sessions.id, sessionId)),
   /** Puts a session in a state later screens will give it, so the screens that exist can be checked against it. */

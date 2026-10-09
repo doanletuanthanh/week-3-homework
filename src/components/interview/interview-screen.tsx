@@ -10,6 +10,7 @@ import { Composer } from "./composer";
 import { EndSessionDialog } from "./end-session-dialog";
 import { NotesCanvas } from "./notes-canvas";
 import { NotesSheet } from "./notes-sheet";
+import { SESSION_CAP_REACHED } from "@/strings/product-strings";
 import { SessionBar } from "./session-bar";
 import { TranscriptList, type PendingTurn, type Turn } from "./transcript-list";
 import { postTurn, sendJson } from "./turn-request";
@@ -36,6 +37,7 @@ const REFUSED: Record<string, string> = {
   turn_limit: `Buổi luyện đã đủ ${MAX_TURNS} lượt.`,
   invalid_input: `Câu hỏi cần từ 1 đến ${MAX_QUESTION_CHARS} ký tự.`,
   not_found: "Không tìm thấy buổi này.",
+  cap_reached: SESSION_CAP_REACHED,
 };
 
 const END_REFUSED: Record<string, string> = {

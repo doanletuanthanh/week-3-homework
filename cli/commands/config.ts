@@ -62,7 +62,7 @@ export async function runConfig(args: string[], io: CliIo, db: Database | null, 
 export function configCommand(db: Database | null, operator: () => string): Command {
   return {
     usage: "config <list|get|set>",
-    summary: "Xem và đổi cấu hình vận hành (cap chi phí, cổng publish).",
+    summary: "Xem và đổi cấu hình vận hành (cap chi phí, cổng publish, đường tạo chủ đề).",
     run: (args, io) => runConfig(args, io, db, operator),
   };
 }

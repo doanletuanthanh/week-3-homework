@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { BrowserReveal } from "@/engine/seal";
-import { PATH_LABEL, TRUST_MISSED, fillTemplate } from "@/strings/product-strings";
+import { CUSTOM_LABEL, PATH_LABEL, TRUST_MISSED, fillTemplate } from "@/strings/product-strings";
 import { TurnRef } from "./turn-ref";
 
 type Item = BrowserReveal["missedItems"][number];
@@ -31,13 +31,14 @@ function TrustLine({ turns, persona }: { turns: number[]; persona: Persona }) {
   );
 }
 
-function MissedItem({ item, persona }: { item: Item; persona: Persona }) {
+function MissedItem({ item, persona, fictional }: { item: Item; persona: Persona; fictional: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <li>
       <button type="button" className="li ex-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="ring" />
         <span className={`${open ? "label-lg" : "body-md"} li-text`}>{item.content}</span>
+        {fictional && <span className="pill pill-outline fict">{CUSTOM_LABEL.fictional}</span>}
         <span className="pill pill-neutral">{PATH_LABEL[item.path]}</span>
       </button>
       {open && (
@@ -83,7 +84,7 @@ function MissedItem({ item, persona }: { item: Item; persona: Persona }) {
  * Màn 6 item 4: what the persona did not tell, with how each could have been opened. The item
  * held for the replay is not in this list.
  */
-export function MissedList({ items, persona }: { items: Item[]; persona: Persona }) {
+export function MissedList({ items, persona, fictional = false }: { items: Item[]; persona: Persona; fictional?: boolean }) {
   return (
     <section className="card reveal-list" aria-labelledby="missed-title">
       <div className="sec-h">
@@ -94,7 +95,7 @@ export function MissedList({ items, persona }: { items: Item[]; persona: Persona
       </div>
       <ul>
         {items.map((item) => (
-          <MissedItem key={item.content} item={item} persona={persona} />
+          <MissedItem key={item.content} item={item} persona={persona} fictional={fictional} />
         ))}
       </ul>
     </section>

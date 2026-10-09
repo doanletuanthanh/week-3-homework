@@ -44,6 +44,8 @@ export type CallModelDeps = {
   createModel: (spec: RoleSpec) => BaseChatModel;
   recordCall: (record: LlmCallRecord) => Promise<void>;
   attemptTimeoutMs: number;
+  /** Cancels every call made with these dependencies: a run that is being stopped as a whole. */
+  signal?: AbortSignal;
 };
 
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -140,7 +142,8 @@ export async function callModel<T>(
   const deps = { ...defaultDeps, ...depsOverride };
   const spec = deps.roleSpec(role);
   const model = deps.createModel(spec);
-  const { schema, scope, signal, onDelta } = options;
+  const { schema, scope, onDelta } = options;
+  const signal = options.signal && deps.signal ? AbortSignal.any([options.signal, deps.signal]) : (options.signal ?? deps.signal);
   let deltaSent = false;
   const runConfig = {
     runName: role,

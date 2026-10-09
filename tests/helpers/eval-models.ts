@@ -14,6 +14,9 @@ const SPEC_OF: Record<Role, RoleSpec> = {
   EVAL_INTERVIEWER: { provider: "openai", model: "gpt-6-luna", effort: "low" },
   EVAL_LEAK_JUDGE: { provider: "openai", model: "gpt-6-sol", effort: "low" },
   STRING_CHECK: { provider: "openai", model: "gpt-6.1-sol", effort: "low" },
+  MODERATION: { provider: "openai", model: "gpt-6-luna", effort: "medium" },
+  SCENARIO_GENERATOR: { provider: "openai", model: "gpt-6-sol", effort: "medium" },
+  SAFETY: { provider: "openai", model: "gpt-6.1-sol", effort: "medium" },
 };
 
 /**

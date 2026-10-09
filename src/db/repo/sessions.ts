@@ -1,15 +1,20 @@
-import { and, asc, count, desc, eq, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import type { RevealJson } from "@/engine/reveal-types";
 import { tokenize } from "@/engine/tokens";
 import { initialState } from "@/engine/types";
 import type { Database, Executor } from "../client";
-import { branches, scenarios, sessions, snapshots, topics, turns } from "../schema";
+import { branches, generationAttempts, scenarios, sessions, snapshots, topics, turns } from "../schema";
+import type { Scenario } from "@/scenario/schema";
 
 export type ScenarioRow = typeof scenarios.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TurnRow = typeof turns.$inferSelect;
 
-/** Newest version of a persona, with its topic. */
+/** A curated topic is everyone's; a custom one is its owner's alone. `viewerId` is null for a guest. */
+const visibleTo = (viewerId: string | null) =>
+  viewerId === null ? isNull(topics.ownerUserId) : or(isNull(topics.ownerUserId), eq(topics.ownerUserId, viewerId));
+
+/** Newest version of a persona, with its topic. Not filtered by learner: for the operator's commands only. */
 export async function getScenarioByPersona(db: Executor, personaId: string) {
   const [row] = await db
     .select({ scenario: scenarios, topic: topics })
@@ -21,11 +26,25 @@ export async function getScenarioByPersona(db: Executor, personaId: string) {
   return row ?? null;
 }
 
+/** Newest version of a persona this learner (or guest) may see: a custom persona exists for its owner only. */
+export async function getVisibleScenario(db: Executor, personaId: string, viewerId: string | null) {
+  const [row] = await db
+    .select({ scenario: scenarios, topic: topics })
+    .from(scenarios)
+    .innerJoin(topics, eq(topics.id, scenarios.topicId))
+    // A generated scenario an operator took down is hidden from its owner as well.
+    .where(and(eq(scenarios.personaId, personaId), visibleTo(viewerId), sql`NOT (${scenarios.origin} = 'generated' AND ${scenarios.status} = 'taken_down')`))
+    .orderBy(desc(scenarios.version))
+    .limit(1);
+  return row ?? null;
+}
+
 /**
  * The version a new session starts on: the newest published one, or, while the publish gate is
  * not enforced, the newest one that has not been pulled (unpublished, archived or taken down).
+ * A custom persona is found for its owner only.
  */
-export async function getPlayableScenario(db: Executor, personaId: string, requirePublished: boolean) {
+export async function getPlayableScenario(db: Executor, personaId: string, requirePublished: boolean, viewerId: string | null) {
   const playable = requirePublished
     ? eq(scenarios.status, "published")
     : notInArray(scenarios.status, ["unpublished", "archived", "taken_down"]);
@@ -33,17 +52,18 @@ export async function getPlayableScenario(db: Executor, personaId: string, requi
     .select({ scenario: scenarios, topic: topics })
     .from(scenarios)
     .innerJoin(topics, eq(topics.id, scenarios.topicId))
-    .where(and(eq(scenarios.personaId, personaId), playable))
+    .where(and(eq(scenarios.personaId, personaId), playable, visibleTo(viewerId)))
     .orderBy(desc(scenarios.version))
     .limit(1);
   return row ?? null;
 }
 
-/** The persona the home page links to: this slice has exactly one. */
+/** The persona the home page links to: this slice has exactly one authored persona. */
 export async function getFirstPersonaId(db: Executor): Promise<string | null> {
   const [row] = await db
     .select({ personaId: scenarios.personaId })
     .from(scenarios)
+    .where(eq(scenarios.origin, "authored"))
     .orderBy(asc(scenarios.createdAt))
     .limit(1);
   return row?.personaId ?? null;
@@ -58,6 +78,23 @@ export async function findSessionForPersona(db: Executor, userId: string, person
     .orderBy(desc(sessions.startedAt))
     .limit(1);
   return row ?? null;
+}
+
+/** What a session starts from: the main branch, turn 0 (the opening line) and snapshot 0 (the starting state). */
+export async function insertOpening(tx: Executor, sessionId: string, scenario: Scenario): Promise<void> {
+  const [branch] = await tx.insert(branches).values({ sessionId, kind: "main" }).returning({ id: branches.id });
+  const opening = scenario.opening_line;
+  await tx.insert(turns).values({ sessionId, branchId: branch.id, index: 0, personaText: opening, personaTokens: tokenize(opening) });
+  const start = initialState(scenario.openness_start);
+  await tx.insert(snapshots).values({
+    sessionId,
+    branchId: branch.id,
+    index: 0,
+    unlocked: start.unlocked,
+    ledger: start.ledger,
+    disclosed: start.disclosed,
+    openness: start.openness,
+  });
 }
 
 /**
@@ -80,21 +117,7 @@ export async function createSession(
       .returning();
     if (!session) return null;
 
-    const [branch] = await tx.insert(branches).values({ sessionId: session.id, kind: "main" }).returning({ id: branches.id });
-    const opening = scenario.content.opening_line;
-    await tx
-      .insert(turns)
-      .values({ sessionId: session.id, branchId: branch.id, index: 0, personaText: opening, personaTokens: tokenize(opening) });
-    const start = initialState(scenario.content.openness_start);
-    await tx.insert(snapshots).values({
-      sessionId: session.id,
-      branchId: branch.id,
-      index: 0,
-      unlocked: start.unlocked,
-      ledger: start.ledger,
-      disclosed: start.disclosed,
-      openness: start.openness,
-    });
+    await insertOpening(tx, session.id, scenario.content);
     await afterCreate?.(tx, session);
     return session;
   });
@@ -105,7 +128,11 @@ export async function createSession(
   return { session: existing, created: false };
 }
 
-/** A learner's own session with its scenario and topic; null when it does not exist or belongs to someone else. */
+/**
+ * A learner's own session with its scenario and topic; null when it does not exist or belongs to
+ * someone else. A custom session has no scenario until its checks passed: such a session is not
+ * found here but with `getPendingCustomSession`.
+ */
 export async function getSession(db: Executor, userId: string, sessionId: string) {
   const [row] = await db
     .select({ session: sessions, scenario: scenarios, topic: topics })
@@ -136,8 +163,11 @@ export type SessionListRow = {
   startedAt: Date;
   /** Read for a `done` session only: no other session's result leaves the database for a list. */
   revealJson: RevealJson | null;
-  displayName: string;
-  topicTitle: string;
+  /** Null for a custom session whose scenario does not exist (yet). */
+  displayName: string | null;
+  topicTitle: string | null;
+  /** The topic the learner typed, for a custom session. */
+  customTopicText: string | null;
 };
 
 /** A learner's own sessions, newest first. */
@@ -150,10 +180,12 @@ export async function listSessionRows(db: Executor, userId: string, page: { offs
       revealJson: sql<RevealJson | null>`CASE WHEN ${sessions.status} = 'done' THEN ${sessions.revealJson} END`,
       displayName: scenarios.displayName,
       topicTitle: topics.title,
+      customTopicText: generationAttempts.topicText,
     })
     .from(sessions)
-    .innerJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
-    .innerJoin(topics, eq(topics.id, scenarios.topicId))
+    .leftJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
+    .leftJoin(topics, eq(topics.id, scenarios.topicId))
+    .leftJoin(generationAttempts, eq(generationAttempts.sessionId, sessions.id))
     .where(eq(sessions.userId, userId))
     .orderBy(desc(sessions.startedAt), desc(sessions.id))
     .limit(page.limit)

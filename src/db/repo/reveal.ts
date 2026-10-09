@@ -154,7 +154,7 @@ export async function storeGuess(
     if (session.guess !== null) return "already_stored";
     if (session.status !== "interviewing" || session.canvasFrozenAt === null) return "not_ended";
 
-    const [scenario] = await tx.select({ content: scenarios.content }).from(scenarios).where(eq(scenarios.id, session.scenarioId));
+    const [scenario] = await tx.select({ content: scenarios.content }).from(scenarios).where(eq(scenarios.id, session.scenarioId!));
     if (input.guess > scenario.content.items.length) return "out_of_range";
 
     const [after] = await tx

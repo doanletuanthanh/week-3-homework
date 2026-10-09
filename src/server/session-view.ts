@@ -21,7 +21,7 @@ type Persona = { displayName: string; displayNameCapitalized: string };
  * reveal in it comes from `toBrowserReveal`, and nothing else of the stored reveal or of the
  * scenario's items is here.
  */
-export type SessionView =
+export type SessionView = { /** A generated scenario plays: every screen carries the custom-topic labels. */ custom: boolean } & (
   | {
       screen: "withdrawn";
       personaName: string;
@@ -54,6 +54,8 @@ export type SessionView =
       print: { topicTitle: string; date: string; fileName: string };
       /** How the replay ended, with how many questions it had. Set for a `done` session that had a replay moment. */
       replay: { outcome: ReplayOutcome; turnCount: number } | null;
+      /** "Kịch bản này có vấn đề" was pressed already. Read for a custom session only. */
+      problemReported: boolean;
     }
   | {
       screen: "replay";
@@ -68,7 +70,8 @@ export type SessionView =
       replayTurns: ReplayViewTurn[];
     }
   /** A state no screen exists for yet. */
-  | { screen: "ended" };
+  | { screen: "ended" }
+);
 
 /**
  * PRD §7: a session nobody has asked a question in opens on Màn 3, with "Tiếp tục buổi luyện"
@@ -112,14 +115,16 @@ export function buildSessionView(input: {
     turnCount: Math.max(0, turns.length - 1),
   };
   const sessionId = session.id;
+  const custom = scenario.origin === "generated";
 
   if (session.status === "withdrawn") {
-    return { screen: "withdrawn", personaName: card.displayNameCapitalized, topicTitle, date: header.date, turnCount: header.turnCount, turns };
+    return { custom, screen: "withdrawn", personaName: card.displayNameCapitalized, topicTitle, date: header.date, turnCount: header.turnCount, turns };
   }
 
   if (session.status === "interviewing") {
-    if (session.canvasFrozenAt !== null) return { screen: "guess", sessionId, personaName: card.displayName, itemCount: card.itemCount };
+    if (session.canvasFrozenAt !== null) return { custom, screen: "guess", sessionId, personaName: card.displayName, itemCount: card.itemCount };
     return {
+      custom,
       screen: "interview",
       sessionId,
       persona: { ...persona, researchGoal: card.researchGoal, itemCount: card.itemCount },
@@ -133,6 +138,7 @@ export function buildSessionView(input: {
   if (session.status === "replaying" && replay && replay.branch.result === null && replay.branch.fallbackLevel !== null && replay.branch.forkAfterTurn !== null) {
     const forkAfterTurn = replay.branch.forkAfterTurn;
     return {
+      custom,
       screen: "replay",
       sessionId,
       persona,
@@ -161,6 +167,7 @@ export function buildSessionView(input: {
     });
     if (reveal) {
       return {
+        custom,
         screen: "reveal",
         sessionId,
         persona,
@@ -173,9 +180,10 @@ export function buildSessionView(input: {
           fileName: `thoi-quen-hoi-${scenario.personaId}-${year}-${month}-${day}`,
         },
         replay: outcome && replay ? { outcome, turnCount: replay.turns.length } : null,
+        problemReported: session.problemReportedAt !== null,
       };
     }
-    if (session.guess !== null && session.revealReadyAt === null) return { screen: "computing", sessionId, guess: session.guess, header };
+    if (session.guess !== null && session.revealReadyAt === null) return { custom, screen: "computing", sessionId, guess: session.guess, header };
   }
-  return { screen: "ended" };
+  return { custom, screen: "ended" };
 }

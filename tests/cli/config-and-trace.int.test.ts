@@ -48,6 +48,9 @@ describe("il config", () => {
       "require_published = false  (mặc định)",
       "session_daily_cap_usd = 5  (mặc định)",
       "session_demo_reserve_usd = 1  (mặc định)",
+      "custom_path_enabled = true  (mặc định)",
+      "generation_daily_budget_usd = 10  (mặc định)",
+      "generation_reserve_usd = 1  (mặc định)",
     ]);
   });
 

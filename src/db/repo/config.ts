@@ -23,6 +23,21 @@ export const CONFIG = {
     default: 1,
     summary: "Phần của cap dành riêng cho tài khoản demo.",
   },
+  custom_path_enabled: {
+    schema: z.boolean(),
+    default: true,
+    summary: "Công tắc của đường tạo chủ đề (FR-56). Tắt: Màn 10 hiện trạng thái tạm dừng, không nhận lần thử mới.",
+  },
+  generation_daily_budget_usd: {
+    schema: z.number().nonnegative(),
+    default: 10,
+    summary: "Ngân sách LLM cho việc sinh kịch bản tự tạo trong một ngày (UTC+7), tách khỏi cap của buổi. Mỗi tài khoản dùng tối đa 20%.",
+  },
+  generation_reserve_usd: {
+    schema: z.number().positive(),
+    default: 1,
+    summary: "Chi phí giữ trước cho mỗi lần thử sinh kịch bản. Lần thử bị dừng khi tiêu tới mức này.",
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG;

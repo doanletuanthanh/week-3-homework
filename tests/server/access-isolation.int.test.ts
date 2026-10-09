@@ -3,10 +3,12 @@ import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/client";
+import { getPendingCustomSession } from "@/db/repo/custom-topics";
 import { getSession, listTurns } from "@/db/repo/sessions";
 import { events, llmCalls } from "@/db/schema";
 import type { AppUser } from "@/server/auth";
 import { endSession, saveCanvas } from "@/server/canvas";
+import { reportCustomProblem } from "@/server/custom-topic";
 import { getReplayTranscriptView, runReplayTurn, skipReplay, startReplay, stopReplay } from "@/server/replay";
 import { getRevealView, getTranscriptView, recordTakeawayDownload, submitGuess } from "@/server/reveal";
 import { listSessions } from "@/server/session-list";
@@ -46,6 +48,8 @@ const SERVICES: Record<string, (learner: AppUser, sessionId: string) => Promise<
   "replay POST stop": (learner, id) => stopReplay(db(), learner, id),
   "replay turns POST": (learner, id) => runReplayTurn(db(), learner, id, question(), { llmDeps: noModels().llmDeps }),
   "download POST": (learner, id) => recordTakeawayDownload(db(), learner, id),
+  "report-problem POST": (learner, id) => reportCustomProblem(db(), learner, id),
+  "repo getPendingCustomSession": (learner, id) => getPendingCustomSession(db(), learner.id, id),
 };
 
 /** A session of learner A in each state of PRD §7 that a learner route can meet. */
@@ -82,7 +86,7 @@ describe.each(Object.keys(STATES))("learner B and a session of learner A that is
       const missing = await call(b, randomUUID());
       expect(theirs, name).toEqual(missing);
       // The answer itself carries nothing: no text, no number.
-      expect(JSON.stringify(theirs ?? null), name).toMatch(/^(null|\[\]|"not_found"|\{"found":false\}|\{"ok":false,"error":"not_found"\})$/u);
+      expect(JSON.stringify(theirs ?? null), name).toMatch(/^(null|false|\[\]|"not_found"|\{"found":false\}|\{"ok":false,"error":"not_found"\})$/u);
     }
 
     expect(await mainData(sessionId)).toBe(mainBefore);
@@ -117,8 +121,12 @@ describe("every learner route is in the table above", () => {
     "sessions/[id]/replay": ["replay POST start", "replay POST skip", "replay POST stop"],
     "sessions/[id]/replay/turns": ["replay turns POST"],
     "sessions/[id]/download": ["download POST"],
+    "sessions/[id]/report-problem": ["report-problem POST"],
+    // Keyed by an attempt, not a session: asked as another learner in custom-topic.int.test.ts.
+    "custom-topics/[attemptId]": [],
     // These take no session id: they act on the signed-in learner alone.
     sessions: [],
+    "custom-topics": [],
     waitlist: [],
     account: [],
   };

@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { signInAndAccept } from "./helpers/auth";
 import { composer } from "./helpers/chat";
 import { db } from "./helpers/db";
 import { postEnd, startInterview } from "./helpers/interview";
@@ -174,8 +175,39 @@ test.describe("PRD §7: the URL of a session renders the screen of its state", (
     });
   }
 
-  // `generating` and `failed_eval` exist only for custom topics. Their screen (Màn 11) is built
-  // with the custom-topic path; until then a session cannot reach either state.
-  test.fixme("generating → Màn 11, being prepared (custom topics)", () => {});
-  test.fixme("failed_eval → Màn 11, did not pass the checks (custom topics)", () => {});
+  // `generating` and `failed_eval` exist only for custom topics: the session is created by Màn 10.
+  async function customSession(page: Page, context: BrowserContext, label: string, marker: string) {
+    await signInAndAccept(page, context, label, "/custom-topic");
+    await page.getByLabel("Bạn muốn phỏng vấn người dùng về chủ đề gì?").fill(`cách sinh viên chọn quán ăn trưa ${marker}`);
+    await page.getByRole("button", { name: "Tạo kịch bản" }).click();
+    await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]{36}$/u);
+    return page.url().split("/").pop()!;
+  }
+
+  test("generating → Màn 11, being prepared (custom topics)", async ({ page, context }) => {
+    const sessionId = await customSession(page, context, "state-generating", "[stub:slow-gen]");
+    await page.goto("/");
+
+    await page.goto(`/sessions/${sessionId}`);
+
+    await expect(page).toHaveURL(`/sessions/${sessionId}`);
+    await expect(page.getByText("Đang chuẩn bị kịch bản")).toBeVisible();
+    await expect(page.locator(".gen-steps li")).toHaveCount(2);
+    await expect(composer(page)).toHaveCount(0);
+    // Left alone, it goes on to Màn 3 of the new persona.
+    await expect(page).toHaveURL(/\/prep\/custom-/u, { timeout: 60_000 });
+  });
+
+  test("failed_eval → Màn 11, did not pass the checks (custom topics)", async ({ page, context }) => {
+    const sessionId = await customSession(page, context, "state-failed-eval", "[stub:invalid]");
+    await expect(page.locator(".failed-facts")).toBeVisible({ timeout: 60_000 });
+    await page.goto("/");
+
+    await page.goto(`/sessions/${sessionId}`);
+
+    await expect(page).toHaveURL(`/sessions/${sessionId}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kịch bản này chưa qua kiểm tra nên chúng tôi không cho bạn luyện với nó.");
+    await expect(page.getByRole("link", { name: "Thử lại" })).toHaveAttribute("href", `/custom-topic?retry=${sessionId}`);
+    await expect(composer(page)).toHaveCount(0);
+  });
 });

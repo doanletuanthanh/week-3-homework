@@ -23,7 +23,20 @@
 //   [stub:replay-judge={...}]       JSON (no spaces) merged over the judge's neutral reply
 //   [stub:fail-judge]               the judge gets HTTP 500, so the turn counts unchecked
 //   [stub:slow-judge]               the judge waits before answering, so a test can watch the wait
+// It answers the calls of a custom topic as well, told apart by the first sentence of their prompt:
+//   - moderation allows the topic, with the focus the learner's answer names;
+//   - the scenario generator returns chị Thu's file under another name ("chị Mai");
+//   - the output safety check finds nothing.
+// Markers in the topic the learner typed steer one attempt:
+//   [stub:refuse]            moderation refuses the topic
+//   [stub:minor]             moderation allows it with the constraint adult_persona_only
+//   [stub:fail-moderation]   the moderation call gets HTTP 500
+//   [stub:invalid]           the generator returns three items, on every try
+//   [stub:unsafe]            the generator names a real company, and the safety check objects to it
+//   [stub:fail-gen]          the generator gets HTTP 500
+//   [stub:slow-gen]          the generator waits before answering, so a test can watch the wait
 // GET /requests returns every request body received so far, so tests can read what the app sent.
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const PORT = Number(process.env.LLM_STUB_PORT ?? 4010);
@@ -129,6 +142,63 @@ function personaLine(body) {
   // The reply reports how the question arrived, so tests can see the transcript and the data block.
   const wrapped = (users.at(-1) ?? "").includes("<cau_hoi>\n") ? "trong khối dữ liệu" : "không có khối dữ liệu";
   return `Chị trả lời câu thứ ${users.length} (${wrapped}).`;
+}
+
+const CUSTOM_ROLES = [
+  ["moderation", "người kiểm duyệt chủ đề"],
+  ["generator", "người soạn kịch bản nhân vật"],
+  ["safety", "người kiểm an toàn nội dung"],
+];
+
+/** Which call of the custom-topic path this is, or null for any other call. */
+function customRole(text) {
+  return CUSTOM_ROLES.find(([, phrase]) => text.includes(phrase))?.[0] ?? null;
+}
+
+const BASE_SCENARIO = JSON.parse(readFileSync(new URL("../../scenarios/ux-chi-tieu/chi-thu.json", import.meta.url), "utf8"));
+const REAL_COMPANY_CLAIM = "Chị làm kế toán ở Vinamilk, công ty này hay nợ lương nhân viên.";
+
+/** A scenario as the generator returns it: chị Thu's content under another name. */
+function generatedScenario(prompt) {
+  const items = BASE_SCENARIO.items.map((item) => ({
+    id: item.id,
+    content: item.content,
+    secret_terms: item.secret_terms,
+    topic_tag: item.topic_tag,
+    path: item.path,
+    prerequisite_id: item.prerequisite_id ?? null,
+    trust_threshold: item.trust_threshold ?? null,
+    hook_line: item.hook_line,
+    do_not_assert: item.do_not_assert.text,
+    weight: item.weight,
+    sample_question: item.sample_question,
+  }));
+  const facts = BASE_SCENARIO.surface_facts;
+  return {
+    persona: { ...BASE_SCENARIO.persona, avatar_key: undefined, display_name: "chị Mai", name: "Chị Mai, 27 tuổi", tagline: "Nhân viên văn phòng ở một công ty nhỏ" },
+    research_goal: BASE_SCENARIO.research_goal,
+    opening_line: "Chào em, chị là Mai. Em cứ hỏi tự nhiên nha.",
+    openness_start: BASE_SCENARIO.openness_start,
+    surface_facts: prompt.includes("[stub:unsafe]") ? [REAL_COMPANY_CLAIM, ...facts.slice(1)] : facts,
+    error_patterns: BASE_SCENARIO.error_patterns,
+    habit_card_label: BASE_SCENARIO.habit_card_label,
+    items: prompt.includes("[stub:invalid]") ? items.slice(0, 3) : items,
+  };
+}
+
+function moderationReply(prompt) {
+  if (prompt.includes("[stub:refuse]")) return { decision: "refuse", reason_code: "real_org_or_brand", constraints: [], focus: "general" };
+  const asked = prompt.slice(prompt.lastIndexOf("<muon_luyen>"));
+  const focus = asked.includes("Hỏi tiếp chi tiết") ? "follow_up" : asked.includes("dẫn dắt") ? "no_leading" : "general";
+  if (prompt.includes("[stub:minor]")) return { decision: "allow_with_constraints", reason_code: null, constraints: ["adult_persona_only"], focus };
+  return { decision: "allow", reason_code: null, constraints: [], focus };
+}
+
+/** The reply of a custom-topic call, as JSON text. */
+function customReply(role, prompt) {
+  if (role === "moderation") return moderationReply(prompt);
+  if (role === "generator") return generatedScenario(prompt);
+  return { violations: prompt.includes("Vinamilk") ? [{ field: "surface_facts[0]", kind: "real_org_or_brand", reason: "stub" }] : [] };
 }
 
 const tokenUsage = {
@@ -241,6 +311,21 @@ createServer(async (request, reply) => {
   const question = newestQuestion(body);
   const structured = wantsJson(body);
   const prompt = allText(body);
+  const custom = customRole(prompt);
+  if (custom) {
+    const failed = (custom === "moderation" && prompt.includes("[stub:fail-moderation]")) || (custom === "generator" && prompt.includes("[stub:fail-gen]"));
+    if (failed) {
+      reply.writeHead(500, { "content-type": "application/json" });
+      reply.end(JSON.stringify({ error: { message: "stubbed provider failure", type: "server_error" } }));
+      return;
+    }
+    if (custom === "generator" && prompt.includes("[stub:slow-gen]")) await sleep(4000);
+    const text = JSON.stringify(customReply(custom, prompt));
+    reply.writeHead(200, { "content-type": "application/json" });
+    reply.end(JSON.stringify(request.url.endsWith("/responses") ? response(body.model, text) : chatCompletion(body.model, text)));
+    return;
+  }
+
   const reveal = revealRole(prompt);
   const failReveal = /\[stub:fail-reveal=(\w+)\]/.exec(prompt)?.[1];
   if (reveal && (failReveal === reveal || failReveal === "all")) {

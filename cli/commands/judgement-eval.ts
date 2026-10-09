@@ -7,12 +7,16 @@ import {
   formatScore,
   judgementExitCode,
   labelCaseSchema,
+  moderationCaseSchema,
   noveltyCaseSchema,
   parseTestSet,
   runCanvasSet,
   runLabelSet,
+  runModerationSet,
   runNoveltySet,
+  runSafetySet,
   runVerdictSet,
+  safetyCaseSchema,
   verdictCaseSchema,
   type SetKind,
   type SetScore,
@@ -58,6 +62,8 @@ export function runJudgementEval(args: string[], io: CliIo, llmDeps?: Partial<Ca
         "turn-verdict": () => runVerdictSet(scenario, parseTestSet(raw, verdictCaseSchema), options),
         "canvas-judge": () => runCanvasSet(scenario, parseTestSet(raw, canvasCaseSchema), options),
         "leading-novelty": () => runNoveltySet(scenario, parseTestSet(raw, noveltyCaseSchema), options),
+        moderation: () => runModerationSet(parseTestSet(raw, moderationCaseSchema), options),
+        "output-safety": () => runSafetySet(scenario, parseTestSet(raw, safetyCaseSchema), options),
       };
       const score = await runs[kind]();
       io.out(`Bộ thử ${kind}: ${score.size} ca, kịch bản ${scenario.persona_id}`);

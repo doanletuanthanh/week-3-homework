@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { signInAsNewLearner, uniqueEmail } from "./helpers/auth";
+import { signInAndAccept, signInAsNewLearner, uniqueEmail } from "./helpers/auth";
 
 /** No page may be wider than the viewport: the fixed 1280px design container must not leak through. */
 async function expectNoHorizontalScroll(page: Page) {
@@ -18,6 +18,21 @@ test.describe("layout at this viewport", () => {
     const start = page.getByRole("button", { name: "Bắt đầu" });
     await start.scrollIntoViewIfNeeded();
     await expect(start).toBeInViewport({ ratio: 1 });
+  });
+
+  test("the custom-topic form fits the viewport, with the information block under the form", async ({ page, context }) => {
+    await signInAndAccept(page, context, "layout-custom", "/custom-topic");
+    await expectNoHorizontalScroll(page);
+    await page.getByLabel("Bạn muốn phỏng vấn người dùng về chủ đề gì?").fill("một chủ đề đủ dài không có khoảng trắng " + "b".repeat(200));
+    await expectNoHorizontalScroll(page);
+    const create = page.getByRole("button", { name: "Tạo kịch bản" });
+    await create.scrollIntoViewIfNeeded();
+    await expect(create).toBeInViewport({ ratio: 1 });
+    const form = await page.locator(".ct-form").boundingBox();
+    const info = await page.locator(".ct-info").boundingBox();
+    // Side by side on a wide screen; on a narrow one the information block stacks under the form.
+    if (page.viewportSize()!.width < 768) expect(info!.y).toBeGreaterThanOrEqual(form!.y + form!.height);
+    else expect(info!.x).toBeGreaterThanOrEqual(form!.x + form!.width);
   });
 
   test("notice and interview fit the viewport and stay usable", async ({ page, context }) => {

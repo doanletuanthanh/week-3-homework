@@ -4,6 +4,7 @@ import type { Database } from "@/db/client";
 import type { DeviceClass } from "@/db/schema";
 import { claimTurn, findTurnByKey, releaseClaim, type ClaimRefusal } from "@/db/repo/turns";
 import { runTurnGraph, type TurnGraphResult } from "@/graphs/turn-graph";
+import { canStartSession } from "./cost-cap";
 import { LlmCallError, type CallModelDeps } from "@/llm/call-model";
 import type { AppUser } from "./auth";
 import { postgresTurnStore } from "./turn-store";
@@ -24,6 +25,7 @@ export type TurnError =
   | "turn_limit"
   | "in_flight"
   | "conflict"
+  | "cap_reached"
   | "llm_failed";
 
 /** The only things a turn reports: the persona text and the turn count, or an error state. */
@@ -77,6 +79,12 @@ export async function runTurn(
   }
   const { claim } = claimed;
   const { turnIndex } = claim;
+  // FR-37: a custom session exists before anyone could check the day's cap for it, so the cap
+  // stops it at its first question. The session stays as it is and can go on another day.
+  if (turnIndex === 1 && claim.scenario.origin === "generated" && !(await canStartSession(db, claim.isDemo))) {
+    await releaseClaim(db, sessionId, claim.token);
+    return { ok: false, error: "cap_reached" };
+  }
   const store = postgresTurnStore(db, { sessionId, userId: user.id, claim });
 
   const startedAt = Date.now();

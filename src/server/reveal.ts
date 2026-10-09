@@ -38,6 +38,7 @@ export function toRevealBasis({ session, scenario, turns, snapshot }: Pick<Loade
       selectedHook: turns.at(-1)!.hookSelected,
     },
     canvasTokens: session.canvasTokens ?? [],
+    focus: session.focus,
   };
 }
 

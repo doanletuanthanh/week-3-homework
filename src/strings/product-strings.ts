@@ -1,3 +1,6 @@
+import type { AttemptStep, FailureCode, Focus } from "@/db/schema";
+import type { QuotaBlock } from "@/server/custom-quota";
+
 /**
  * Product-level fixed strings. Changing `DATA_NOTICE` requires bumping `DATA_NOTICE_VERSION`:
  * every learner then sees the notice again before any page that needs sign-in or writes data.
@@ -105,6 +108,74 @@ export const REPLAY_RESULT = {
   unchecked: "Chưa kiểm được lượt này.",
 } as const;
 
+/** FR-56: the three labels every screen of a custom topic carries. */
+export const CUSTOM_LABEL = {
+  light_check: "Kiểm tra nhẹ",
+  fictional: "chi tiết hư cấu",
+  not_insight: "Đây không phải insight thật",
+} as const;
+
+/** Màn 10, the information block, word for word from the PRD. The last line is the emphasised one. */
+export const CUSTOM_TOPIC_INFO = [
+  "AI sẽ sinh một nhân vật hư cấu cho chủ đề này.",
+  "Bạn không thấy và không chọn được điều nhân vật giấu.",
+  "Kịch bản chỉ qua kiểm tra nhẹ: chưa ai đọc nó, và nó chưa được chạy thử lần nào.",
+  "Đây không phải insight về người dùng thật.",
+  "Quản trị viên InterviewLab xem được chủ đề và buổi luyện của bạn.",
+  "Đừng nhập tên hay thông tin của người thật hay tổ chức thật.",
+] as const;
+
+/** Màn 10: why a new custom topic cannot be started, one sentence per reason. */
+export const CUSTOM_BLOCK: Record<QuotaBlock, string> = {
+  paused: "Tạm dừng tạo chủ đề mới để kiểm tra chất lượng.",
+  running: "Bạn đang có một kịch bản đang chuẩn bị",
+  free_used: "Bạn đã dùng kịch bản tự tạo miễn phí.",
+  failures_exhausted: "Tài khoản này đã dùng hết lần thử tạo chủ đề.",
+  budget_exhausted: "Hôm nay đã hết lần tạo kịch bản. Quay lại sau 0 giờ đêm nay.",
+  daily_attempts: "Bạn đã dùng 3 lần thử hôm nay. Quay lại sau 0 giờ đêm nay.",
+  refusal_locked: "Hôm nay bạn đã gửi quá nhiều chủ đề không tạo được. Quay lại sau 0 giờ đêm nay.",
+};
+
+/** Màn 10: the one message for every topic moderation turned down. The reason is never shown. */
+export const CUSTOM_REFUSED = "Chủ đề này không tạo được. Thử một chủ đề khác, không nhắc tới người thật hay tổ chức thật.";
+
+export const CUSTOM_TOPIC_LENGTH = "Chủ đề cần từ 10 đến 300 ký tự.";
+
+/** Màn 10: the four quick answers to "Bạn muốn luyện điều gì trong buổi này?". */
+export const FOCUS_CHIPS = ["Hỏi tiếp chi tiết vừa nghe", "Kéo về một lần cụ thể", "Người dè dặt", "Tránh câu dẫn dắt"] as const;
+
+/** Màn 3 of a custom topic: what the session concentrates on, in the words of the quick answers. `general` shows no line. */
+export function focusLabel(focus: Focus): string | null {
+  const position = (["follow_up", "past_story", "trust", "no_leading"] as const).indexOf(focus as Exclude<Focus, "general">);
+  return position < 0 ? null : FOCUS_CHIPS[position];
+}
+
+/** Màn 11 while the scenario is prepared: one line per step of the attempt. */
+export const GENERATING_STEP: Record<AttemptStep, string> = {
+  generating: "Đang tạo nhân vật",
+  validating: "Kiểm tra nội dung",
+};
+
+export const GENERATING = {
+  note: "Thường mất khoảng 1 phút. Bạn có thể đóng trang; kịch bản sẽ ở trong Buổi của tôi.",
+  ready_title: "✓ Kịch bản sẵn sàng",
+} as const;
+
+/** Màn 11 when the scenario did not pass: the fixed sentence of each reason code. */
+export const FAILED_EVAL = {
+  title: "Kịch bản này chưa qua kiểm tra nên chúng tôi không cho bạn luyện với nó.",
+  free_left: "Kịch bản miễn phí của bạn vẫn còn.",
+} as const;
+
+export const FAILURE_REASON: Record<FailureCode, string> = {
+  invalid: "Nhân vật chưa đủ chặt chẽ",
+  unsafe_output: "Nội dung sinh ra không qua kiểm tra an toàn",
+  system_error: "Lỗi hệ thống (lần thử này không bị tính)",
+};
+
+/** Màn 6 of a custom topic: the report button and what it says once pressed. */
+export const CUSTOM_REPORT = { button: "Kịch bản này có vấn đề", done: "Đã ghi nhận báo cáo của bạn." } as const;
+
 export function fillTemplate(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/gu, (whole, key: string) => (key in values ? String(values[key]) : whole));
 }
@@ -130,5 +201,16 @@ export function productStrings(): { key: string; text: string }[] {
     { key: "leading_never_said", text: LEADING_NEVER_SAID },
     { key: "canvas_replay_opened", text: CANVAS_REPLAY_OPENED },
     ...Object.entries(REPLAY_RESULT).map(([name, text]) => ({ key: `replay_result.${name}`, text })),
+    ...Object.entries(CUSTOM_LABEL).map(([name, text]) => ({ key: `custom_label.${name}`, text })),
+    ...CUSTOM_TOPIC_INFO.map((text, index) => ({ key: `custom_topic_info.${index + 1}`, text })),
+    ...Object.entries(CUSTOM_BLOCK).map(([name, text]) => ({ key: `custom_block.${name}`, text })),
+    { key: "custom_refused", text: CUSTOM_REFUSED },
+    { key: "custom_topic_length", text: CUSTOM_TOPIC_LENGTH },
+    ...FOCUS_CHIPS.map((text, index) => ({ key: `focus_chip.${index + 1}`, text })),
+    ...Object.entries(GENERATING_STEP).map(([name, text]) => ({ key: `generating_step.${name}`, text })),
+    ...Object.entries(GENERATING).map(([name, text]) => ({ key: `generating.${name}`, text })),
+    ...Object.entries(FAILED_EVAL).map(([name, text]) => ({ key: `failed_eval.${name}`, text })),
+    ...Object.entries(FAILURE_REASON).map(([name, text]) => ({ key: `failure_reason.${name}`, text })),
+    ...Object.entries(CUSTOM_REPORT).map(([name, text]) => ({ key: `custom_report.${name}`, text })),
   ];
 }

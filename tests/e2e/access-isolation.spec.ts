@@ -32,9 +32,13 @@ const SESSION_ROUTES: Record<string, (id: string) => Call[]> = {
   ],
   "sessions/[id]/replay/turns": (id) => [{ method: "POST", path: `/api/sessions/${id}/replay/turns`, body: { text: "Chị kể em nghe ạ?", expectedIndex: 1, turnKey: randomUUID() } }],
   "sessions/[id]/download": (id) => [{ method: "POST", path: `/api/sessions/${id}/download` }],
+  "sessions/[id]/report-problem": (id) => [{ method: "POST", path: `/api/sessions/${id}/report-problem` }],
 };
-/** Routes that take no session id: they act on the signed-in learner alone. */
-const OWN_ROUTES = ["sessions", "waitlist", "account"];
+/**
+ * Routes that take no session id: they act on the signed-in learner alone. The status of a
+ * custom-topic attempt is keyed by the attempt; custom-topic.spec.ts asks it as another learner.
+ */
+const OWN_ROUTES = ["sessions", "waitlist", "account", "custom-topics", "custom-topics/[attemptId]"];
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -115,6 +119,8 @@ test.describe("another learner's session", () => {
     for (const call of [
       { method: "GET", path: "/api/sessions" },
       { method: "POST", path: "/api/waitlist", body: { context: "no_more_personas" } },
+      { method: "POST", path: "/api/custom-topics", body: { topic: "một chủ đề đủ dài" } },
+      { method: "GET", path: `/api/custom-topics/${id}` },
     ] satisfies Call[]) {
       expect((await send(request, call)).status, call.path).toBe(401);
     }

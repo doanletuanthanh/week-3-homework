@@ -243,7 +243,20 @@ describe("deleteAccount: what is kept so that no limit is reset", () => {
 
     const rows = await db().select().from(quotaTombstones);
     expect(rows).toMatchObject([{ key: keyOf(LINH_SUBJECT), playedPersonaIds: [PERSONA_ID] }]);
-    expect(Object.keys(rows[0]).sort()).toEqual(["key", "playedPersonaIds", "updatedAt"]);
+    // Besides the personas: the custom-topic counters, which are numbers and a day, never text.
+    expect(Object.keys(rows[0]).sort()).toEqual([
+      "customAttempts",
+      "customDay",
+      "customFailedCount",
+      "customRefusals",
+      "customSpendUsd",
+      "freeCustomUsed",
+      "key",
+      "playedPersonaIds",
+      "updatedAt",
+    ]);
+    // This learner never asked for a custom topic: every counter is empty.
+    expect(rows[0]).toMatchObject({ customAttempts: 0, customDay: null, customFailedCount: 0, customRefusals: 0, customSpendUsd: 0, freeCustomUsed: false });
     expect(rows[0].key).toMatch(/^[0-9a-f]{64}$/u);
   });
 

@@ -190,7 +190,7 @@ export async function claimReplayTurn(
     const [used] = await tx.select({ index: turns.index }).from(turns).where(and(eq(turns.sessionId, session.id), eq(turns.turnKey, input.turnKey))).limit(1);
     if (used) return { ok: false, reason: "key_used" };
 
-    const [scenario] = await tx.select().from(scenarios).where(eq(scenarios.id, session.scenarioId));
+    const [scenario] = await tx.select().from(scenarios).where(eq(scenarios.id, session.scenarioId!));
     const claim: TurnClaim = { token: randomUUID(), at: now.toISOString() };
     await tx.update(sessions).set({ turnClaim: claim }).where(eq(sessions.id, session.id));
     return {

@@ -378,7 +378,7 @@ describe("device class", () => {
 describe("createSession: all or nothing", () => {
   it("leaves no half session when something fails while it is being created", async () => {
     await getDb().delete(sessions);
-    const found = await getPlayableScenario(getDb(), PERSONA_ID, false);
+    const found = await getPlayableScenario(getDb(), PERSONA_ID, false, learner.id);
 
     const failing = createSession(getDb(), { userId: learner.id, scenario: found!.scenario, isDemo: false }, async () => {
       throw new Error("the event could not be written");

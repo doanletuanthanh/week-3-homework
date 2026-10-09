@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { Suspense, cache } from "react";
+import { CustomStrip } from "@/components/custom/custom-strip";
+import { FailedEvalScreen } from "@/components/custom/failed-eval-screen";
+import { GeneratingScreen } from "@/components/custom/generating-screen";
 import { GuessScreen } from "@/components/guess/guess-screen";
 import { InterviewScreen } from "@/components/interview/interview-screen";
 import { RevealComputing } from "@/components/reveal/reveal-computing";
@@ -10,35 +13,72 @@ import { RevealScreen } from "@/components/reveal/reveal-screen";
 import { SessionSkeleton } from "@/components/ui/page-skeletons";
 import { WithdrawnScreen } from "@/components/withdrawn-screen";
 import { getDb } from "@/db/client";
+import { attemptRunIsDue, getPendingCustomSession, sweepStaleAttempts } from "@/db/repo/custom-topics";
 import { loadReplay } from "@/db/repo/replay";
 import { countLearnerTurns, getSession, listTurns } from "@/db/repo/sessions";
 import { isOnWaitlist } from "@/db/repo/waitlist";
 import { personaCard } from "@/scenario/persona-card";
 import { requireAckedUser } from "@/server/auth";
 import { freezeAbandonedCanvas } from "@/server/canvas";
+import { getCustomQuota } from "@/server/custom-topic";
+import { runGeneration } from "@/server/generation";
 import { revealRunIsDue, runReveal } from "@/server/reveal";
 import { hasEnteredSession } from "@/server/session-entry";
-import { buildSessionView, opensOnPrep } from "@/server/session-view";
+import { buildSessionView, opensOnPrep, type SessionView } from "@/server/session-view";
 import { isUuid } from "@/server/uuid";
 
-// A reveal that has no live runner is started from here, after the page is sent.
+// A reveal, or the preparation of a custom scenario, that has no live runner is started from here, after the page is sent.
 export const maxDuration = 300;
 
 /**
  * The learner's own session. A session that does not exist and one that belongs to someone else
- * get the same "not found" page.
+ * get the same "not found" page. A custom session has no scenario while it is prepared and when
+ * its scenario never passed: it is then `pending`, with the attempt that says where it stands.
  */
 const loadSession = cache(async (id: string) => {
   const user = await requireAckedUser(`/sessions/${id}`);
   if (!isUuid(id)) notFound();
-  const found = await getSession(getDb(), user.id, id);
-  if (!found) notFound();
-  return { user, ...found };
+  const db = getDb();
+  const found = await getSession(db, user.id, id);
+  if (found) return { user, pending: null, ...found };
+  // An attempt whose runner died is closed here, so this page never waits for nobody.
+  await sweepStaleAttempts(db, user.id);
+  const pending = await getPendingCustomSession(db, user.id, id);
+  if (!pending) {
+    // The attempt may have passed between the two reads.
+    const now = await getSession(db, user.id, id);
+    if (!now) notFound();
+    return { user, pending: null, ...now };
+  }
+  return { user, pending, session: pending.session, scenario: null, topic: null };
 });
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { scenario } = await loadSession((await params).id);
+  const { scenario, pending } = await loadSession((await params).id);
+  if (!scenario) return { title: `${pending.session.status === "generating" ? "Đang chuẩn bị kịch bản" : "Chưa qua kiểm tra"} · InterviewLab` };
   return { title: `Buổi phỏng vấn người dùng với ${personaCard(scenario.content).displayName} · InterviewLab` };
+}
+
+/** Màn 11: the custom session that has no scenario, being prepared or turned down. */
+async function PendingScreen({ id }: { id: string }) {
+  const { user, pending } = await loadSession(id);
+  const { session, attempt } = pending!;
+  if (session.status === "generating") {
+    // The function that worked on it may have been cut off: the next run starts from here.
+    if (attemptRunIsDue(attempt)) after(() => runGeneration(getDb(), attempt.id).catch((error: unknown) => console.error(error)));
+    return <GeneratingScreen attemptId={attempt.id} topicText={attempt.topicText} initialStep={attempt.step} />;
+  }
+  const quota = await getCustomQuota(getDb(), user);
+  return (
+    <FailedEvalScreen
+      sessionId={session.id}
+      topicText={attempt.topicText}
+      failureCode={attempt.failureCode ?? "system_error"}
+      block={quota.block}
+      freeLeft={quota.freeLeft}
+      attemptsLeftToday={quota.attemptsLeftToday}
+    />
+  );
 }
 
 /** Shown for a state that has no screen yet. */
@@ -60,7 +100,10 @@ function SessionEnded() {
  */
 async function SessionScreen({ id }: { id: string }) {
   const loaded = await loadSession(id);
-  const { user, scenario, topic } = loaded;
+  const { user } = loaded;
+  // Only called for a session that has its scenario.
+  const scenario = loaded.scenario!;
+  const topic = loaded.topic!;
   let { session } = loaded;
   const db = getDb();
 
@@ -82,6 +125,15 @@ async function SessionScreen({ id }: { id: string }) {
     replay: session.status === "replaying" || session.status === "done" ? await loadReplay(db, id) : null,
   });
 
+  return (
+    <>
+      {view.custom && <CustomStrip />}
+      <StateScreen view={view} />
+    </>
+  );
+}
+
+function StateScreen({ view }: { view: SessionView }) {
   switch (view.screen) {
     case "withdrawn":
       return (
@@ -111,6 +163,7 @@ async function SessionScreen({ id }: { id: string }) {
           waitlisted={view.waitlisted}
           print={view.print}
           replay={view.replay}
+          custom={view.custom ? { reported: view.problemReported } : null}
         />
       );
     case "replay":
@@ -137,14 +190,10 @@ async function SessionScreen({ id }: { id: string }) {
  */
 export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { session } = await loadSession(id);
+  const { session, pending } = await loadSession(id);
   // No question yet: the session opens on Màn 3, whose button leads back here (PRD §7).
   if (session.status === "interviewing" && session.endedAt === null) {
-    if (opensOnPrep(session, await countLearnerTurns(getDb(), id), await hasEnteredSession(id))) redirect(`/prep/${encodeURIComponent(session.personaId)}`);
+    if (opensOnPrep(session, await countLearnerTurns(getDb(), id), await hasEnteredSession(id))) redirect(`/prep/${encodeURIComponent(session.personaId!)}`);
   }
-  return (
-    <Suspense fallback={<SessionSkeleton />}>
-      <SessionScreen id={id} />
-    </Suspense>
-  );
+  return <Suspense fallback={<SessionSkeleton />}>{pending ? <PendingScreen id={id} /> : <SessionScreen id={id} />}</Suspense>;
 }

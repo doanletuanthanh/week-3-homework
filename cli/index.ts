@@ -4,6 +4,7 @@ import type { Database } from "@/db/client";
 import type { CallModelDeps } from "@/llm/call-model";
 import { adjudicateCommand } from "./commands/adjudicate";
 import { configCommand } from "./commands/config";
+import { customCommand } from "./commands/custom";
 import { evalCommand } from "./commands/eval";
 import { importCommand } from "./commands/import-scenario";
 import { judgementEvalCommand } from "./commands/judgement-eval";
@@ -61,6 +62,7 @@ async function main(): Promise<number> {
     import: importCommand(connected),
     config: configCommand(connected, operatorEmail),
     trace: traceCommand(connected, operatorEmail),
+    custom: customCommand(connected, operatorEmail),
     eval: evalCommand(connected, () => ({ roleSpec: roleSpecFromEnv, llmDeps: llmDeps(), confirm, setTracing })),
     adjudicate: adjudicateCommand(connected, operatorEmail),
     "check-strings": checkStringsCommand(connected, llmDeps),

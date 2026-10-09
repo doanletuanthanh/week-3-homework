@@ -1,3 +1,4 @@
+import type { Focus } from "@/db/schema";
 import type { Scenario, UnlockPath } from "@/scenario/schema";
 import type { TokenRange } from "./tokens";
 import type { CheckedAnalysis, EngineState, Label, Verdict } from "./types";
@@ -34,6 +35,8 @@ export type RevealBasis = {
   /** The state of the last turn. The end judge's verdict about that turn may not be in it yet. */
   state: EngineState;
   canvasTokens: string[];
+  /** Custom topics only: what the learner asked to practise. Puts the comment about it first. */
+  focus?: Focus | null;
 };
 
 export const CANVAS_MATCH_KINDS = ["told", "unconfirmed", "unrevealed", "never_said"] as const;

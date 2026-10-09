@@ -1,10 +1,20 @@
 import type { Executor } from "@/db/client";
-import { events, type DeviceClass, type WaitlistContext } from "@/db/schema";
+import { events, type DeviceClass, type FailureCode, type Focus, type ModerationConstraint, type WaitlistContext } from "@/db/schema";
 import type { ReplayLevel, ReplayResult } from "@/engine/replay-result";
 
-/** FR-38 events this slice writes. The custom-topic path adds its own. */
+/** FR-38 events the app writes. */
 export type AppEvent =
-  | { name: "session_started"; props: { persona_id: string; topic_id: string; kind: "curated"; scenario_version: number } }
+  /** For a custom session, written when its scenario passed its checks: that is when it can be played. */
+  | { name: "session_started"; props: { persona_id: string; topic_id: string; kind: "curated" | "custom"; scenario_version: number } }
+  /** A topic passed moderation and its attempt started. The topic text is not in it. */
+  | { name: "custom_topic_requested"; props: { focus: Focus; constraints: ModerationConstraint[] } }
+  /** The attempt stopped running, however it ended. */
+  | {
+      name: "custom_topic_finished";
+      props: { outcome: "passed" | "failed" | "system_error"; failure_code: FailureCode | null; cost_usd: number; duration_ms: number; runs: number };
+    }
+  /** "Kịch bản này có vấn đề" was pressed. */
+  | { name: "custom_problem_reported"; props: Record<string, never> }
   | { name: "turn"; props: { turn_index: number; latency_ms: number } }
   /** Written by the freeze of the notes. `device_class` is null when no question was ever asked. */
   | { name: "session_ended"; props: { canvas_empty: boolean; device_class: DeviceClass | null } }

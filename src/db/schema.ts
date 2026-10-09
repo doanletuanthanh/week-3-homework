@@ -29,15 +29,28 @@ export const users = pgTable("user", {
   email: text("email").notNull(),
   visibilityAckVersion: integer("visibility_ack_version"),
   visibilityAckAt: timestamp("visibility_ack_at", { withTimezone: true }),
+  /** The one free playable custom scenario was used (FR-56). An operator can give it back. */
+  freeCustomUsed: boolean("free_custom_used").notNull().default(false),
+  /** Custom-topic attempts that failed their checks. System errors and refusals are not in it. */
+  customFailedCount: integer("custom_failed_count").notNull().default(0),
   createdAt,
 });
 
-export const topics = pgTable("topic", {
-  id: text("id").primaryKey(),
-  title: text("title").notNull(),
-  summary: text("summary").notNull(),
-  createdAt,
-});
+export const TOPIC_KINDS = ["curated", "custom"] as const;
+
+export const topics = pgTable(
+  "topic",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    kind: text("kind", { enum: TOPIC_KINDS }).notNull().default("curated"),
+    /** Set for a custom topic: only this learner (and operators) can see it and its persona. */
+    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "cascade" }),
+    createdAt,
+  },
+  (table) => [index("topic_owner_idx").on(table.ownerUserId)],
+);
 
 export const SCENARIO_STATUSES = [
   "draft",
@@ -90,6 +103,10 @@ export const SESSION_STATUSES = [
   "withdrawn",
 ] as const;
 
+/** What a learner asked to practise in a custom topic (FR-53). `general` is the answer to anything else. */
+export const FOCUSES = ["follow_up", "past_story", "trust", "no_leading", "general"] as const;
+export type Focus = (typeof FOCUSES)[number];
+
 export const DEVICE_CLASSES = ["mobile", "desktop"] as const;
 export type DeviceClass = (typeof DEVICE_CLASSES)[number];
 
@@ -103,11 +120,14 @@ export const sessions = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    scenarioId: uuid("scenario_id")
-      .notNull()
-      .references(() => scenarios.id),
-    personaId: text("persona_id").notNull(),
+    /** Empty while a custom scenario is being prepared (`generating`) and when it never passed (`failed_eval`). */
+    scenarioId: uuid("scenario_id").references(() => scenarios.id),
+    personaId: text("persona_id"),
     status: text("status", { enum: SESSION_STATUSES }).notNull().default("interviewing"),
+    /** Custom topics only: what the learner wants to practise, from the closed set. Orders the takeaway comments. */
+    focus: text("focus", { enum: FOCUSES }),
+    /** "Kịch bản này có vấn đề" was pressed on the reveal of a custom scenario. */
+    problemReportedAt: timestamp("problem_reported_at", { withTimezone: true }),
     isDemo: boolean("is_demo").notNull().default(false),
     /** Set by "Kết thúc buổi" or by turn 30. No turn is written after it. */
     endedAt: timestamp("ended_at", { withTimezone: true }),
@@ -300,6 +320,79 @@ export const dailySpend = pgTable(
   (table) => [primaryKey({ columns: [table.day, table.scope] })],
 );
 
+export const MODERATION_DECISIONS = ["refuse", "allow_with_constraints", "allow"] as const;
+export const REFUSAL_CODES = ["real_person", "real_org_or_brand", "sexual", "illegal", "harassment", "other"] as const;
+export const MODERATION_CONSTRAINTS = ["adult_persona_only", "no_crisis_content", "service_use_only"] as const;
+export type ModerationConstraint = (typeof MODERATION_CONSTRAINTS)[number];
+
+export const ATTEMPT_OUTCOMES = ["refused", "running", "passed", "failed", "system_error"] as const;
+export const ATTEMPT_STEPS = ["generating", "validating"] as const;
+export type AttemptStep = (typeof ATTEMPT_STEPS)[number];
+
+/** Why a generated scenario was not given to its learner (FR-54). Each code has one fixed sentence on Màn 11. */
+export const FAILURE_CODES = ["invalid", "unsafe_output", "system_error"] as const;
+export type FailureCode = (typeof FAILURE_CODES)[number];
+
+/** What the checks of an attempt found, for the operator. Holds no learner text. */
+export type AttemptReport = {
+  /** `validate` violations of the last generated file, as messages. */
+  violations?: string[];
+  /** What the output safety check objected to. */
+  unsafe?: { field: string; kind: string; reason: string }[];
+  /** What stopped an attempt that ended as a system error. */
+  error?: string;
+};
+
+/**
+ * One request to create a custom topic (FR-52 to FR-56). A refused request has no topic and no
+ * session. The limits of FR-56 are counted from these rows.
+ */
+export const generationAttempts = pgTable(
+  "generation_attempt",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    topicId: text("topic_id").references(() => topics.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "cascade" }),
+    /** Set when the attempt passed: the scenario the session then plays. */
+    scenarioId: uuid("scenario_id").references(() => scenarios.id, { onDelete: "set null" }),
+    topicText: text("topic_text").notNull(),
+    focus: text("focus", { enum: FOCUSES }).notNull(),
+    /** The learner's own words about what to practise. Read by the moderation call and by nothing else. */
+    focusRaw: text("focus_raw").notNull().default(""),
+    moderationDecision: text("moderation_decision", { enum: MODERATION_DECISIONS }).notNull(),
+    reasonCode: text("reason_code", { enum: REFUSAL_CODES }),
+    constraints: jsonb("constraints").$type<ModerationConstraint[]>().notNull().default([]),
+    outcome: text("outcome", { enum: ATTEMPT_OUTCOMES }).notNull(),
+    failureCode: text("failure_code", { enum: FAILURE_CODES }),
+    step: text("step", { enum: ATTEMPT_STEPS }),
+    /** The scenario once it passed `validate`, kept so a later run does not generate it again. Sealed like any scenario. */
+    draft: jsonb("draft").$type<Scenario>(),
+    /** The one runner allowed to write this attempt; every write checks it and that the attempt still runs. */
+    runToken: uuid("run_token"),
+    /** Runs that have claimed this attempt so far. */
+    runAttempt: integer("run_attempt").notNull().default(0),
+    heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }),
+    /** The submit request's start plus ten minutes. Past it the attempt is a system error. */
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }),
+    /** Held of the daily generation budget while the attempt runs. */
+    costReservedUsd: numeric("cost_reserved_usd", { precision: 14, scale: 9, mode: "number" }).notNull().default(0),
+    /** What the attempt spent. Written once, when it stops running. */
+    costActualUsd: numeric("cost_actual_usd", { precision: 14, scale: 9, mode: "number" }).notNull().default(0),
+    report: jsonb("report").$type<AttemptReport>().notNull().default({}),
+    createdAt,
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (table) => [
+    // FR-56: one running attempt per learner, whatever two parallel requests do.
+    uniqueIndex("generation_attempt_running_key").on(table.userId).where(sql`${table.outcome} = 'running'`),
+    uniqueIndex("generation_attempt_session_key").on(table.sessionId),
+    index("generation_attempt_user_idx").on(table.userId, table.createdAt),
+  ],
+);
+
 /**
  * What stays of a deleted account, so that deleting it and signing in again resets no limit. The
  * key is a keyed hash of the Google account; the row holds counters and persona ids only: no
@@ -309,6 +402,14 @@ export const quotaTombstones = pgTable("quota_tombstone", {
   key: text("key").primaryKey(),
   /** Personas the account had a session with that counted for the one-session rule. */
   playedPersonaIds: jsonb("played_persona_ids").$type<string[]>().notNull().default([]),
+  /** The custom-topic limits of FR-56, carried over a deletion. */
+  freeCustomUsed: boolean("free_custom_used").notNull().default(false),
+  customFailedCount: integer("custom_failed_count").notNull().default(0),
+  /** The day (UTC+7) the three counters below belong to; on any other day they count as zero. */
+  customDay: date("custom_day"),
+  customAttempts: integer("custom_attempts").notNull().default(0),
+  customRefusals: integer("custom_refusals").notNull().default(0),
+  customSpendUsd: numeric("custom_spend_usd", { precision: 14, scale: 9, mode: "number" }).notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -326,7 +427,8 @@ export const events = pgTable(
   (table) => [index("event_name_at_idx").on(table.name, table.at)],
 );
 
-export const WAITLIST_CONTEXTS = ["no_more_personas"] as const;
+/** `custom_topics`: the learner used their free custom scenario and asked to be told when more can be made. */
+export const WAITLIST_CONTEXTS = ["no_more_personas", "custom_topics"] as const;
 export type WaitlistContext = (typeof WAITLIST_CONTEXTS)[number];
 
 /** FR-32: a learner who asked to be told about new content. One row per learner and context. */

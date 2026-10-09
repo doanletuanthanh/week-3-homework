@@ -27,6 +27,7 @@ const STATUS: Record<TurnError, number> = {
   turn_limit: 409,
   in_flight: 409,
   conflict: 409,
+  cap_reached: 409,
   llm_failed: 502,
 };
 

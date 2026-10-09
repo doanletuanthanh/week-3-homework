@@ -19,7 +19,7 @@ export async function resetDatabase(): Promise<void> {
   const db = getDb();
   await db.execute(sql`DELETE FROM auth.users`);
   await db.execute(
-    sql`TRUNCATE "turn", "snapshot", "branch", "event", "session", "pending_action", "llm_call", "daily_spend", "config", "admin_access_log", "string_approval", "waitlist", "quota_tombstone", "scenario", "topic", "user" CASCADE`,
+    sql`TRUNCATE "generation_attempt", "turn", "snapshot", "branch", "event", "session", "pending_action", "llm_call", "daily_spend", "config", "admin_access_log", "string_approval", "waitlist", "quota_tombstone", "scenario", "topic", "user" CASCADE`,
   );
   const imported = await importScenarioFile(db, PERSONA_FILE);
   if (!imported.ok) throw new Error(`${PERSONA_FILE} does not pass validate`);

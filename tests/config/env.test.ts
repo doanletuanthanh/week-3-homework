@@ -14,6 +14,9 @@ const valid = {
   LLM_END_JUDGE: "google:gemini-3.8-flash:low",
   LLM_FEEDBACK: "google:gemini-3.8-flash:low",
   LLM_VERIFIER: "google:gemini-3.5-flash-lite:low",
+  LLM_MODERATION: "google:gemini-3.5-flash-lite:low",
+  LLM_SCENARIO_GENERATOR: "google:gemini-3.8-flash:medium",
+  LLM_SAFETY: "google:gemini-3.5-flash:low",
   GOOGLE_API_KEY: "g-key",
 };
 
@@ -98,12 +101,12 @@ describe("parseEnv", () => {
     const mixed = { ...valid, LLM_REPLAY_JUDGE: "openai:gpt-6-luna:low" };
     expect(() => parseEnv(mixed)).toThrow(/OPENAI_API_KEY: required because LLM_REPLAY_JUDGE uses provider "openai"/);
     expect(() => parseEnv({ ...mixed, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).toThrow(
-      /GOOGLE_API_KEY: required because LLM_ANALYSIS, LLM_PERSONA, LLM_END_JUDGE, LLM_FEEDBACK, LLM_VERIFIER use provider "google"/,
+      /GOOGLE_API_KEY: required because LLM_ANALYSIS, LLM_PERSONA, LLM_END_JUDGE, LLM_FEEDBACK, LLM_VERIFIER, LLM_MODERATION, LLM_SCENARIO_GENERATOR, LLM_SAFETY use provider "google"/,
     );
     expect(() => parseEnv({ ...mixed, OPENAI_API_KEY: "o-key" })).not.toThrow();
     // No role on Google: its key is not needed.
     const openAi = "openai:gpt-6-luna:low";
-    const allOpenAi = { ...valid, LLM_ANALYSIS: openAi, LLM_PERSONA: openAi, LLM_REPLAY_JUDGE: openAi, LLM_END_JUDGE: openAi, LLM_FEEDBACK: openAi, LLM_VERIFIER: openAi };
+    const allOpenAi = Object.fromEntries(Object.entries(valid).map(([name, value]) => [name, name.startsWith("LLM_") ? openAi : value]));
     expect(() => parseEnv({ ...allOpenAi, OPENAI_API_KEY: "o-key", GOOGLE_API_KEY: undefined })).not.toThrow();
   });
 
@@ -116,6 +119,14 @@ describe("parseEnv", () => {
     expect(parseEnv({ ...valid, GOOGLE_API_KEY_BATCH: " " }).GOOGLE_API_KEY_BATCH).toBeUndefined();
     // Left blank in an env file, like a blank key: not set, and the app still starts.
     expect(parseEnv({ ...valid, LLM_STRING_CHECK: "", LLM_EVAL_INTERVIEWER: "  " }).LLM_STRING_CHECK).toBeUndefined();
+  });
+
+  it("requires the roles of the custom-topic path, which the app calls to prepare a learner's scenario", () => {
+    for (const name of ["LLM_MODERATION", "LLM_SCENARIO_GENERATOR", "LLM_SAFETY"]) {
+      expect(() => parseEnv({ ...valid, [name]: undefined })).toThrow(new RegExp(name));
+      expect(() => parseEnv({ ...valid, [name]: "  " })).toThrow(new RegExp(name));
+    }
+    expect(parseEnv(valid).LLM_SCENARIO_GENERATOR).toEqual({ provider: "google", model: "gemini-3.8-flash", effort: "medium" });
   });
 
   it("checks a CLI role like any other once it is set: format, price and provider key", () => {

@@ -1,4 +1,5 @@
 import type { Database } from "@/db/client";
+import { sweepStaleAttempts } from "@/db/repo/custom-topics";
 import { countSessions, listSessionRows, type SessionListRow } from "@/db/repo/sessions";
 import type { SESSION_STATUSES } from "@/db/schema";
 import { toBrowserResult, type BrowserRecognized } from "@/engine/seal";
@@ -22,9 +23,13 @@ const STATE_OF: Record<(typeof SESSION_STATUSES)[number], SessionListState> = {
   withdrawn: "withdrawn",
 };
 
+/** What stands where a custom session has no persona or topic title to show. */
+export const CUSTOM_TOPIC_LABEL = "Chủ đề tự tạo";
+
 /** One row of "Buổi của tôi", as it is sent to the browser. */
 export type SessionListItem = {
   id: string;
+  /** For a custom session with no scenario (being prepared, or never passed): the topic the learner typed. */
   personaName: string;
   topicTitle: string;
   /** The day the session started, as "dd/mm". */
@@ -43,8 +48,8 @@ export function toListItem(row: SessionListRow): SessionListItem {
   const { day, month } = dayOf(row.startedAt);
   return {
     id: row.id,
-    personaName: capitalizeFirst(row.displayName),
-    topicTitle: row.topicTitle,
+    personaName: row.displayName === null ? (row.customTopicText ?? CUSTOM_TOPIC_LABEL) : capitalizeFirst(row.displayName),
+    topicTitle: row.displayName === null ? CUSTOM_TOPIC_LABEL : (row.topicTitle ?? CUSTOM_TOPIC_LABEL),
     date: `${day}/${month}`,
     state: STATE_OF[row.status],
     result: toBrowserResult(row.status, row.revealJson),
@@ -58,8 +63,12 @@ export type SessionListPage = {
   total: number;
 };
 
-/** The learner's own sessions, newest first, one page at a time. */
+/**
+ * The learner's own sessions, newest first, one page at a time. A custom session whose runner
+ * died is closed first, so the list never shows "Đang chuẩn bị" for something nobody is preparing.
+ */
 export async function listSessions(db: Database, user: Pick<AppUser, "id">, offset: number = 0): Promise<SessionListPage> {
+  await sweepStaleAttempts(db, user.id);
   const [rows, total] = await Promise.all([
     listSessionRows(db, user.id, { offset, limit: SESSION_PAGE_SIZE }),
     countSessions(db, user.id),

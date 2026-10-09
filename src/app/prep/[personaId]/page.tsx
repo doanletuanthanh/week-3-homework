@@ -7,19 +7,22 @@ import { StartSessionButton } from "@/components/start-session-button";
 import { PrepSkeleton } from "@/components/ui/page-skeletons";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
-import { countLearnerTurns, findSessionForPersona, getPlayableScenario, getScenarioByPersona } from "@/db/repo/sessions";
+import { countLearnerTurns, findSessionForPersona, getPlayableScenario, getVisibleScenario } from "@/db/repo/sessions";
 import { personaCard } from "@/scenario/persona-card";
 import { continueSession, startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { playedBeforeDeletion } from "@/server/quota";
-import { PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED } from "@/strings/product-strings";
+import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED } from "@/strings/product-strings";
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
 /** The standard error (PRD §6.0), shown when creating the session failed. Nothing was created. */
 const SESSION_START_FAILED = "Không kết nối được. Thử lại.";
 
-/** Màn 3 · Chuẩn bị. Guests can read it; "Bắt đầu" asks for sign-in and the data notice first. */
+/**
+ * Màn 3 · Chuẩn bị. Guests can read it; "Bắt đầu" asks for sign-in and the data notice first.
+ * The persona of a custom topic exists for its owner alone: for anyone else it is "not found".
+ */
 export default async function PrepPage({
   params,
   searchParams,
@@ -30,9 +33,10 @@ export default async function PrepPage({
   const { personaId } = await params;
   const { blocked } = await searchParams;
   const db = getDb();
+  const viewerId = (await getUser())?.id ?? null;
   // The card shows the version a new session would start on; when none can be played, the newest one.
-  const playable = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"));
-  const found = playable ?? (await getScenarioByPersona(db, personaId));
+  const playable = await getPlayableScenario(db, personaId, await getConfig(db, "require_published"), viewerId);
+  const found = playable ?? (await getVisibleScenario(db, personaId, viewerId));
   if (!found) notFound();
 
   return (
@@ -42,7 +46,7 @@ export default async function PrepPage({
   );
 }
 
-type Found = NonNullable<Awaited<ReturnType<typeof getScenarioByPersona>>>;
+type Found = NonNullable<Awaited<ReturnType<typeof getVisibleScenario>>>;
 
 /** The screen itself: the persona, and the button that fits what the signed-in learner has with them. */
 async function PrepScreen({ personaId, blocked, found, playable }: { personaId: string; blocked?: string; found: Found; playable: boolean }) {
@@ -55,12 +59,14 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
   const canStartAnother = user?.isDemo === true && session !== null && playable;
   // No question asked yet: "Tiếp tục buổi luyện" is the press that leads into the interview (PRD §7).
   const notAskedYet = session !== null && session.status === "interviewing" && session.endedAt === null && (await countLearnerTurns(db, session.id)) === 0;
+  const custom = found.scenario.origin === "generated";
+  const focusLabel = custom && session?.focus ? focusLabelOf(session.focus) : null;
 
   return (
     <main className="container prep">
       <nav aria-label="Đường dẫn" className="label-md crumbs">
-        <Link href="/" className="c-variant">
-          Trang chủ
+        <Link href={custom ? "/my-sessions" : "/"} className="c-variant">
+          {custom ? "Buổi của tôi" : "Trang chủ"}
         </Link>
         <ChevronRightIcon size={14} className="c-outline" />
         <span className="c-variant">{found.topic.title}</span>
@@ -77,7 +83,14 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
                 <h1 className="headline-lg">{persona.name}</h1>
                 <p className="body-md c-variant">{persona.tagline}</p>
               </div>
+              {custom && <span className="pill pill-outline prep-light">{CUSTOM_LABEL.light_check}</span>}
             </div>
+            {custom && (
+              <p className="note-box note-info body-sm" role="note">
+                Nhân vật này do AI sinh cho chủ đề của bạn, mọi chi tiết là hư cấu. <b>{CUSTOM_LABEL.not_insight}.</b>
+                {focusLabel && <> Buổi này tập trung vào: {focusLabel}.</>}
+              </p>
+            )}
             <div className="ctx prep-goal">
               <span className="ctx-k">Câu hỏi nghiên cứu</span>
               <p className="headline-md">{persona.researchGoal}</p>

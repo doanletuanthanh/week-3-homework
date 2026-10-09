@@ -40,11 +40,15 @@ function sessionOf(overrides: Partial<SessionRow>): SessionRow {
     revealRunToken: null,
     revealRunAttempt: 0,
     revealHeartbeatAt: null,
+    focus: null,
+    problemReportedAt: null,
     startedAt: new Date("2026-09-25T15:30:00Z"),
     updatedAt: new Date("2026-09-25T16:00:00Z"),
     ...overrides,
   };
 }
+
+const generated = { ...scenario, origin: "generated" } as ScenarioRow;
 
 const ended = { endedAt: new Date(), canvasFrozenAt: new Date() };
 const ready = { ...ended, guess: 4, revealedAt: new Date(), revealJson: reveal, revealReadyAt: new Date(), revealParts: fullParts(basis) };
@@ -73,6 +77,7 @@ describe("buildSessionView: which screen a session's state renders (PRD §7)", (
 
   it("withdrawn: the page gets who, the topic, the day and the turn it stopped at, with the transcript", () => {
     expect(view(sessionOf({ ...ready, status: "withdrawn" }))).toEqual({
+      custom: false,
       screen: "withdrawn",
       personaName: "Chị Thu",
       topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm",
@@ -125,6 +130,7 @@ describe("the serialised props of the session page", () => {
 
   it("guess screen: the persona's name and the item count, and nothing else of the session", () => {
     expect(view(sessionOf({ ...ready, guess: null, revealedAt: null }))).toEqual({
+      custom: false,
       screen: "guess",
       sessionId: "11111111-1111-4111-8111-111111111111",
       personaName: "chị Thu",
@@ -135,6 +141,7 @@ describe("the serialised props of the session page", () => {
   it("computing screen: the guess and the header, no number of the result", () => {
     const computing = view(sessionOf({ ...ended, status: "revealed", guess: 4, revealedAt: new Date(), revealParts: fullParts(basis) }));
     expect(computing).toEqual({
+      custom: false,
       screen: "computing",
       sessionId: "11111111-1111-4111-8111-111111111111",
       guess: 4,
@@ -167,5 +174,33 @@ describe("the serialised props of the session page", () => {
 
   it("does not show a revealed session's result when the guess is missing", () => {
     expect(view(sessionOf({ ...ready, status: "revealed", guess: null })).screen).toBe("ended");
+  });
+});
+
+describe("a session on a generated scenario (FR-56)", () => {
+  const customView = (session: SessionRow) => buildSessionView({ session, scenario: generated, topicTitle: "app hẹn hò trong khu dân cư đang sống", turns, waitlisted: false });
+
+  it("marks every screen as custom, so each one carries the labels", () => {
+    const states: Partial<SessionRow>[] = [
+      {},
+      ended,
+      { ...ended, status: "revealed", guess: 4, revealedAt: new Date() },
+      { ...ready, status: "revealed" },
+      { ...ready, status: "done" },
+      { status: "withdrawn" },
+    ];
+    for (const state of states) expect(customView(sessionOf(state)).custom).toBe(true);
+    for (const state of states) expect(view(sessionOf(state)).custom).toBe(false);
+  });
+
+  it("tells the reveal whether the learner already reported the scenario, and nothing else new", () => {
+    const fresh = customView(sessionOf({ ...ready, status: "done" }));
+    const reported = customView(sessionOf({ ...ready, status: "done", problemReportedAt: new Date() }));
+    expect(fresh).toMatchObject({ screen: "reveal", custom: true, problemReported: false });
+    expect(reported).toMatchObject({ screen: "reveal", custom: true, problemReported: true });
+    // While the replay is on offer the custom view holds back exactly what the authored one does.
+    const offer = JSON.stringify(customView(sessionOf({ ...ready, status: "revealed" })));
+    expect(offer).not.toContain(target.content);
+    expect(offer).not.toContain(target.sample_question);
   });
 });
