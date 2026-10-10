@@ -26,8 +26,8 @@ export const metadata = { title: "Thư viện · InterviewLab" };
  */
 async function Library({ user }: { user: AppUser | null }) {
   const db = getDb();
-  // The account's choice wins over the one this browser remembers.
-  const filter = user?.roleFilter ?? (await rememberedRoleFilter());
+  // A consenting learner's filter is the account's alone, the same on every device; a guest's is this browser's.
+  const filter = user?.noticeAcked ? user.roleFilter : await rememberedRoleFilter();
   // As in "Buổi của tôi": an attempt whose runner died is closed first, so its card does not say "Đang chuẩn bị" for nothing.
   if (user) await sweepStaleAttempts(db, user.id);
   const [topics, ownTopics] = await Promise.all([

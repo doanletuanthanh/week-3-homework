@@ -257,6 +257,8 @@ test.describe("Màn 2: the role filter of a learner", () => {
     await press(page, "PM", "true");
     await expect(emptyState(page)).toBeVisible();
     expect((await db.user(userId)).roleFilter).toBe("pm");
+    // The account alone remembers: this browser keeps no copy.
+    expect(await roleCookie(context)).toBeUndefined();
     await press(page, "UX", "true");
     expect((await db.user(userId)).roleFilter).toBe("ux");
     await press(page, "UX", "false");
@@ -280,25 +282,59 @@ test.describe("Màn 2: the role filter of a learner", () => {
       await expectPressed(otherPage, ["BA"]);
       await expect(emptyState(otherPage)).toBeVisible();
 
-      // What the account holds wins over what a browser remembers.
+      // A cookie in the browser of a learner counts for nothing: the account is the only source.
       await other.addCookies([{ name: ROLE_COOKIE, value: "ux", url: APP_URL }]);
       await otherPage.reload();
       await expectPressed(otherPage, ["BA"]);
+
+      // Cleared in the first browser, it is cleared in the other, whatever cookie that one holds.
+      await press(page, "BA", "false");
+      await otherPage.reload();
+      await expectPressed(otherPage, []);
+      await expect(topicCard(otherPage)).toBeVisible();
     } finally {
       await other.close();
     }
   });
 
-  test("a choice made as a guest is still shown after signing in, until the account holds one", async ({ page, context }) => {
+  test("a choice made as a guest moves onto the account when the learner signs in and accepts the notice", async ({ page, context }) => {
     await page.goto("/library");
     await press(page, "Khác", "true");
+    expect((await roleCookie(context))?.value).toBe("other");
 
     const { userId } = await signInAndAccept(page, context, "lib-guest-then-learner", "/library");
     await expectPressed(page, ["Khác"]);
     await expect(page.getByText(OTHER_NOTE)).toBeVisible();
-    // Signing in wrote nothing: the account takes a choice when the learner makes one.
-    expect((await db.user(userId)).roleFilter).toBeNull();
+    // The account holds it now and the browser no longer does. Carrying it over is not a press: no event.
+    expect((await db.user(userId)).roleFilter).toBe("other");
+    expect(await roleCookie(context)).toBeUndefined();
     expect((await db.eventsOfUser(userId)).filter((event) => event.name === "role_filter_selected")).toEqual([]);
+  });
+
+  test("a cookie with a value outside the four chips is dropped at the notice and changes nothing", async ({ page, context }) => {
+    await context.addCookies([{ name: ROLE_COOKIE, value: "admin", url: APP_URL }]);
+
+    const { userId } = await signInAndAccept(page, context, "lib-bad-cookie", "/library");
+
+    await expectPressed(page, []);
+    expect((await db.user(userId)).roleFilter).toBeNull();
+    expect(await roleCookie(context)).toBeUndefined();
+  });
+
+  test("signing out leaves no filter behind in the browser", async ({ page, context }) => {
+    await signInAsNewLearner(context, uniqueEmail("lib-sign-out"));
+    await page.goto("/library");
+    await press(page, "BA", "true");
+    expect((await roleCookie(context))?.value).toBe("ba");
+
+    await page.getByLabel("Tài khoản: mở menu").click();
+    await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
+    await expect(page.getByRole("link", { name: "Đăng nhập", exact: true })).toBeVisible();
+
+    expect(await roleCookie(context)).toBeUndefined();
+    await page.goto("/library");
+    await expectPressed(page, []);
+    await expect(topicCard(page)).toBeVisible();
   });
 
   test("a learner who has not accepted the data notice is remembered by the browser only", async ({ page, context }) => {

@@ -10,7 +10,7 @@ import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { getUser, noticePath, requireAckedUser, requireUser } from "./auth";
 import { chooseRoleFilter } from "./library";
 import { resumePendingAction, storePendingAction } from "./pending-actions";
-import { rememberRoleFilter } from "./role-filter";
+import { adoptRememberedRoleFilter, rememberRoleFilter } from "./role-filter";
 import { safeNextPath } from "./safe-next";
 import { markSessionEntered } from "./session-entry";
 import { openSession, sessionEntryPath, sessionStartFailedPath, type OpenSessionResult } from "./sessions";
@@ -45,6 +45,8 @@ export async function signInWithGoogle(formData: FormData): Promise<void> {
 export async function signOut(): Promise<void> {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
+  // Nothing of the learner's choices stays in a browser they signed out of.
+  await rememberRoleFilter(null);
   redirect("/");
 }
 
@@ -87,6 +89,8 @@ export async function acceptDataNotice(formData: FormData): Promise<void> {
   const next = safeNextPath(formData.get("next") as string | null);
   const user = await requireUser(next);
   await acknowledgeNotice(getDb(), user.id, DATA_NOTICE_VERSION);
+  // A filter chosen before consent was kept by the browser: the account takes it now.
+  await adoptRememberedRoleFilter(getDb(), { id: user.id, noticeAcked: true });
 
   const resumed = await resumePendingAction({ ...user, noticeAcked: true });
   redirect(resumed ?? (next === RESUME_PATH ? "/" : next));
@@ -103,7 +107,9 @@ export async function resumeAfterSignIn(): Promise<void> {
  * The library is shown again with the choice applied: where to go is never read from the request.
  */
 export async function selectRoleFilter(formData: FormData): Promise<void> {
-  const role = await chooseRoleFilter(getDb(), await getUser(), formData.get("role"));
-  await rememberRoleFilter(role);
+  const user = await getUser();
+  const role = await chooseRoleFilter(getDb(), user, formData.get("role"));
+  // The account is the only source for a consenting learner; the cookie is a guest's.
+  await rememberRoleFilter(user?.noticeAcked ? null : role);
   revalidatePath("/library");
 }
