@@ -1,6 +1,6 @@
 ---
 title: "Phase 3: Topic screen and persona cards"
-status: todo
+status: done
 phase: 3
 priority: P1
 effort: "1.5d"
@@ -40,14 +40,16 @@ Màn 2b at `/topics/[topicId]`: the topic, the overlap warning, and one card per
 
 - `src/app/topics/[topicId]/page.tsx`: `getTopicWithPersonas` → `notFound()` on null; signed-in, `listSessionsForPersonas`; map with `personaButton`. Suspense boundary and skeleton after the not-found check, as the bootstrap plan decided for every page.
 - `src/app/topics/[topicId]/not-found.tsx`, modelled on the session one.
-- `topic_opened` is recorded in the page render, only when there is a user. Next.js may render a server component twice (prefetch): record from a tiny route handler called by a client effect only if the integration test shows duplicate rows; start with the simple version and measure.
+- `topic_opened` is reported from the browser: `src/components/library/topic-opened.tsx` (a client effect) calls the server action `topicOpened`, which runs `reportTopicOpened` in `src/server/library.ts`. See the notes below for why it is not written in the render.
+<!-- Updated: Phase 3 implementation - event reported by a client effect, not in the render -->
 - `src/components/library/persona-card.tsx`; `src/components/topic-warning.tsx` holding the FR-51 string once.
 - `PersonaAvatar` takes `{ size, avatarKey, name }`: `avatarKey === "thu"` (the key in `chi-thu.json`) → the existing drawing; otherwise a circle with the first letter of the given name on a tone chosen by a hash of the name from the theme's neutral tokens. All existing call sites pass the two new props.
 - "Bắt đầu buổi mới" for demo accounts reuses the form and action of the prep page; move that small form to `src/components/start-session-button.tsx` if it is not already shared.
 
 ## Related code files
 
-- Create: `src/app/topics/[topicId]/page.tsx`, `src/app/topics/[topicId]/not-found.tsx`, `src/components/library/persona-card.tsx`, `src/components/topic-warning.tsx`, `tests/e2e/topic.spec.ts`
+- Create: `src/app/topics/[topicId]/page.tsx`, `src/app/topics/[topicId]/not-found.tsx`, `src/components/library/persona-card.tsx`, `src/components/library/topic-opened.tsx`, `src/components/topic-warning.tsx`, `tests/e2e/topic.spec.ts`, `tests/components/topic-screen.test.tsx`
+- Also modified in the implementation: `src/db/repo/library.ts` (`getVisibleTopic`), `src/db/repo/sessions.ts`, `src/server/library.ts` (`toPersonaCardView`, `reportTopicOpened`), `src/server/actions.ts`, `src/server/session-list.ts`, `src/server/session-view.ts`, `src/scenario/persona-card.ts` (`personaInitial`), `src/components/start-session-button.tsx`, `src/components/library/topic-card.tsx`, and the tests of each
 - Modify: `src/components/persona-avatar.tsx` and its four call sites (`src/app/page.tsx`, `src/app/prep/[personaId]/page.tsx`, `src/components/interview/session-bar.tsx`, `src/components/sessions/session-row.tsx`), `src/app/prep/[personaId]/page.tsx` (breadcrumb, avatar), `src/strings/product-strings.ts`, `src/app/globals.css`, `src/components/ui/page-skeletons.tsx` (`TopicSkeleton`), `tests/e2e/guest.spec.ts`
 
 ## Implementation steps
@@ -61,10 +63,24 @@ Màn 2b at `/topics/[topicId]`: the topic, the overlap warning, and one card per
 
 ## Success criteria
 
-- [ ] All §7 rows produce the button the table names, for a learner and for a demo account.
-- [ ] `tests/e2e/access-isolation.spec.ts` gains the custom-topic case and passes.
-- [ ] The page HTML holds no item content, tag, hook line or sample question.
-- [ ] Existing e2e specs that assert the prep breadcrumb or the avatar are updated, not deleted.
+- [x] All §7 rows produce the button the table names, for a learner and for a demo account.
+- [x] `tests/e2e/access-isolation.spec.ts` gains the custom-topic case and passes.
+- [x] The page HTML holds no item content, tag, hook line or sample question.
+- [x] Existing e2e specs that assert the prep breadcrumb or the avatar are updated, not deleted.
+
+## Deviations and notes from the implementation
+
+- **`topic_opened` is reported by the page from the browser**, not written while it renders: `TopicOpened` (a client effect) calls the server action `topicOpened`, which runs `reportTopicOpened`. The page asks the server for itself again once shown (`RefreshOnShow`, so a card is current after the back button), and a render-time write would have counted that as a second visit. This was reasoned from the code, not measured. The action writes only for a consenting learner and a topic that learner can see; the e2e spec checks one row per visit across a hover, the page's own refresh, a reload and a return.
+- **In development React runs effects twice**, so a visit writes two rows there. Production writes one.
+- **"Bắt đầu buổi mới" on a demo card is a form** posting the existing `startSession` action (FR-45: it creates the session at once). Every other card button is a link. `StartSessionButton` gained a `card` size.
+- **The day in "Đã luyện · dd/mm"** is the day the session started, as in "Buổi của tôi".
+- **"Bạn đã luyện k/n"** is shown to every signed-in learner, 0/n included, and counts a persona with any finished session, as the library does (so a demo account that started a new session after a finished one still reads 1/1).
+- **A custom topic's page** shows "Kiểm tra nhẹ" and the AI line in place of a role label and a summary (its stored summary is the fixed text "Chủ đề tự tạo"). The FR-51 warning stays. A custom topic whose scenario is being prepared, did not pass, or was taken down shows the empty state to its owner.
+- **A topic id that is not a slug** (a zero byte, upper case, over 200 characters) is "not found" before the database is asked: Postgres answers some of those with an error, not with no row.
+- **The portrait needs two fields in two browser payloads:** `avatarKey` on the interview screen's persona, and `avatarKey` + `displayName` on a row of "Buổi của tôi". Both are public persona fields. A row with no persona yet shows an empty circle.
+- **The page title is the fixed "Chủ đề · InterviewLab"**, like Màn 3; the artboard puts the topic's title there.
+- **Strings:** 6 more product strings (`topic.*`), 19 since phase 2 began. The user task in `plan.md` covers them.
+- **`node_modules/next/dist/docs/` was not read:** a hook of this machine denies the folder. The page follows the patterns already in the repo (`library`, `my-sessions`, `prep`).
 
 ## Risk assessment
 
