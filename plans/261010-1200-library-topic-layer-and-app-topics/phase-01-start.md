@@ -1,6 +1,6 @@
 ---
 title: "Phase 1: Topic data and library queries"
-status: todo
+status: done
 phase: 1
 priority: P1
 effort: "1.5d"

@@ -1,6 +1,6 @@
 ---
 title: "Phase 2: Library screen and role filter"
-status: todo
+status: done
 phase: 2
 priority: P1
 effort: "1.5d"
@@ -31,7 +31,8 @@ Màn 2 at `/library`: role chips, the grid of curated topics, the "Tạo chủ �
   - Empty: a filter with no topic → "Chưa có chủ đề cho vai trò này." with "Xem mọi chủ đề" (clears the chip) and "Tạo chủ đề của bạn".
   - Loading: a skeleton shaped like the grid. Error: the standard error with retry.
 - Non-functional:
-  - Works with JavaScript off (chips are form buttons).
+  - Chips are form buttons: a press works before the page's script bundles have loaded. With JavaScript switched off entirely the page stays on its skeleton (see Deviations).
+<!-- Updated: Phase 2 implementation - "JavaScript off" narrowed; the Suspense skeleton needs the inline swap script -->
   - Role colours always come with the text label (design README). Chips expose `aria-pressed`.
   - <768px: one column; chips wrap.
 
@@ -56,14 +57,24 @@ Màn 2 at `/library`: role chips, the grid of curated topics, the "Tạo chủ �
 3. Page and components from the artboards; skeleton and error boundary as in `my-sessions`.
 4. "Chủ đề bạn tự tạo" section, reusing the state labels of `custom-strip.tsx`.
 5. Empty state and the "Khác" line.
-6. `tests/e2e/library.spec.ts`: guest sees the grid; chip filters and survives reload; press again clears; BA shows the empty state and "Xem mọi chủ đề" restores; signed-in sees "Đã luyện 1/1" after a done session; a generating custom topic links to Màn 11; the page works with JavaScript disabled.
+6. `tests/e2e/library.spec.ts`: guest sees the grid; chip filters and survives reload; press again clears; BA shows the empty state and "Xem mọi chủ đề" restores; signed-in sees "Đã luyện 1/1" after a done session; a generating custom topic links to Màn 11; the chips work with the script bundles blocked.
 
 ## Success criteria
 
-- [ ] `/library` answers 200 for a guest and matches the `LibraryGuest` artboard's content and order.
-- [ ] The filter persists per the requirement; the `event` table has one row per signed-in choice and none for a guest.
-- [ ] `tests/e2e/hardening.spec.ts` still passes: no Content-Security-Policy refusal on `/library` (the form posts to self).
-- [ ] The page HTML holds no string from any item of any scenario (asserted in the e2e test against chị Thu's `secret_terms`).
+- [x] `/library` answers 200 for a guest and matches the `LibraryGuest` artboard's content and order.
+- [x] The filter persists per the requirement; the `event` table has one row per signed-in choice and none for a guest.
+- [x] `tests/e2e/hardening.spec.ts` still passes: no Content-Security-Policy refusal on `/library` (the form posts to self). The `/library` check itself is in `tests/e2e/library.spec.ts`.
+- [x] The page HTML holds no string from any item of any scenario (asserted in the e2e test against chị Thu's `secret_terms`).
+
+## Deviations and notes from the implementation
+
+- **JavaScript off.** The plan asked for a skeleton and for the page to work with JavaScript off. A Suspense boundary sends the content in a hidden block that an inline script swaps in, so the two exclude each other. Kept: the skeleton (PRD "Tải: chuẩn"). Guaranteed and tested instead: the chips work as plain form posts before the bundles load. To prefer JavaScript-off, remove the boundary in `src/app/library/page.tsx` (no skeleton then). Awaits the user's confirmation.
+- **A learner who has not accepted the data notice** is a guest for writes: cookie only, no column, no event (nothing is written before Màn 0).
+- **No avatar stack and no per-topic icon on the cards:** `PersonaAvatar` ignores `avatar_key` until phase 3, and a topic has no icon field. Cards link to `/topics/[id]`, which phase 3 builds: until then the link answers 404.
+- **"Đã luyện k/n"** is shown to every signed-in learner, 0/n included (PRD wording; the artboard shows it only where k > 0).
+- **Stale attempts** are closed before the learner's own topics are listed, as in "Buổi của tôi"; a due attempt is not resumed from here (its card opens Màn 11, which does).
+- **Strings:** 13 new product strings (`role_label.*`, `library.*`). `il publish` refuses every persona on a database until `pnpm il check-strings product` and `pnpm il approve-strings product` are run there (user task, 13 model calls).
+- **Open, from the code review (M1):** `user.roleFilter ?? cookie` cannot tell "never chose" from "cleared", and the cookie is also written for learners, so a filter cleared in one browser comes back from the cookie of another, and the cookie outlives sign-out. Built as this plan says; needs a decision before phase 4 reads `user.roleFilter`. Review: `plans/reports/code-reviewer-261010-1600-phase-02-library-screen-and-role-filter.md`.
 
 ## Risk assessment
 

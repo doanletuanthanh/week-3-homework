@@ -1,7 +1,7 @@
 ---
 title: "Library topic layer and app topics"
 description: "Build the learner screens the design canvas has and the app lacks (Màn 2 Thư viện, Màn 2b Chủ đề, the designed home page, next-persona suggestion) and add 3 curated topics about building apps and web apps, 2 personas each."
-status: pending
+status: in-progress
 priority: P1
 effort: "~11.5d"
 tags: [library, topics, personas, nextjs, s2]
@@ -50,14 +50,15 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 ## Deviations from the PRD
 
 - **FR-50 and FR-38, narrowed:** `role_filter_selected` and `topic_opened` are written for signed-in learners only (user decision 2026-10-10). A guest's filter is remembered in a cookie and a guest's page load writes nothing, so an anonymous caller cannot fill the `event` table. Cost: BA/PM interest among guests (PRD assumption #6) is not measured.
+- **Màn 2 with JavaScript off (phase 2):** the page keeps its loading skeleton, so with JavaScript switched off it shows the skeleton only; the role chips work before the script bundles load. Awaits the user's confirmation.
 - **S2 content:** the PRD plans UX 2 topics × 3 personas. After this plan there are 4 UX topics with 1 + 2 + 2 + 2 personas.
 
 ## Phases
 
 | # | Phase | Status | Depends on | Effort |
 |---|-------|--------|------------|--------|
-| 1 | [Topic data and library queries](./phase-01-start.md) | Pending | — | 1.5d |
-| 2 | [Library screen and role filter](./phase-02-library-screen-and-role-filter.md) | Pending | 1 | 1.5d |
+| 1 | [Topic data and library queries](./phase-01-start.md) | Done | — | 1.5d |
+| 2 | [Library screen and role filter](./phase-02-library-screen-and-role-filter.md) | Done | 1 | 1.5d |
 | 3 | [Topic screen and persona cards](./phase-03-topic-screen-and-persona-cards.md) | Pending | 1 | 1.5d |
 | 4 | [Home, header and next persona](./phase-04-home-header-and-next-persona.md) | Pending | 2, 3 | 1.5d |
 | 5 | [App and web app topics](./phase-05-app-and-web-app-topics.md) | Pending | 1 | 4.5d |
@@ -78,6 +79,7 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 - Review the content of the six new personas before they are imported into the real database (phase 5).
 - Approve the LLM spend of the quick evaluation runs in phase 5 before they start.
 - Run `pnpm il import` for the new files against the deployed database.
+- Run `pnpm il check-strings product` and `pnpm il approve-strings product` on each database: phase 2 added 13 product strings, and `il publish` refuses every persona until they are approved.
 
 ## Success criteria
 
@@ -92,7 +94,10 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 
 ## Open questions
 
-None. The three questions of the first draft were settled in validation session 1 (below).
+- Role filter of a learner (phase 2 review, M1): should the account be the only source once the learner has accepted the notice (the cookie then serves guests only), or should the cookie fallback stay and be cleared at sign-out? Needed before phase 4.
+- Màn 2 with JavaScript off: keep the skeleton (built) or drop it so the page reads without scripts?
+
+The three questions of the first draft were settled in validation session 1 (below).
 
 ## Validation Log
 
