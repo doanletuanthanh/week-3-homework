@@ -21,6 +21,6 @@ Verified: typecheck, lint, 941 unit, 565 integration, Playwright 254 of 255 on t
 
 ## Left open
 
-- Role filter source for a learner (review M1), and the JavaScript-off deviation.
+- Settled the same day: the account is the only filter source for a consenting learner (a guest's cookie is moved onto it at sign-in or at Màn 0, and removed at sign-out), and the skeleton stays. The move at the OAuth callback has no browser test: Google cannot be driven.
 - `pnpm il check-strings product` and `approve-strings product` on each database before the next `il publish`.
 - Topic cards link to `/topics/[id]`, which phase 3 builds.

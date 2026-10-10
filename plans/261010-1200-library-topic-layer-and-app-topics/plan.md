@@ -50,7 +50,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 ## Deviations from the PRD
 
 - **FR-50 and FR-38, narrowed:** `role_filter_selected` and `topic_opened` are written for signed-in learners only (user decision 2026-10-10). A guest's filter is remembered in a cookie and a guest's page load writes nothing, so an anonymous caller cannot fill the `event` table. Cost: BA/PM interest among guests (PRD assumption #6) is not measured.
-- **Màn 2 with JavaScript off (phase 2):** the page keeps its loading skeleton, so with JavaScript switched off it shows the skeleton only; the role chips work before the script bundles load. Awaits the user's confirmation.
+- **Màn 2 with JavaScript off (phase 2):** the page keeps its loading skeleton, so with JavaScript switched off it shows the skeleton only; the role chips work before the script bundles load (user decision 2026-10-10: keep the skeleton).
 - **S2 content:** the PRD plans UX 2 topics × 3 personas. After this plan there are 4 UX topics with 1 + 2 + 2 + 2 personas.
 
 ## Phases
@@ -94,10 +94,7 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 
 ## Open questions
 
-- Role filter of a learner (phase 2 review, M1): should the account be the only source once the learner has accepted the notice (the cookie then serves guests only), or should the cookie fallback stay and be cleared at sign-out? Needed before phase 4.
-- Màn 2 with JavaScript off: keep the skeleton (built) or drop it so the page reads without scripts?
-
-The three questions of the first draft were settled in validation session 1 (below).
+None. The three questions of the first draft were settled in validation session 1, the two of phase 2 in session 3 (below).
 
 ## Validation Log
 
@@ -137,6 +134,15 @@ The three questions of the first draft were settled in validation session 1 (bel
 | 4 | Name `user.role_filter` in the data notice (Màn 0)? | No: an interface preference, not identifying data |
 
 Propagated to phase 1 (schema, queries), phase 4 (three outcomes on the reveal) and phase 5 (topic files).
+
+### Session 3 — 2026-10-10, after the phase 2 code review
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Source of a learner's role filter | The account only, once the learner has accepted the notice; the cookie is a guest's. At sign-in (or at Màn 0 for a new account) a guest's cookie is moved onto the account and removed. Sign-out removes the cookie |
+| 2 | Màn 2 with JavaScript off | Keep the skeleton |
+
+Propagated to phase 2 (requirement, architecture, notes). Phase 4 reads `user.roleFilter` and needs no change.
 
 ### Whole-Plan Consistency Sweep
 

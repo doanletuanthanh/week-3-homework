@@ -23,7 +23,8 @@ Màn 2 at `/library`: role chips, the grid of curated topics, the "Tạo chủ �
 - Functional:
   - Guests can read the page (FR-1).
   - Chips UX / BA / PM / Khác. None chosen = every topic. Pressing the chosen chip clears it. "Khác" shows every topic with the line "Chưa có chủ đề dành cho vai trò của bạn; đây là mọi chủ đề."
-  - The choice is remembered: a cookie for a guest, `user.role_filter` for an account; an account's stored value wins over the cookie. A signed-in learner's choice writes `role_filter_selected`; a guest's choice writes nothing to the database (user decision 2026-10-10).
+  - The choice is remembered: a cookie for a guest, `user.role_filter` for an account. Once a learner has accepted the notice the account is the only source: the cookie is neither read nor written for them. A guest's cookie is moved onto the account at sign-in (at Màn 0 for a new account) and removed; sign-out removes the cookie (user decision 2026-10-10).
+<!-- Updated: Validation Session 3 - account is the only source for a consenting learner; cookie adopted at sign-in, cleared at sign-out --> A signed-in learner's choice writes `role_filter_selected`; a guest's choice writes nothing to the database (user decision 2026-10-10).
 <!-- Updated: Validation Session 1 - guest filter choices are not recorded as events -->
   - First tile of the grid: "Không thấy chủ đề bạn cần?" with "Kiểm tra nhẹ" and the link to `/custom-topic`.
   - Topic card: role label, title, summary, "n persona", and signed-in "Đã luyện k/n". Links to `/topics/[id]`.
@@ -38,7 +39,7 @@ Màn 2 at `/library`: role chips, the grid of curated topics, the "Tạo chủ �
 
 ## Architecture
 
-- `src/app/library/page.tsx` (server component): reads the user, `require_published`, the remembered filter (`user.roleFilter ?? cookie il_role`), then `listLibraryTopics` and, signed-in, `listOwnCustomTopics`. Filtering by role is done in the page over the full list (four topics; no second query).
+- `src/app/library/page.tsx` (server component): reads the user, `require_published`, the remembered filter (`user.noticeAcked ? user.roleFilter : cookie il_role`), then `listLibraryTopics` and, signed-in, `listOwnCustomTopics`. Filtering by role is done in the page over the full list (four topics; no second query).
 - `src/server/actions.ts` → `selectRoleFilter(formData)`: validates the value against the closed set (anything else = clear), writes the cookie (`il_role`, `SameSite=Lax`, `HttpOnly`, 1 year, deleted when cleared), and when signed in calls `setRoleFilter` and records the event; then `revalidatePath("/library")` (not used anywhere in the repo yet: read its doc first). No redirect target is read from the request.
 - Components in `src/components/library/`: `role-chips.tsx` (one `<form>`, four submit buttons with `name="role"`), `topic-card.tsx` (reused by the home page in phase 4), `create-topic-card.tsx`, `custom-topic-card.tsx`.
 - Strings go in `src/strings/product-strings.ts` beside the existing ones, so `pnpm il check-strings` checks them (FR-36).
@@ -68,13 +69,13 @@ Màn 2 at `/library`: role chips, the grid of curated topics, the "Tạo chủ �
 
 ## Deviations and notes from the implementation
 
-- **JavaScript off.** The plan asked for a skeleton and for the page to work with JavaScript off. A Suspense boundary sends the content in a hidden block that an inline script swaps in, so the two exclude each other. Kept: the skeleton (PRD "Tải: chuẩn"). Guaranteed and tested instead: the chips work as plain form posts before the bundles load. To prefer JavaScript-off, remove the boundary in `src/app/library/page.tsx` (no skeleton then). Awaits the user's confirmation.
+- **JavaScript off.** The plan asked for a skeleton and for the page to work with JavaScript off. A Suspense boundary sends the content in a hidden block that an inline script swaps in, so the two exclude each other. Kept: the skeleton (PRD "Tải: chuẩn"). Guaranteed and tested instead: the chips work as plain form posts before the bundles load. Confirmed by the user 2026-10-10: keep the skeleton.
 - **A learner who has not accepted the data notice** is a guest for writes: cookie only, no column, no event (nothing is written before Màn 0).
 - **No avatar stack and no per-topic icon on the cards:** `PersonaAvatar` ignores `avatar_key` until phase 3, and a topic has no icon field. Cards link to `/topics/[id]`, which phase 3 builds: until then the link answers 404.
 - **"Đã luyện k/n"** is shown to every signed-in learner, 0/n included (PRD wording; the artboard shows it only where k > 0).
 - **Stale attempts** are closed before the learner's own topics are listed, as in "Buổi của tôi"; a due attempt is not resumed from here (its card opens Màn 11, which does).
 - **Strings:** 13 new product strings (`role_label.*`, `library.*`). `il publish` refuses every persona on a database until `pnpm il check-strings product` and `pnpm il approve-strings product` are run there (user task, 13 model calls).
-- **Open, from the code review (M1):** `user.roleFilter ?? cookie` cannot tell "never chose" from "cleared", and the cookie is also written for learners, so a filter cleared in one browser comes back from the cookie of another, and the cookie outlives sign-out. Built as this plan says; needs a decision before phase 4 reads `user.roleFilter`. Review: `plans/reports/code-reviewer-261010-1600-phase-02-library-screen-and-role-filter.md`.
+- **Settled, from the code review (M1):** `user.roleFilter ?? cookie` could not tell "never chose" from "cleared", so a filter cleared in one browser came back from the cookie of another. Now the account is the only source for a consenting learner (`adoptRememberedRoleFilter` in `src/server/role-filter.ts`, called by the OAuth callback and by `acceptDataNotice`; `signOut` removes the cookie). Carrying a guest's choice over writes no event. The callback path cannot be driven by Playwright (Google); the Màn 0 path, the precedence and sign-out are. Review: `plans/reports/code-reviewer-261010-1600-phase-02-library-screen-and-role-filter.md`.
 
 ## Risk assessment
 
