@@ -42,7 +42,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 7 | [Replay](./phase-07-replay.md) | In review: code and tests done; a full session with real models open | 6 | 2.5d |
 | 8 | [My sessions, account, system states](./phase-08-my-sessions-account-and-system-states.md) | In review: code and tests done; a real `seed-demo` run, the home screenshot and the auth tables of the real project open | 7 | 2.5d |
 | 9 | [Custom topics](./phase-09-custom-topics.md) | In review: redesigned 2026-10-09 (no reduced eval, resumable runs); code and tests done, 3 of 3 real topics pass; Vercel and the real database open | 4, 8 | 7d |
-| 10 | [Hardening, docs, launch checks](./phase-10-hardening-docs-and-launch-checks.md) | Pending | 9 | 2d |
+| 10 | [Hardening, docs, launch checks](./phase-10-hardening-docs-and-launch-checks.md) | In review: code, tests and docs done; the deploy, the measured latency, the phone demo and the auth tables of the real project open | 9 | 2d |
 
 ## Accepted deviations from the PRD
 
@@ -75,7 +75,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 - [ ] Automated tests cover PRD §12.2 items 3, 4, 5, 6, 9 (non-Console), 10, 11, 12, 13, 14.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` pass.
 - [ ] A learner can create a custom topic and play it, with quotas, budget and kill switch enforced.
-- [ ] `docs/setup.md` lets a new machine reach a running app with real keys.
+- [ ] `docs/setup.md` lets a new machine reach a running app with real keys. (Written 2026-10-09; not yet followed by a person on a clean machine.)
 
 ## Open questions
 
