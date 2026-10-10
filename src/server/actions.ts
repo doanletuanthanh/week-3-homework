@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
@@ -7,7 +8,9 @@ import { getSession, getVisibleScenario } from "@/db/repo/sessions";
 import { acknowledgeNotice } from "@/db/repo/users";
 import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { getUser, noticePath, requireAckedUser, requireUser } from "./auth";
+import { chooseRoleFilter } from "./library";
 import { resumePendingAction, storePendingAction } from "./pending-actions";
+import { rememberRoleFilter } from "./role-filter";
 import { safeNextPath } from "./safe-next";
 import { markSessionEntered } from "./session-entry";
 import { openSession, sessionEntryPath, sessionStartFailedPath, type OpenSessionResult } from "./sessions";
@@ -93,4 +96,14 @@ export async function acceptDataNotice(formData: FormData): Promise<void> {
 export async function resumeAfterSignIn(): Promise<void> {
   const user = await requireAckedUser(RESUME_PATH);
   redirect((await resumePendingAction(user)) ?? "/");
+}
+
+/**
+ * A chip of the library filter (Màn 2); the chosen chip sends an empty value, which clears it.
+ * The library is shown again with the choice applied: where to go is never read from the request.
+ */
+export async function selectRoleFilter(formData: FormData): Promise<void> {
+  const role = await chooseRoleFilter(getDb(), await getUser(), formData.get("role"));
+  await rememberRoleFilter(role);
+  revalidatePath("/library");
 }

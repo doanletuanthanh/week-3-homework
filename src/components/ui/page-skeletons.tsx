@@ -1,3 +1,4 @@
+import { LIBRARY } from "@/strings/product-strings";
 import { Skeleton, SkeletonStatus } from "./skeleton";
 
 /**
@@ -33,6 +34,40 @@ export function SessionListSkeleton() {
           </div>
         ))}
       </section>
+    </div>
+  );
+}
+
+/** Màn 2: the heading, the chips, then cards in the shape of the grid. */
+export function LibrarySkeleton() {
+  return (
+    <div>
+      <SkeletonStatus label="Đang tải Thư viện" />
+      <span className="eyebrow">Thư viện</span>
+      <h1 className="headline-lg">{LIBRARY.title}</h1>
+      <div className="lib-bar">
+        <div className="chips">
+          {[58, 56, 57, 70].map((width) => (
+            <Skeleton key={width} width={width} height={36} radius={999} />
+          ))}
+        </div>
+      </div>
+      <div className="lib-grid">
+        <Skeleton width="100%" height={92} radius={12} className="lib-create" />
+        {[70, 55, 62].map((width) => (
+          <div className="card tcard" key={width}>
+            <div className="tbody">
+              <Skeleton width={48} height={48} radius={12} />
+              <Skeleton width={`${width}%`} height={24} />
+              <Skeleton width="100%" height={14} />
+              <Skeleton width={`${width + 10}%`} height={14} />
+            </div>
+            <div className="tfoot">
+              <Skeleton width={72} height={14} />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

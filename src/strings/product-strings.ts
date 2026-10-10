@@ -1,4 +1,4 @@
-import type { AttemptStep, FailureCode, Focus } from "@/db/schema";
+import type { AttemptStep, FailureCode, Focus, RoleFilter } from "@/db/schema";
 import type { QuotaBlock } from "@/server/custom-quota";
 
 /**
@@ -176,6 +176,22 @@ export const FAILURE_REASON: Record<FailureCode, string> = {
 /** Màn 6 of a custom topic: the report button and what it says once pressed. */
 export const CUSTOM_REPORT = { button: "Kịch bản này có vấn đề", done: "Đã ghi nhận báo cáo của bạn." } as const;
 
+/** Màn 2: the chips of the role filter. A role's colour never stands without its label. */
+export const ROLE_LABEL: Record<RoleFilter, string> = { ux: "UX", ba: "BA", pm: "PM", other: "Khác" };
+
+/** Màn 2 · Thư viện: its heading, the lines of the filter, the card that leads to Màn 10, and the learner's own topics. */
+export const LIBRARY = {
+  title: "Chọn một chủ đề để luyện",
+  other_note: "Chưa có chủ đề dành cho vai trò của bạn; đây là mọi chủ đề.",
+  empty: "Chưa có chủ đề cho vai trò này.",
+  show_all: "Xem mọi chủ đề",
+  create_title: "Không thấy chủ đề bạn cần?",
+  create_body: "Gõ một chủ đề, InterviewLab tạo một nhân vật hư cấu để bạn luyện.",
+  create_action: "Tạo chủ đề của bạn",
+  own_title: "Chủ đề bạn tự tạo",
+  practised: "Đã luyện",
+} as const;
+
 export function fillTemplate(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/gu, (whole, key: string) => (key in values ? String(values[key]) : whole));
 }
@@ -212,5 +228,7 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(FAILED_EVAL).map(([name, text]) => ({ key: `failed_eval.${name}`, text })),
     ...Object.entries(FAILURE_REASON).map(([name, text]) => ({ key: `failure_reason.${name}`, text })),
     ...Object.entries(CUSTOM_REPORT).map(([name, text]) => ({ key: `custom_report.${name}`, text })),
+    ...Object.entries(ROLE_LABEL).map(([name, text]) => ({ key: `role_label.${name}`, text })),
+    ...Object.entries(LIBRARY).map(([name, text]) => ({ key: `library.${name}`, text })),
   ];
 }

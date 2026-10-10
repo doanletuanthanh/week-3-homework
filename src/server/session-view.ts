@@ -90,6 +90,13 @@ export function dayOf(date: Date): { day: string; month: string; year: string } 
   return { day: parts.day, month: parts.month, year: parts.year };
 }
 
+const clockParts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+/** The time of day on the learners' clock (UTC+7), as "hh:mm". */
+export function clockOf(date: Date): string {
+  return clockParts.format(date);
+}
+
 /**
  * The screen of a session's current state (PRD §7), from stored rows. Pure, so the props of every
  * state can be checked for sealed data without a browser.

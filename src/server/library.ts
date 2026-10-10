@@ -4,12 +4,17 @@ import {
   listDonePersonaIds,
   listPractisedPersonaIds,
   type CuratedPersonaRow,
+  type OwnCustomTopicRow,
   type PersonaSessionRow,
 } from "@/db/repo/library";
 import { listPlayedPersonas } from "@/db/repo/quota-tombstone";
+import { setRoleFilter } from "@/db/repo/users";
 import { TOPIC_ROLES, type RoleFilter, type TopicRole } from "@/db/schema";
+import type { AppUser } from "./auth";
+import { recordEvent } from "./events";
 import { quotaKeyOf } from "./quota";
 import { STATE_OF } from "./session-list";
+import { clockOf, dayOf } from "./session-view";
 
 /** One card of the library grid. */
 export type LibraryTopic = {
@@ -59,6 +64,52 @@ export function filterTopics(topics: LibraryTopic[], filter: RoleFilter | null):
 /** Reads a chip value from a form or a cookie; anything outside the closed set is no filter. */
 export function parseRoleFilter(value: unknown): RoleFilter | null {
   return value === "other" || TOPIC_ROLES.some((role) => role === value) ? (value as RoleFilter) : null;
+}
+
+/**
+ * A chip of the library filter was pressed (FR-50): returns the choice, read from the closed set.
+ * A learner's account remembers it and one event reports it, together or not at all. For a guest,
+ * and for a learner who has not accepted the data notice, nothing is written: the browser alone
+ * remembers the choice.
+ */
+export async function chooseRoleFilter(db: Executor, user: AppUser | null, value: unknown): Promise<RoleFilter | null> {
+  const role = parseRoleFilter(value);
+  if (user?.noticeAcked) {
+    await db.transaction(async (tx) => {
+      await setRoleFilter(tx, user.id, role);
+      await recordEvent(tx, { userId: user.id, sessionId: null, isDemo: user.isDemo }, { name: "role_filter_selected", props: { role } });
+    });
+  }
+  return role;
+}
+
+/** One card of "Chủ đề bạn tự tạo" (Màn 2). */
+export type OwnTopicCard = {
+  topicId: string;
+  /** The topic as the learner typed it. */
+  title: string;
+  /** When it was asked for, as "dd/mm · hh:mm". */
+  created: string;
+  /** What the card says (PRD §7): being prepared, not passed, or a topic that can be played. */
+  state: "preparing" | "failed_eval" | "playable";
+  /** For a playable topic: whether its one persona has a finished session. */
+  done: boolean;
+  /** Màn 11 while there is nothing to play, the topic's own page once there is. */
+  href: string;
+};
+
+export function toOwnTopicCard(row: OwnCustomTopicRow): OwnTopicCard {
+  const listed = STATE_OF[row.status];
+  const state = listed === "preparing" || listed === "failed_eval" ? listed : "playable";
+  const { day, month } = dayOf(row.createdAt);
+  return {
+    topicId: row.topicId,
+    title: row.title,
+    created: `${day}/${month} · ${clockOf(row.createdAt)}`,
+    state,
+    done: listed === "done",
+    href: state === "playable" ? `/topics/${row.topicId}` : `/sessions/${row.sessionId}`,
+  };
 }
 
 /** What the button of a persona card does (PRD §7). */

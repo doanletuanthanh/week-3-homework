@@ -7,10 +7,10 @@ import { getDb } from "@/db/client";
 import { getTopicWithPersonas, listCuratedPersonas, listOwnCustomTopics, listSessionsForPersonas } from "@/db/repo/library";
 import { addPlayedPersonas } from "@/db/repo/quota-tombstone";
 import { setRoleFilter } from "@/db/repo/users";
-import { scenarios, sessions } from "@/db/schema";
+import { events, scenarios, sessions, users } from "@/db/schema";
 import type { Scenario, TopicFile } from "@/scenario/schema";
 import { resolveUser } from "@/server/auth";
-import { filterTopics, listLibraryTopics, personaButton, pickNextPersona } from "@/server/library";
+import { chooseRoleFilter, filterTopics, listLibraryTopics, personaButton, pickNextPersona } from "@/server/library";
 import { quotaKeyOf } from "@/server/quota";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { INVALID, attempt, attemptRow } from "../helpers/custom-db";
@@ -334,5 +334,78 @@ describe("the role filter on the account", () => {
 
     await setRoleFilter(db(), linh.id, null);
     expect((await resolveUser(db(), claims, lists))?.roleFilter).toBeNull();
+  });
+});
+
+describe("chooseRoleFilter (FR-50)", () => {
+  const filterEvents = () => db().select().from(events).where(eq(events.name, "role_filter_selected")).orderBy(events.at);
+  const storedFilter = async (userId: string) => (await db().select({ roleFilter: users.roleFilter }).from(users).where(eq(users.id, userId)))[0].roleFilter;
+  const consenting = async (email: string, lists?: Parameters<typeof createLearner>[1]) => ({ ...(await createLearner(email, lists)), noticeAcked: true });
+
+  it("stores a learner's choice on the account and writes one event for each press", async () => {
+    const linh = await consenting("linh@example.com");
+
+    expect(await chooseRoleFilter(db(), linh, "ba")).toBe("ba");
+    expect(await storedFilter(linh.id)).toBe("ba");
+    expect(await chooseRoleFilter(db(), linh, "other")).toBe("other");
+    expect(await storedFilter(linh.id)).toBe("other");
+
+    expect((await filterEvents()).map((event) => [event.userId, event.sessionId, event.props])).toEqual([
+      [linh.id, null, { role: "ba" }],
+      [linh.id, null, { role: "other" }],
+    ]);
+  });
+
+  it("clears the filter for the chosen chip's empty value and for anything outside the four chips", async () => {
+    const linh = await consenting("linh@example.com");
+
+    for (const value of ["", "admin", "UX", " ux", null, undefined, 3, { role: "ux" }]) {
+      await setRoleFilter(db(), linh.id, "ux");
+      expect(await chooseRoleFilter(db(), linh, value), String(value)).toBeNull();
+      expect(await storedFilter(linh.id), String(value)).toBeNull();
+    }
+    expect((await filterEvents()).at(-1)?.props).toEqual({ role: null });
+  });
+
+  it("writes nothing for a guest: the choice comes back for the browser to remember", async () => {
+    const linh = await createLearner("linh@example.com");
+    const before = await db().select().from(events);
+
+    expect(await chooseRoleFilter(db(), null, "pm")).toBe("pm");
+    expect(await chooseRoleFilter(db(), null, "nothing")).toBeNull();
+
+    expect(await db().select().from(events)).toEqual(before);
+    expect(await storedFilter(linh.id)).toBeNull();
+  });
+
+  it("writes nothing for a learner who has not accepted the data notice", async () => {
+    const linh = await createLearner("linh@example.com");
+    expect(linh.noticeAcked).toBe(false);
+
+    expect(await chooseRoleFilter(db(), linh, "pm")).toBe("pm");
+
+    expect(await storedFilter(linh.id)).toBeNull();
+    expect(await filterEvents()).toEqual([]);
+  });
+
+  it("remembers a demo account's choice and leaves it out of the events", async () => {
+    const demo = await consenting("demo@example.com", { ADMIN_EMAILS: [], DEMO_ACCOUNT_EMAILS: ["demo@example.com"] });
+    expect(demo.isDemo).toBe(true);
+
+    expect(await chooseRoleFilter(db(), demo, "ux")).toBe("ux");
+
+    expect(await storedFilter(demo.id)).toBe("ux");
+    expect(await filterEvents()).toEqual([]);
+  });
+
+  it("only touches the learner who chose", async () => {
+    const linh = await consenting("linh@example.com");
+    const minh = await consenting("minh@example.com");
+    await chooseRoleFilter(db(), minh, "ba");
+
+    await chooseRoleFilter(db(), linh, "pm");
+
+    expect(await storedFilter(minh.id)).toBe("ba");
+    expect(await storedFilter(linh.id)).toBe("pm");
   });
 });

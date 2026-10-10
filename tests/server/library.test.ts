@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SESSION_STATUSES } from "@/db/schema";
 import { topicSchema } from "@/scenario/schema";
-import { filterTopics, groupByTopic, parseRoleFilter, personaButton, type LibraryTopic } from "@/server/library";
+import { filterTopics, groupByTopic, parseRoleFilter, personaButton, toOwnTopicCard, type LibraryTopic } from "@/server/library";
+import { clockOf } from "@/server/session-view";
+import { LIBRARY, ROLE_LABEL, productStrings } from "@/strings/product-strings";
 
 const persona = (personaId: string, topicId: string, topicRole: "ux" | "ba" | "pm" | null = "ux") => ({
   personaId,
@@ -107,5 +109,70 @@ describe("topic file", () => {
   it("is what the curated topic on disk passes", () => {
     const file = JSON.parse(readFileSync("scenarios/ux-chi-tieu/topic.json", "utf8"));
     expect(topicSchema.parse(file)).toMatchObject({ id: "ux-chi-tieu", role: "ux", display_order: 10 });
+  });
+});
+
+describe("toOwnTopicCard (Màn 2, PRD §7)", () => {
+  const row = (status: (typeof SESSION_STATUSES)[number]) => ({
+    topicId: "topic-1",
+    title: "app đặt lịch cắt tóc ở tiệm nhỏ",
+    // 14:40 UTC is 21:40 on the learners' clock.
+    createdAt: new Date("2026-10-02T14:40:00Z"),
+    sessionId: "session-1",
+    status,
+  });
+
+  it("opens Màn 11 while the topic is being prepared or did not pass", () => {
+    expect(toOwnTopicCard(row("generating"))).toMatchObject({ state: "preparing", href: "/sessions/session-1", done: false });
+    expect(toOwnTopicCard(row("failed_eval"))).toMatchObject({ state: "failed_eval", href: "/sessions/session-1", done: false });
+  });
+
+  it("opens the topic's own page once it can be played, and is done only for a finished session", () => {
+    for (const status of ["interviewing", "revealed", "replaying"] as const) {
+      expect(toOwnTopicCard(row(status)), status).toMatchObject({ state: "playable", href: "/topics/topic-1", done: false });
+    }
+    expect(toOwnTopicCard(row("done"))).toMatchObject({ state: "playable", href: "/topics/topic-1", done: true });
+  });
+
+  it("carries the topic as typed and when it was asked for, on the learners' clock", () => {
+    expect(toOwnTopicCard(row("generating"))).toEqual({
+      topicId: "topic-1",
+      title: "app đặt lịch cắt tóc ở tiệm nhỏ",
+      created: "02/10 · 21:40",
+      state: "preparing",
+      done: false,
+      href: "/sessions/session-1",
+    });
+  });
+
+  it("puts a request made late in the evening UTC on the next day", () => {
+    expect(toOwnTopicCard({ ...row("done"), createdAt: new Date("2026-12-31T17:05:00Z") }).created).toBe("01/01 · 00:05");
+  });
+});
+
+describe("clockOf", () => {
+  it("is the time of day at UTC+7, two digits each, midnight as 00", () => {
+    expect(clockOf(new Date("2026-10-02T02:03:00Z"))).toBe("09:03");
+    expect(clockOf(new Date("2026-10-02T17:00:00Z"))).toBe("00:00");
+    expect(clockOf(new Date("2026-10-02T16:59:59Z"))).toBe("23:59");
+  });
+});
+
+describe("the strings of the library", () => {
+  it("are all in the fixed-string check", () => {
+    const checked = new Map(productStrings().map((entry) => [entry.key, entry.text]));
+    for (const [name, text] of Object.entries(LIBRARY)) expect(checked.get(`library.${name}`), name).toBe(text);
+    for (const [name, text] of Object.entries(ROLE_LABEL)) expect(checked.get(`role_label.${name}`), name).toBe(text);
+  });
+
+  it("word the 'Khác' line and the empty state as the PRD does", () => {
+    expect(LIBRARY.other_note).toBe("Chưa có chủ đề dành cho vai trò của bạn; đây là mọi chủ đề.");
+    expect(LIBRARY.empty).toBe("Chưa có chủ đề cho vai trò này.");
+    expect(ROLE_LABEL).toEqual({ ux: "UX", ba: "BA", pm: "PM", other: "Khác" });
+  });
+
+  it("gives every string its own key", () => {
+    const keys = productStrings().map((entry) => entry.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
