@@ -5,10 +5,25 @@ import type { AppUser } from "@/server/auth";
 import { resolveUser } from "@/server/auth";
 import { openSession } from "@/server/sessions";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
+import { curatedPersonas } from "./curated-scenarios";
 import { LOCAL_DATABASE_URL } from "./local-stack";
 
 export const PERSONA_ID = "chi-thu";
 export const PERSONA_FILE = "scenarios/ux-chi-tieu/chi-thu.json";
+
+/**
+ * Imports every other persona file under `scenarios/`, the way the operator imports the library,
+ * and returns their ids. For the tests about the whole library; the rest keep the one persona.
+ */
+export async function importCuratedLibrary(): Promise<string[]> {
+  if (process.env.DATABASE_URL !== LOCAL_DATABASE_URL) throw new Error("importCuratedLibrary only runs against the local Supabase stack");
+  const others = curatedPersonas().filter((persona) => persona.file !== PERSONA_FILE);
+  for (const { file } of others) {
+    const imported = await importScenarioFile(getDb(), file);
+    if (!imported.ok) throw new Error(`${file} does not pass validate: ${JSON.stringify(imported.violations[0])}`);
+  }
+  return others.map((persona) => persona.scenario.persona_id);
+}
 
 /**
  * Empties every app table and the sign-in accounts, and imports the one persona from its file, so
