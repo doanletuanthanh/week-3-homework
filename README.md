@@ -1,6 +1,6 @@
 # InterviewLab
 
-A Vietnamese web app for practising user interviews. A learner interviews an AI persona that holds 8–12 things it will only say when asked well, takes notes, guesses how much it was told, then sees what the persona told (KHAI THÁC) and what the notes caught (NHẬN BIẾT), replays the moment it missed, and takes home a habit sheet. A learner can also have a persona generated for a topic of their own.
+A Vietnamese web app for practising user interviews. A learner interviews an AI persona that holds 8–12 things it will only say when asked well, takes notes, guesses how much it was told, then sees what the persona told (KHAI THÁC) and what the notes caught (NHẬN BIẾT), replays the moment it missed, and takes home a habit sheet. Personas are grouped into topics in a library with a role filter (UX, BA, PM). A learner can also have a persona generated for a topic of their own.
 
 Next.js 16 (App Router) on Vercel, Supabase Postgres and Auth (Google sign-in), LangGraph JS with Gemini and OpenAI models, LangSmith tracing. The reasons for each choice are in [docs/tech-stack.md](docs/tech-stack.md).
 
@@ -38,7 +38,7 @@ The three test commands need no key and spend nothing. To run the app with real 
 | `src/server` | Request-level services: sessions, turns, reveal, replay, custom topics, cost cap |
 | `src/db` | Drizzle schema and the repository layer; `drizzle/` holds the migrations |
 | `cli` | The operator CLI |
-| `scenarios` | Persona files; `evalsets` holds the judgement test sets and the demo transcript |
+| `scenarios` | One folder per library topic: `topic.json` and its persona files; `evalsets` holds the judgement test sets and the demo transcript |
 | `tests` | `*.test.ts(x)` unit, `*.int.test.ts` integration, `e2e/*.spec.ts` Playwright |
 
 ## Docs

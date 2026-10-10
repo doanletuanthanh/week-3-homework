@@ -39,20 +39,27 @@ async function watchCsp(context: BrowserContext): Promise<string[]> {
 const nonceOf = (policy: string | undefined) => policy?.match(/'nonce-([A-Za-z0-9+/=]+)'/u)?.[1];
 
 test.describe("security headers", () => {
-  test("every response carries them: a page, a redirect, an API answer, a page that is not there", async ({ page, context }) => {
+  test("every response carries them: a page, the library and a topic, a redirect, an API answer, a page that is not there", async ({ page, context }) => {
     await signInAndAccept(page, context, "headers");
     const guest = await page.context().browser()!.newContext();
 
     const responses = [
       await guest.request.get("/"),
       await guest.request.get("/sign-in"),
+      await guest.request.get("/library"),
+      await guest.request.get("/topics/ux-chi-tieu"),
+      // What a client navigation asks for, and a topic that is not there.
+      await guest.request.get("/library", { headers: { RSC: "1" } }),
+      await guest.request.get("/topics/khong-co"),
       await guest.request.get("/my-sessions", { maxRedirects: 0 }),
       await guest.request.get("/api/sessions"),
       await guest.request.get("/no-such-page"),
       await page.request.get("/my-sessions"),
+      await page.request.get("/library"),
+      await page.request.get("/topics/ux-chi-tieu"),
       await page.request.get("/api/sessions"),
     ];
-    expect(responses.map((response) => response.status())).toEqual([200, 200, 307, 401, 404, 200, 200]);
+    expect(responses.map((response) => response.status())).toEqual([200, 200, 200, 200, 200, 404, 307, 401, 404, 200, 200, 200, 200]);
 
     for (const response of responses) {
       const headers = response.headers();
@@ -124,7 +131,19 @@ test.describe("security headers", () => {
 
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await page.goto("/prep/chi-thu");
+    // Into the library and down to a persona by the links, so the pages come as a client navigation brings them.
+    await page.locator(".hero").getByRole("link", { name: "Vào thư viện" }).click();
+    await expect(page).toHaveURL("/library");
+    // The role filter is a form posted to the page itself.
+    const ux = page.getByRole("group", { name: "Lọc theo vai trò" }).getByRole("button", { name: "UX", exact: true });
+    await ux.click();
+    await expect(ux).toHaveAttribute("aria-pressed", "true");
+    await page.locator('a.tcard[href="/topics/ux-chi-tieu"]').click();
+    await expect(page).toHaveURL("/topics/ux-chi-tieu");
+    await expect(page.getByRole("heading", { level: 1, name: "Chi tiêu hằng ngày của người trẻ đi làm" })).toBeVisible();
+    await page.getByRole("link", { name: "Bắt đầu", exact: true }).click();
+    await expect(page).toHaveURL("/prep/chi-thu");
+    await page.goto("/topics/khong-co");
     await page.goto("/sign-in");
     await expect(page.getByRole("button", { name: "Đăng nhập với Google" })).toBeVisible();
     // The three typefaces are files of this origin.
@@ -148,6 +167,12 @@ test.describe("security headers", () => {
     await expect(page.getByRole("alertdialog", { name: DELETE_ACCOUNT.title })).toBeVisible();
     await page.goto("/custom-topic");
     await expect(page.getByRole("heading", { level: 1, name: "Tạo chủ đề của bạn" })).toBeVisible();
+    // The library and the topic as a learner has them: the progress, and the card that follows the session.
+    await page.goto("/library");
+    await expect(page.locator('a.tcard[href="/topics/ux-chi-tieu"] .tcard-done')).toBeVisible();
+    await page.locator('a.tcard[href="/topics/ux-chi-tieu"]').click();
+    await expect(page.locator(".topic-done")).toBeVisible();
+    await expect(page.locator("article.pcard .actionbar a").first()).toBeVisible();
     await page.goto("/no-such-page");
 
     expect(violations).toEqual([]);

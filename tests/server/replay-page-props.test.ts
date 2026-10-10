@@ -100,7 +100,7 @@ function replayOf(branch: Partial<BranchRow>, specs: TurnSpec[] = [], open: stri
 }
 
 const view = (status: SessionRow["status"], replay: LoadedReplay | null) =>
-  buildSessionView({ session: sessionOf(status), scenario, topicTitle: "Chi tiêu hằng ngày", turns: mainTurns, waitlisted: false, replay });
+  buildSessionView({ session: sessionOf(status), scenario, topicTitle: "Chi tiêu hằng ngày", turns: mainTurns, waitlisted: false, next: { kind: "all_practised" }, replay });
 
 const targetStrings = [target.content, target.sample_question, target.topic_tag, target.hook_line, target.do_not_assert.text, `"${target.id}"`];
 const told = (...ids: string[]): Verdict => ({ hook_dropped: false, disclosed_item_ids: ids, violations: [] });

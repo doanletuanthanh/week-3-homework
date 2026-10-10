@@ -68,12 +68,12 @@ describe("import: every file under scenarios/ on a clean database", () => {
     }
   });
 
-  it.each(NEW.map((persona) => [persona.file] as const))("validate passes %s against the tags its topic sibling holds in the database", async (file) => {
+  it.each(NEW.map((persona) => [persona.file, persona.scenario.items.length] as const))("validate passes %s against the tags its topic sibling holds in the database", async (file, items) => {
     const { io, out, err } = capture();
 
     expect(await runValidate([file], io, (topicId, personaId) => listOtherPersonaTags(db(), topicId, personaId))).toBe(0);
     expect(err).toEqual([]);
-    expect(out[0]).toMatch(/^OK .+: [a-z-]+, 10 item, 1[5-6] fact bề mặt\.$/u);
+    expect(out[0]).toMatch(new RegExp(`^OK .+: [a-z-]+, ${items} item, \\d+ fact bề mặt\\.$`, "u"));
   });
 
   it("gives a second import of a file version 2 of the same persona, not a second persona", async () => {
@@ -114,7 +114,8 @@ describe("the library with the curated content in it", () => {
     expect(found?.topic).toMatchObject({ id: topicId, kind: "curated", role: "ux" });
     expect(found!.personas.map((persona) => persona.personaId).sort()).toEqual(expected.map((persona) => persona.scenario.persona_id).sort());
     for (const persona of found!.personas) {
-      expect(toPersonaCardView(persona, null)).toMatchObject({ button: "start", itemCount: 10, avatarKey: null });
+      const file = expected.find((entry) => entry.scenario.persona_id === persona.personaId)!;
+      expect(toPersonaCardView(persona, null)).toMatchObject({ button: "start", itemCount: file.scenario.items.length, avatarKey: null });
     }
   });
 

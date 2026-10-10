@@ -8,9 +8,18 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 test.describe("layout at this viewport", () => {
-  test("home, a topic, prep and sign-in fit the viewport", async ({ page }) => {
-    for (const path of ["/", "/topics/ux-chi-tieu", "/topics/khong-co", "/prep/chi-thu", "/sign-in"]) {
+  test("home, the library, a topic, prep and sign-in fit the viewport", async ({ page }) => {
+    for (const path of ["/", "/library", "/topics/ux-chi-tieu", "/topics/khong-co", "/prep/chi-thu", "/sign-in"]) {
       await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectNoHorizontalScroll(page);
+    }
+    // The library with a role chosen: its empty state, then every topic under the line of "Khác".
+    await page.goto("/library");
+    for (const role of ["BA", "Khác"]) {
+      const chip = page.getByRole("group", { name: "Lọc theo vai trò" }).getByRole("button", { name: role, exact: true });
+      await chip.click();
+      await expect(chip).toHaveAttribute("aria-pressed", "true");
       await expectNoHorizontalScroll(page);
     }
     await page.goto("/prep/chi-thu");
@@ -19,6 +28,39 @@ test.describe("layout at this viewport", () => {
     await start.scrollIntoViewIfNeeded();
     await expect(start).toBeInViewport({ ratio: 1 });
   });
+
+  for (const path of ["/", "/library", "/topics/ux-chi-tieu"]) {
+    test(`${path} has one h1, and Tab reaches every link and button in page order under a visible focus ring`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator("main a[href], main button").first()).toBeVisible();
+
+      /** What the keyboard can stop on, in the order of the page. Kept on the page to tell where the focus is. */
+      const stops = await page.evaluate(() => {
+        const found = [...document.querySelectorAll<HTMLElement>("a[href], button, summary, input, select, textarea, [tabindex]")].filter(
+          (element) => element.tabIndex >= 0 && !(element as HTMLButtonElement).disabled && element.checkVisibility({ visibilityProperty: true }),
+        );
+        (window as unknown as { __stops: HTMLElement[] }).__stops = found;
+        return found.map((element, index) => `${index} ${element.tagName.toLowerCase()} ${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().replace(/\s+/gu, " ").slice(0, 40)}`);
+      });
+      expect(stops.length).toBeGreaterThan(3);
+
+      const visited: string[] = [];
+      const unmarked: string[] = [];
+      for (const stop of stops) {
+        await page.keyboard.press("Tab");
+        const at = await page.evaluate(() => {
+          const active = document.activeElement as HTMLElement;
+          const style = getComputedStyle(active);
+          return { index: (window as unknown as { __stops: HTMLElement[] }).__stops.indexOf(active), ring: style.outlineStyle !== "none" && parseFloat(style.outlineWidth) > 0 };
+        });
+        visited.push(stops[at.index] ?? "somewhere else");
+        if (!at.ring) unmarked.push(stop);
+      }
+      expect(visited).toEqual(stops);
+      expect(unmarked).toEqual([]);
+    });
+  }
 
   test("the custom-topic form fits the viewport, with the information block under the form", async ({ page, context }) => {
     await signInAndAccept(page, context, "layout-custom", "/custom-topic");

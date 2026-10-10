@@ -52,7 +52,7 @@ const generated = { ...scenario, origin: "generated" } as ScenarioRow;
 
 const ended = { endedAt: new Date(), canvasFrozenAt: new Date() };
 const ready = { ...ended, guess: 4, revealedAt: new Date(), revealJson: reveal, revealReadyAt: new Date(), revealParts: fullParts(basis) };
-const view = (session: SessionRow) => buildSessionView({ session, scenario, topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm", turns, waitlisted: false });
+const view = (session: SessionRow) => buildSessionView({ session, scenario, topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm", turns, waitlisted: false, next: { kind: "all_practised" } });
 const props = (session: SessionRow) => JSON.stringify(view(session));
 
 const everySealedString = chiThu.items.flatMap((item) => [item.content, item.sample_question, item.topic_tag, item.hook_line, item.do_not_assert.text, `"${item.id}"`]);
@@ -178,7 +178,7 @@ describe("the serialised props of the session page", () => {
 });
 
 describe("a session on a generated scenario (FR-56)", () => {
-  const customView = (session: SessionRow) => buildSessionView({ session, scenario: generated, topicTitle: "app hẹn hò trong khu dân cư đang sống", turns, waitlisted: false });
+  const customView = (session: SessionRow) => buildSessionView({ session, scenario: generated, topicTitle: "app hẹn hò trong khu dân cư đang sống", turns, waitlisted: false, next: { kind: "all_practised" } });
 
   it("marks every screen as custom, so each one carries the labels", () => {
     const states: Partial<SessionRow>[] = [
@@ -216,8 +216,17 @@ describe("the next step of a result (FR-31)", () => {
     expect(withNext(sessionOf({ ...ready, status }))).toMatchObject({ screen: "reveal", next });
   });
 
-  it("a result built without one says every persona was practised, as before there was a library", () => {
-    expect(view(sessionOf({ ...ready, status: "done" }))).toMatchObject({ screen: "reveal", next: { kind: "all_practised" } });
+  it("a result is refused without one: nothing is said of what the learner practised unless someone looked", () => {
+    const withoutNext = (session: SessionRow) => buildSessionView({ session, scenario, topicTitle: "Chi tiêu hằng ngày", turns, waitlisted: false, next: null });
+
+    for (const status of ["revealed", "replaying", "done"] as const) expect(() => withoutNext(sessionOf({ ...ready, status })), status).toThrow("A result needs the next step");
+  });
+
+  it("a screen with no result is built without one", () => {
+    const withoutNext = (session: SessionRow) => buildSessionView({ session, scenario, topicTitle: "Chi tiêu hằng ngày", turns, waitlisted: false, next: null });
+
+    expect(withoutNext(sessionOf({})).screen).toBe("interview");
+    expect(withoutNext(sessionOf({ ...ready, status: "withdrawn" })).screen).toBe("withdrawn");
   });
 
   it("no other screen carries a suggestion", () => {

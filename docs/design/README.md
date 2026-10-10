@@ -29,3 +29,5 @@ Colour meaning (always paired with a text label): green secondary = told · indi
 | 6.0 Luật chung (tải, lỗi, header) | `SystemStates` |
 
 Not copied (out of the current build scope): `Method` (Màn 12) and Review Console `C1`–`C10`.
+
+The library screens are built: Màn 2 is the route `/library` and Màn 2b is `/topics/[topicId]`; a persona's Màn 3 is `/prep/[personaId]`.

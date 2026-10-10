@@ -134,7 +134,7 @@ async function SessionScreen({ id }: { id: string }) {
           roleFilter: user.roleFilter,
           requirePublished: await getConfig(db, "require_published"),
         })
-      : undefined,
+      : null,
     replay: session.status === "replaying" || session.status === "done" ? await loadReplay(db, id) : null,
   });
 

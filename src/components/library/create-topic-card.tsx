@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PlusIcon, SparkIcon } from "@/components/icons";
-import { CUSTOM_LABEL, LIBRARY } from "@/strings/product-strings";
+import { LIBRARY } from "@/strings/product-strings";
 
 /** The first tile of the library grid: the way to a topic of the learner's own (Màn 10). */
 export function CreateTopicCard() {
@@ -13,7 +13,6 @@ export function CreateTopicCard() {
         <h2 className="headline-sm">{LIBRARY.create_title}</h2>
         <p className="body-md c-variant">{LIBRARY.create_body}</p>
       </div>
-      <span className="pill pill-outline">{CUSTOM_LABEL.light_check}</span>
       <Link className="btn btn-primary btn-md" href="/custom-topic">
         <PlusIcon size={16} />
         {LIBRARY.create_action}

@@ -20,6 +20,16 @@ The authority for options is each command's own usage line in `cli/commands/`. T
 
 `import` reads `topic.json` from the same folder and writes nothing unless the file passes `validate`. A draft is playable while `require_published` is off.
 
+### Topics and the library
+
+A topic is a folder under `scenarios/` with a `topic.json` and one file per persona. `import` takes one persona file at a time and creates the topic, or overwrites it, from the `topic.json` beside that file.
+
+- `topic.json` needs all of `id`, `title`, `summary`, `role` and `display_order`; `import` refuses the file without one of them. `role` is `ux`, `ba` or `pm` and is the chip the library files the topic under. `display_order` is a whole number from 0: the library and the home page list topics from the lowest up (the four on disk use 10, 20, 30, 40).
+- A scenario's `topic_id` must be the `id` of that `topic.json`.
+- Two personas of one topic may not share a `topic_tag`. `validate` checks a file against the personas of its topic that are already in the database, so import the first persona before validating the second.
+- Inside a topic, personas are listed by the time of their first import. Import them in the order they should appear.
+- The library lists a topic while at least one of its personas can be played. A topic leaves it when every persona is pulled or, with `require_published` on, when none is published.
+
 ## Evaluate and publish
 
 | Task | Command |
@@ -80,7 +90,7 @@ pnpm il config set <key> <value>
 
 | Key | Default | Meaning |
 |---|---|---|
-| `require_published` | `false` | Only published persona versions can be played (FR-35) |
+| `require_published` | `false` | Only published persona versions can be played (FR-35). Turned on, the library, the topic page, the home page's library section and the next-persona suggestion show published personas only: with none published the library lists no topic and keeps the way to a topic of one's own |
 | `session_daily_cap_usd` | `5` | LLM spend of sessions per day (UTC+7). At the cap, new sessions are refused |
 | `session_demo_reserve_usd` | `1` | The part of the cap kept for demo accounts |
 | `custom_path_enabled` | `true` | The switch of "Tạo chủ đề của bạn" (FR-56) |
@@ -101,7 +111,7 @@ A change takes effect on the next request. The defaults are placeholders for a s
   ```
 
 - **Custom topics.** A separate daily budget. An attempt reserves `generation_reserve_usd` before it starts and gives back what it did not spend. When the budget cannot hold another reserve, new attempts are refused and sessions are not affected.
-- **Evaluation.** A quick run of chị Thu cost about 0.67 USD. A full run is 2,000 or more calls, roughly 20–40 USD.
+- **Evaluation.** A quick run of one persona cost 0.66 to 0.75 USD. A full run is 2,000 or more calls, roughly 20–40 USD.
 - **Tracing.** The LangSmith free plan holds 5,000 traces a month and a session is up to about 70.
 
 ## Custom topics

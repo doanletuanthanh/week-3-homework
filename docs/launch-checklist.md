@@ -1,6 +1,6 @@
 # Launch checklist
 
-What stands between this build and real learners. Status as of 2026-10-09. Sources: PRD §12.2 (launch gates) and §12.4 (launch checklist); the plan `plans/261003-1818-interviewlab-bootstrap-s1-and-custom-topics/`.
+What stands between this build and real learners. Status as of 2026-10-10. Sources: PRD §12.2 (launch gates) and §12.4 (launch checklist); the plans `plans/261003-1818-interviewlab-bootstrap-s1-and-custom-topics/` and `plans/261010-1200-library-topic-layer-and-app-topics/`.
 
 Status words: **Done** (built and covered by automated tests that pass locally), **Measure** (the tool exists, the number does not), **User** (needs a person, an account or a decision the build cannot supply), **Out** (not in this slice).
 
@@ -15,7 +15,7 @@ Nothing below has been done: the app has not been deployed by this build. Do the
 | D3 | Turn latency p95 ≤ 6 s (NFR-2) | `pnpm il measure-latency`, see `docs/operations.md` | not measured |
 | D4 | Reveal ready ≤ 15 s after "Xem kết quả" (NFR-2) | Same command, several runs for a p95 | not measured |
 | D5 | Custom-topic path p95 ≤ 2 min (NFR-2) | Ten sample topics. Locally: 3 of 3 real topics passed (plan, phase 9) | not measured |
-| D6 | A real model session end to end | Home → prep → sign-in and notice → interview with notes → guess → result → replay → "Mang về" and print → "Buổi của tôi" (§12.2 item 1 without the library) | not run |
+| D6 | A real model session end to end | Home → library → topic → prep → sign-in and notice → interview with notes → guess → result → replay → "Mang về" and print → "Luyện tiếp với …" to the next persona → "Buổi của tôi" (§12.2 item 1). In the library, press a role chip and reload: the choice is kept | not run |
 | D7 | The same on a phone | iOS Safari and Android Chrome, for the notes sheet | not run |
 | D8 | What the auth server keeps of a deleted account | The queries below | not run |
 | D9 | Trace reaches LangSmith with the session id | Open the project after D6 | not run |
@@ -66,8 +66,8 @@ On the local stack `deleteAccount` removes the `auth.users` row with its identit
 
 | # | Gate | Status | Evidence or what is missing |
 |---|---|---|---|
-| 1 | End-to-end demo on the deployed URL | User | D6, D7. The same path passes locally against the model stub (`tests/e2e/`). Library screens are out of this slice |
-| 2 | Each curated persona passes `validate` and the full evaluation | User | `validate` passes for chị Thu. Quick runs recorded (plan, phase 4): the good run opens 36 % of the items against the 50–75 % target. No full run, no second adjudicator yet |
+| 1 | End-to-end demo on the deployed URL | User | D6, D7. The same path passes locally against the model stub, through the library and a topic (`tests/e2e/library-path.spec.ts`, `tests/e2e/guest.spec.ts`) |
+| 2 | Each curated persona passes `validate` and the full evaluation | User | 4 curated topics, 7 personas, all drafts; `validate` passes for each (`tests/scenario/curated-scenarios.test.ts`). None has a full run, and there is no second adjudicator yet. One quick run each, against the 50–75 % target for a good run: `chi-thu` 36 % (bootstrap plan, phase 4); `chi-hanh` 50 %, `anh-tung` 60 %, `co-lan` 70 % are inside it; `anh-khoa` 30 %, `chi-my` 30 %, `ban-phuc` 20 % open too little and need their hooks reworked first. Five leak flags of those runs are not ruled on. The content of the six new personas has no recorded approval (library plan, phase 5) |
 | 3 | Context isolation | Done | `tests/engine/contexts-isolation.test.ts`, `tests/eval/attacks-and-isolation.test.ts`, `tests/server/replay.int.test.ts` |
 | 4 | Unlock gate | Done | `tests/engine/unlock.test.ts`, `tests/engine/plan-turn-adversarial.test.ts` |
 | 5 | Replay | Done | `tests/engine/select-replay.test.ts`, `tests/server/replay.int.test.ts`, `tests/server/sealed-payloads.int.test.ts`, `tests/e2e/replay.spec.ts` |
@@ -75,13 +75,13 @@ On the local stack `deleteAccount` removes the `auth.users` row with its identit
 | 7 | Judgement gates (NFR-7) | User | The harness and starter sets of 8–18 lines exist. Each gate needs a hand-labelled set of 100 or more |
 | 8 | Latency | Measure | D3, D4, D5 |
 | 9 | Who can see and delete | Done, D8 open | `tests/server/access-isolation.int.test.ts`, `tests/e2e/access-isolation.spec.ts`, `tests/server/delete-account.int.test.ts`. Console routes are out of this slice |
-| 10 | "Buổi của tôi" and navigation | Done | `tests/e2e/session-states.spec.ts`, `tests/e2e/my-sessions.spec.ts` |
+| 10 | "Buổi của tôi" and navigation | Done | `tests/e2e/session-states.spec.ts`, `tests/e2e/my-sessions.spec.ts`. Library, topic, the header link and the next persona: `tests/e2e/library.spec.ts`, `tests/e2e/topic.spec.ts`, `tests/e2e/home-and-next-persona.spec.ts`, `tests/e2e/library-path.spec.ts`; keyboard order and the two widths: `tests/e2e/responsive.spec.ts` |
 | 11 | Cost cap and queue | Done | `tests/server/cost-cap.int.test.ts`, `tests/e2e/turn-engine.spec.ts`, `tests/server/custom-quota.int.test.ts`. "Turn p95 ≤ 6 s while a full evaluation runs" is not applicable when the CLI uses the batch keys, and is measured with D3 when it shares a key with live turns |
-| 12 | Trace and seed | Done, real run open | `tests/cli/config-and-trace.int.test.ts`, `tests/cli/seed-demo.int.test.ts`. A real `seed-demo` run and the home screenshot taken from it are open |
+| 12 | Trace and seed | Done, real run open | `tests/cli/config-and-trace.int.test.ts`, `tests/cli/seed-demo.int.test.ts`. A real `seed-demo` run is open. The home page shows the design's sample result, labelled "buổi mẫu", in place of a picture taken from that run (user decision 2026-10-10): its numbers are an example, not a session |
 | 13 | Notes canvas | Done | `tests/server/canvas.int.test.ts`, `tests/e2e/interview-screen.spec.ts`, `tests/e2e/interview-mobile.spec.ts`. Real phones: D7 |
 | 14 | "Tạo chủ đề của bạn" | Done with a deviation | `tests/server/custom-topic.int.test.ts`, `tests/server/custom-quota.int.test.ts`, `tests/e2e/custom-topic.spec.ts`. The reduced evaluation of FR-54 was dropped (user decision 2026-10-09): a generated scenario is only lightly checked, and the "≥ 6 of 10 sample topics" bullet does not apply as written |
 | 15 | Method page | Done | `/phuong-phap` answers 404 and nothing links to it (`tests/e2e/hardening.spec.ts`) |
-| 16 | Interim gate | User | chị Thu has no full run, so no flag to clear. Until then it is played as a draft: `require_published` is `false` (user decision 2026-10-03) |
+| 16 | Interim gate | User | No persona has a full run, so no flag to clear. Until then all seven are played as drafts: `require_published` is `false` (user decision 2026-10-03). `pnpm il publish` also refuses every persona until the product strings are approved on that database: the library screens added 29 (`pnpm il check-strings product`, then `pnpm il approve-strings product approve --all`) |
 
 Security hardening added by this build, outside the PRD's numbering: security headers and a nonce-based Content-Security-Policy on every response; learner text with HTML renders as text in the question, the notes and the custom-topic fields (`tests/server/escape-render.test.tsx`, `tests/e2e/hardening.spec.ts`).
 
@@ -107,6 +107,7 @@ Security hardening added by this build, outside the PRD's numbering: security he
 - Supabase free projects pause after about 7 days of low activity.
 - LangSmith free plan: 5,000 traces a month, up to about 70 per session. Sample or pay beyond about 70 sessions a month.
 - Nothing checks that a generated persona keeps its items sealed before a learner plays it (plan, open question 8). The labels, the report button and `pnpm il custom takedown` are what there is.
+- The events "chọn bộ lọc vai trò" and "mở chủ đề" (FR-50, FR-38) are written for signed-in learners who accepted the data notice only (user decision 2026-10-10). A guest's filter is a cookie and a guest's visit writes nothing, so BA/PM interest among guests is not measured.
 - Where real evaluation runs live: the tests empty the local database (see `docs/operations.md`).
 - `Strict-Transport-Security` is sent with `includeSubDomains` for two years: on a custom domain, every subdomain of it must serve https.
 - A refusal of the Content-Security-Policy in a learner's browser is reported nowhere (no `report-to`).
@@ -114,4 +115,6 @@ Security hardening added by this build, outside the PRD's numbering: security he
 
 ## Not built in this slice
 
-The S2 library, the S3 Review Console, the S4 BA/PM personas, and the method page.
+The S3 Review Console, the S4 BA/PM personas, and the method page.
+
+The S2 library screens (Màn 2 at `/library`, Màn 2b at `/topics/[topicId]`) are built. Its content is short of the PRD's plan of UX 2 topics × 3 personas: `ux-chi-tieu` has one persona, and the three topics about apps and web apps have two each. The library has no BA or PM topic, so those two chips show the empty state. A topic has no status of its own: it is listed while one of its personas can be played.

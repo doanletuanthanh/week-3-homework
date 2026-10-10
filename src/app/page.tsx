@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { SampleResult } from "@/components/home/sample-result";
 import { ArrowRightIcon, ChatIcon, GoogleIcon, GridIcon, LayersIcon, LockIcon, ReplayIcon } from "@/components/icons";
 import { TopicCard } from "@/components/library/topic-card";
 import { PersonaAvatar } from "@/components/persona-avatar";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
 import { listLibraryTopics } from "@/server/library";
-import { CUSTOM_LABEL, HOME, LIBRARY } from "@/strings/product-strings";
+import { HOME, LIBRARY } from "@/strings/product-strings";
 
 /** How many topics the home page shows of the library. */
 const PREVIEW_TOPICS = 3;
@@ -68,25 +69,7 @@ export default async function HomePage() {
             Đăng nhập Google khi bắt đầu
           </p>
 
-          {/* Reveal preview: stays a placeholder until a demo session can be seeded. */}
-          <div className="window hero-window" aria-hidden="true">
-            <div className="window-bar">
-              <span className="wdots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span className="pill pill-primary">
-                <LayersIcon size={14} />
-                Tảng băng lộ diện
-              </span>
-            </div>
-            <div className="hero-window-body">
-              <span className="sk" style={{ width: "40%" }} />
-              <span className="sk" style={{ width: "72%" }} />
-              <span className="sk" style={{ width: "58%" }} />
-            </div>
-          </div>
+          <SampleResult />
         </div>
       </section>
 
@@ -157,7 +140,6 @@ export default async function HomePage() {
               <p className="body-lg c-variant">{HOME.create_body}</p>
             </div>
             <div className="home-close-actions">
-              <span className="pill pill-outline">{CUSTOM_LABEL.light_check}</span>
               <Link className="btn btn-primary btn-lg" href="/custom-topic">
                 {LIBRARY.create_action}
               </Link>

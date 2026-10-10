@@ -92,7 +92,9 @@ export const TOPIC_VISIT_MINUTES = 30;
 /**
  * A topic's page was shown to a learner (FR-38): one event per visit, not per time the page
  * loads. A reload, or a return to the page, within `TOPIC_VISIT_MINUTES` of the event is the
- * same visit and writes nothing, so a browser that repeats the request cannot fill the table.
+ * same visit and writes nothing. The check and the write are two statements, with no lock: requests
+ * sent at the same instant may each write a row. These are counts for analytics, and a few rows
+ * too many are accepted for that (user decision 2026-10-10).
  * Nothing is written for a guest, for a learner who has not accepted the data notice, or for a
  * topic the learner cannot see: the id a browser sends can only ever name a page it was given.
  */

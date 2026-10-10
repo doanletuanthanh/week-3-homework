@@ -12,7 +12,7 @@ import { personaCard } from "@/scenario/persona-card";
 import { continueSession, startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { playedBeforeDeletion } from "@/server/quota";
-import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED, TOPIC } from "@/strings/product-strings";
+import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED, TOPIC, LIBRARY, MY_SESSIONS_NAME } from "@/strings/product-strings";
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
@@ -66,7 +66,7 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
     <main className="container prep">
       <nav aria-label="Đường dẫn" className="label-md crumbs">
         <Link href={custom ? "/my-sessions" : "/library"} className="c-variant">
-          {custom ? "Buổi của tôi" : "Thư viện"}
+          {custom ? MY_SESSIONS_NAME : LIBRARY.name}
         </Link>
         <ChevronRightIcon size={14} className="c-outline" />
         {custom ? (
@@ -207,7 +207,7 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
           ) : !playable || playedBefore ? (
             // Nothing to start: back to the topic, or for a topic of the learner's own, to their sessions.
             <Link className="btn btn-tonal btn-lg prep-start" href={custom ? "/my-sessions" : `/topics/${found.topic.id}`}>
-              {custom ? "Buổi của tôi" : TOPIC.to_topic}
+              {custom ? MY_SESSIONS_NAME : TOPIC.to_topic}
             </Link>
           ) : (
             <form action={startSession}>

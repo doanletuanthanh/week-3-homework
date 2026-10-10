@@ -24,6 +24,7 @@ export const db = {
   llmCallsOf: (sessionId: string) =>
     getDb().select().from(llmCalls).where(eq(llmCalls.sessionId, sessionId)).orderBy(llmCalls.createdAt),
   pendingActions: () => getDb().select().from(pendingActions),
+  userCount: async () => (await getDb().select({ id: users.id }).from(users)).length,
   waitlistOf: (userId: string) => getDb().select().from(waitlist).where(eq(waitlist.userId, userId)),
   eventsNamed: (name: string) => getDb().select().from(events).where(eq(events.name, name)).orderBy(events.at),
   eventsOfUser: (userId: string) => getDb().select().from(events).where(eq(events.userId, userId)),

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
+import { LIBRARY, MY_SESSIONS_NAME } from "@/strings/product-strings";
 
 const DESTINATIONS = {
-  library: { href: "/library", label: "Thư viện" },
-  mySessions: { href: "/my-sessions", label: "Buổi của tôi" },
+  library: { href: "/library", label: LIBRARY.name },
+  mySessions: { href: "/my-sessions", label: MY_SESSIONS_NAME },
 } as const;
 
 /**

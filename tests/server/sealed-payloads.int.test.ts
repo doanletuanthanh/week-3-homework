@@ -125,7 +125,7 @@ async function payloads(learner: AppUser, sessionId: string) {
     list: toBrowserResult(found.session.status, found.session.revealJson),
     // A turn request: the session has ended, so it is refused, with an error state and nothing else.
     turn: await runTurn(db(), learner, sessionId, { text: "Thêm một câu nữa ạ?", expectedIndex: turns.length, turnKey: randomUUID() }),
-    page: buildSessionView({ session: found.session, scenario: found.scenario, topicTitle: found.topic.title, turns, waitlisted: false }),
+    page: buildSessionView({ session: found.session, scenario: found.scenario, topicTitle: found.topic.title, turns, waitlisted: false, next: { kind: "all_practised" } }),
   };
 }
 
@@ -230,7 +230,7 @@ describe("payloads of the other session states", () => {
     await db().update(sessions).set({ endedAt: null, canvasFrozenAt: null }).where(eq(sessions.id, sessionId));
     const found = (await getSession(db(), learner.id, sessionId))!;
     const turns = await listTurns(db(), learner.id, sessionId);
-    const page = buildSessionView({ session: found.session, scenario: found.scenario, topicTitle: found.topic.title, turns, waitlisted: false });
+    const page = buildSessionView({ session: found.session, scenario: found.scenario, topicTitle: found.topic.title, turns, waitlisted: false, next: { kind: "all_practised" } });
 
     expect(page.screen).toBe("interview");
     expect(Object.keys((await getTranscriptView(db(), learner, sessionId))![1]).sort()).toEqual(["index", "leading", "learnerText", "personaText"]);

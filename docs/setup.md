@@ -55,12 +55,23 @@ Fill in every variable; `.env.example` says what each one is. Notes:
 - `QUOTA_HASH_SECRET`: generate once with `openssl rand -hex 32` and keep it. Every environment that shares a database must use the same value; changing it makes the kept counters of deleted accounts unreachable.
 - The app checks the whole environment when it starts and exits with a message listing every bad value.
 
-### 2.5 Database and the first persona
+### 2.5 Database and the library
 
 ```bash
 pnpm db:migrate                                        # applies drizzle/ to DATABASE_URL_DIRECT
 pnpm il validate scenarios/ux-chi-tieu/chi-thu.json    # checks the file; no database needed
-pnpm il import scenarios/ux-chi-tieu/chi-thu.json      # stores it as a draft version
+pnpm il import scenarios/ux-chi-tieu/chi-thu.json      # stores it as a draft version, with its topic
+```
+
+That is one topic with one persona. The other three folders under `scenarios/` hold two personas each; import every file for the whole library, in this order (it is the order the personas are listed in):
+
+```bash
+pnpm il import scenarios/ux-cong-viec-nhom/chi-hanh.json
+pnpm il import scenarios/ux-cong-viec-nhom/anh-khoa.json
+pnpm il import scenarios/ux-dat-san-the-thao/anh-tung.json
+pnpm il import scenarios/ux-dat-san-the-thao/co-lan.json
+pnpm il import scenarios/ux-ban-hang-online/chi-my.json
+pnpm il import scenarios/ux-ban-hang-online/ban-phuc.json
 ```
 
 A draft persona is playable: the `require_published` setting is off by default (`pnpm il config list`).
@@ -71,7 +82,7 @@ A draft persona is playable: the `require_published` setting is off by default (
 pnpm dev
 ```
 
-Open http://localhost:3000, press "Bắt đầu" on the persona, sign in with Google, accept the data notice, ask a question.
+Open http://localhost:3000, press "Vào thư viện", open a topic, press "Bắt đầu" on a persona and again on its prep screen, sign in with Google, accept the data notice, ask a question.
 
 ## 3. Deploy to Vercel
 

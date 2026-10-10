@@ -146,7 +146,7 @@ describe("a withdrawn session", () => {
 
     expect((await listSessions(db(), learner)).items).toMatchObject([{ id: session.id, state: "withdrawn", result: null }]);
     const found = (await getSession(db(), learner.id, session.id))!;
-    const view = buildSessionView({ ...found, topicTitle: found.topic.title, turns: await listTurns(db(), learner.id, session.id), waitlisted: false });
+    const view = buildSessionView({ ...found, topicTitle: found.topic.title, turns: await listTurns(db(), learner.id, session.id), waitlisted: false, next: { kind: "all_practised" } });
     expect(view).toMatchObject({ screen: "withdrawn", personaName: "Chị Thu", topicTitle: TOPIC, turnCount: 0 });
     // A session that was already finished keeps its result.
     expect((await listSessions(db(), finished)).items).toMatchObject([{ id: finishedId, state: "done", result: { told: 1 } }]);
@@ -193,7 +193,7 @@ describe("the review of a finished session (FR-40)", () => {
         ...found,
         topicTitle: found.topic.title,
         turns: await listTurns(db(), learner.id, sessionId),
-        waitlisted: false,
+        waitlisted: false, next: { kind: "all_practised" },
         replay: await loadReplay(db(), sessionId),
       });
       expect(view).toMatchObject({ screen: "reveal", reveal: { mode: "done" } });

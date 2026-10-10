@@ -27,7 +27,7 @@ function Suggestion({ next }: { next: NextStepChoice }) {
             {!persona.sameTopic && <p className="body-sm c-variant">{persona.topicTitle}</p>}
             <p className="label-md c-tertiary next-seal">
               <LockIcon size={14} />
-              Đang giữ {persona.itemCount} điều
+              {fillTemplate(NEXT_STEP.holding, { count: persona.itemCount })}
             </p>
           </div>
         </div>

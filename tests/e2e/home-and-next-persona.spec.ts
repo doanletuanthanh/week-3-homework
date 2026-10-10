@@ -138,9 +138,16 @@ test.describe("Màn 1: the home page leads into the library", () => {
     // Step 1 names the choice the library offers.
     await expect(page.locator(".step h3").first()).toHaveText("Chọn chủ đề và persona");
 
-    // The closing band: both ways on, the custom one under its label.
+    // Under the hero: the result of a sample session, said to be one, where the placeholder was.
+    const sample = page.getByRole("figure", { name: "Buổi mẫu: kết quả một buổi luyện với chị Thu" });
+    await expect(sample.getByText("Chị Thu đã kể: 3 trên 11.")).toBeVisible();
+    await expect(sample.locator("mark")).toHaveText("cách riêng để không tiêu quá tay");
+    await expect(sample.getByText("Chị ấy vừa nhắc tới một cách xoay xở. Bạn chuyển chủ đề.")).toBeVisible();
+    await expect(sample.locator(".sk")).toHaveCount(0);
+
+    // The closing band: both ways on, with no tag on it.
     await expect(closing(page).getByText("Gõ một chủ đề. InterviewLab tạo một nhân vật hư cấu để bạn luyện. Kịch bản tự tạo chỉ qua kiểm tra nhẹ.")).toBeVisible();
-    await expect(closing(page).getByText("Kiểm tra nhẹ", { exact: true })).toBeVisible();
+    await expect(closing(page).getByText("Kiểm tra nhẹ", { exact: true })).toHaveCount(0);
     await expect(closing(page).getByRole("link")).toHaveText(["Tạo chủ đề của bạn", "Vào thư viện"]);
     await expect(closing(page).getByRole("link", { name: "Vào thư viện" })).toHaveAttribute("href", "/library");
 
@@ -178,12 +185,14 @@ test.describe("Màn 1: the home page leads into the library", () => {
   });
 
   test("shows the first three topics in library order, and the same page to a learner who practised", async ({ page, context }) => {
-    const extra = [
-      await importExtraPersona({ personaId: "p-first", displayName: "anh Một", name: "Anh Một, 30 tuổi", topic: { id: "ux-first", title: "Chủ đề đứng đầu", summary: "Một câu.", role: "ux", display_order: 1 } }),
-      await importExtraPersona({ personaId: "p-ba", displayName: "chị Hai", name: "Chị Hai, 31 tuổi", topic: { id: "ba-second", title: "Chủ đề BA", summary: "Một câu.", role: "ba", display_order: 5 } }),
-      await importExtraPersona({ personaId: "p-last", displayName: "anh Bốn", name: "Anh Bốn, 33 tuổi", topic: { id: "pm-last", title: "Chủ đề đứng cuối", summary: "Một câu.", role: "pm", display_order: 99 } }),
+    const wanted: ExtraPersona[] = [
+      { personaId: "p-first", displayName: "anh Một", name: "Anh Một, 30 tuổi", topic: { id: "ux-first", title: "Chủ đề đứng đầu", summary: "Một câu.", role: "ux", display_order: 1 } },
+      { personaId: "p-ba", displayName: "chị Hai", name: "Chị Hai, 31 tuổi", topic: { id: "ba-second", title: "Chủ đề BA", summary: "Một câu.", role: "ba", display_order: 5 } },
+      { personaId: "p-last", displayName: "anh Bốn", name: "Anh Bốn, 33 tuổi", topic: { id: "pm-last", title: "Chủ đề đứng cuối", summary: "Một câu.", role: "pm", display_order: 99 } },
     ];
+    const extra: ExtraPersona[] = [];
     try {
+      for (const persona of wanted) extra.push(await importExtraPersona(persona));
       await page.goto("/");
       const cards = homeLibrary(page).locator("a.tcard");
       await expect(cards.getByRole("heading", { level: 3 })).toHaveText(["Chủ đề đứng đầu", "Chủ đề BA", CHI_TIEU.title]);
@@ -268,8 +277,9 @@ test.describe("Màn 3: a persona that cannot be started leads back to its topic"
 test.describe("Màn 6 item 7: the persona to practise next (FR-31)", () => {
   test("same topic first, then another topic, then 'practised them all' with the waitlist written once", async ({ page, context }) => {
     test.setTimeout(120_000);
-    const extra = [await importExtraPersona(ANH_DUNG), await importExtraPersona(CO_LAN)];
+    const extra: ExtraPersona[] = [];
     try {
+      for (const persona of [ANH_DUNG, CO_LAN]) extra.push(await importExtraPersona(persona));
       // home → library → topic → prep → … → reveal.
       const { userId } = await signInAndAccept(page, context, "next-persona", "/");
       await hero(page).getByRole("link", { name: "Vào thư viện" }).click();
@@ -345,11 +355,13 @@ test.describe("Màn 6 item 7: the persona to practise next (FR-31)", () => {
 
   test("a persona of another role is never offered, and a pulled one neither", async ({ page, context }) => {
     test.setTimeout(120_000);
-    const extra = [
-      await importExtraPersona({ personaId: "p-ba", displayName: "chị Hai", name: "Chị Hai, 31 tuổi", topic: { id: "ba-first", title: "Chủ đề BA", summary: "Một câu.", role: "ba", display_order: 1 } }),
-      await importExtraPersona(ANH_DUNG),
+    const wanted: ExtraPersona[] = [
+      { personaId: "p-ba", displayName: "chị Hai", name: "Chị Hai, 31 tuổi", topic: { id: "ba-first", title: "Chủ đề BA", summary: "Một câu.", role: "ba", display_order: 1 } },
+      ANH_DUNG,
     ];
+    const extra: ExtraPersona[] = [];
     try {
+      for (const persona of wanted) extra.push(await importExtraPersona(persona));
       await endedInterview(page, context, "next-role", PLAIN_QUESTIONS, "");
       await guess(page, 0);
       await expectResult(page, 0, 0);

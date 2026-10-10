@@ -107,7 +107,7 @@ describe("runGeneration: an attempt that passes", () => {
     const turn = await runTurn(db(), learner, sessionId, question(1), { llmDeps: models.llmDeps });
     expect(turn).toMatchObject({ ok: true, turnIndex: 1 });
     const found = (await getSession(db(), learner.id, sessionId))!;
-    const view = buildSessionView({ session: found.session, scenario: found.scenario, topicTitle: found.topic.title, turns: await listTurns(db(), learner.id, sessionId), waitlisted: false });
+    const view = buildSessionView({ session: found.session, scenario: found.scenario, topicTitle: found.topic.title, turns: await listTurns(db(), learner.id, sessionId), waitlisted: false, next: { kind: "all_practised" } });
     expect(view).toMatchObject({ custom: true, screen: "interview" });
     const sealed = found.scenario.content.items.flatMap((item) => [item.content, item.sample_question, item.hook_line, item.topic_tag]);
     for (const text of sealed) expect(JSON.stringify(view)).not.toContain(text);

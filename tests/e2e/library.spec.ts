@@ -70,7 +70,7 @@ test.describe("Màn 2: a guest reads the library", () => {
     await expect(tiles.first()).toHaveClass(/lib-create/u);
     await expect(createTile(page).getByRole("heading", { level: 2 })).toHaveText("Không thấy chủ đề bạn cần?");
     await expect(createTile(page)).toContainText("Gõ một chủ đề, InterviewLab tạo một nhân vật hư cấu để bạn luyện.");
-    await expect(createTile(page).getByText("Kiểm tra nhẹ", { exact: true })).toBeVisible();
+    await expect(createTile(page).getByText("Kiểm tra nhẹ", { exact: true })).toHaveCount(0);
     await expect(createTile(page).getByRole("link", { name: "Tạo chủ đề của bạn" })).toHaveAttribute("href", "/custom-topic");
 
     // The topic card: its role in words, title, one sentence, the persona count, and where it leads.

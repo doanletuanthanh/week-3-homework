@@ -194,11 +194,42 @@ export const LIBRARY = {
   name: "Thư viện",
 } as const;
 
+/** The learner's own list (Màn 9), as the header and the links back to it name it. */
+export const MY_SESSIONS_NAME = "Buổi của tôi";
+
 /** Màn 1 · Trang chủ: the library section and the band that closes the page. */
 export const HOME = {
   library_title: "Chọn một chủ đề, rồi chọn một persona",
   library_all: "Xem cả thư viện",
   create_body: "Gõ một chủ đề. InterviewLab tạo một nhân vật hư cấu để bạn luyện. Kịch bản tự tạo chỉ qua kiểm tra nhẹ.",
+} as const;
+
+/**
+ * Màn 1: the sample result under the hero, as the `Main` artboard has it. An example and labelled
+ * as one: its moment is not an item of any persona in the library. The three counts add up to `total`.
+ */
+export const HOME_SAMPLE = {
+  caption: "Buổi mẫu: kết quả một buổi luyện với chị Thu",
+  label: "buổi mẫu · chị thu · kết quả",
+  persona: "Chị Thu, 26 tuổi",
+  guess: "Bạn đoán 7.",
+  told_line: "Chị Thu đã kể: 3 trên 11.",
+  total: 11,
+  told: 3,
+  held: 1,
+  missed: 7,
+  recognised: "Nhận biết: 4",
+  recognised_rest: "điều quan trọng trong ghi chú của bạn.",
+  missed_kind: "Bỏ lỡ · Hỏi tiếp chi tiết",
+  // The artboard says "Tự đặt hạn mức…"; "tự đặt" is a secret term of a persona in the library, so the sample words it otherwise.
+  missed_item: "Giữ hạn mức riêng bằng cách rút tiền mặt đầu tuần",
+  persona_turn: "lượt 11",
+  quote: "Tuần nào cũng vậy, chị có cách riêng để không tiêu quá tay.",
+  quote_marked: "cách riêng để không tiêu quá tay",
+  learner_who: "Bạn hỏi ngay sau",
+  learner_turn: "lượt 12",
+  learner_question: "Vậy chị có hay mua sắm online không ạ?",
+  diagnosis: "Chị ấy vừa nhắc tới một cách xoay xở. Bạn chuyển chủ đề.",
 } as const;
 
 /**
@@ -210,6 +241,7 @@ export const NEXT_STEP = {
   other_topic: "Một chủ đề khác",
   continue_with: "Luyện tiếp với {persona}",
   all_practised: "Bạn đã luyện mọi persona của vai trò này.",
+  holding: "Đang giữ {count} điều",
 } as const;
 
 /**
@@ -265,8 +297,10 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(CUSTOM_REPORT).map(([name, text]) => ({ key: `custom_report.${name}`, text })),
     ...Object.entries(ROLE_LABEL).map(([name, text]) => ({ key: `role_label.${name}`, text })),
     ...Object.entries(LIBRARY).map(([name, text]) => ({ key: `library.${name}`, text })),
+    { key: "my_sessions_name", text: MY_SESSIONS_NAME },
     ...Object.entries(TOPIC).map(([name, text]) => ({ key: `topic.${name}`, text })),
     ...Object.entries(HOME).map(([name, text]) => ({ key: `home.${name}`, text })),
+    ...Object.entries(HOME_SAMPLE).flatMap(([name, text]) => (typeof text === "string" ? [{ key: `home_sample.${name}`, text }] : [])),
     ...Object.entries(NEXT_STEP).map(([name, text]) => ({ key: `next_step.${name}`, text })),
   ];
 }

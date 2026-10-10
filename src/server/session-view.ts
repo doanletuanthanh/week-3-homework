@@ -110,8 +110,8 @@ export function buildSessionView(input: {
   topicTitle: string;
   turns: ViewTurn[];
   waitlisted: boolean;
-  /** What to offer after the session. Left out by callers that do not render a result. */
-  next?: NextStep;
+  /** What to offer after the session; null from a caller that shows no result. A result cannot be built without it. */
+  next: NextStep | null;
   /** The session's replay branch with its turns, when it has one. */
   replay?: LoadedReplay | null;
 }): SessionView {
@@ -178,6 +178,8 @@ export function buildSessionView(input: {
       replaySucceeded: outcome?.level === "primary" && outcome.result === "success",
     });
     if (reveal) {
+      // Guessing here would tell a learner "you practised them all" when nobody looked.
+      if (!input.next) throw new Error("A result needs the next step worked out by its caller.");
       return {
         custom,
         screen: "reveal",
@@ -186,7 +188,7 @@ export function buildSessionView(input: {
         header,
         reveal,
         waitlisted,
-        next: input.next ?? { kind: "all_practised" },
+        next: input.next,
         print: {
           topicTitle,
           date: `${day}/${month}/${year}`,

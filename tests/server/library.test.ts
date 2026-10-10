@@ -5,7 +5,7 @@ import { topicSchema } from "@/scenario/schema";
 import type { PersonaCardRow } from "@/db/repo/library";
 import { filterTopics, groupByTopic, parseRoleFilter, personaButton, toOwnTopicCard, toPersonaCardView, type LibraryTopic } from "@/server/library";
 import { clockOf } from "@/server/session-view";
-import { HOME, LIBRARY, NEXT_STEP, ROLE_LABEL, TOPIC, fillTemplate, productStrings } from "@/strings/product-strings";
+import { HOME, LIBRARY, MY_SESSIONS_NAME, NEXT_STEP, ROLE_LABEL, TOPIC, fillTemplate, productStrings } from "@/strings/product-strings";
 import { findSealed, readChiThu } from "../helpers/sealed-strings";
 
 const persona = (personaId: string, topicId: string, topicRole: "ux" | "ba" | "pm" | null = "ux") => ({
@@ -168,6 +168,18 @@ describe("the strings of the library", () => {
     for (const [name, text] of Object.entries(TOPIC)) expect(checked.get(`topic.${name}`), name).toBe(text);
     for (const [name, text] of Object.entries(HOME)) expect(checked.get(`home.${name}`), name).toBe(text);
     for (const [name, text] of Object.entries(NEXT_STEP)) expect(checked.get(`next_step.${name}`), name).toBe(text);
+    expect(checked.get("my_sessions_name")).toBe(MY_SESSIONS_NAME);
+  });
+
+  it("hold what the header and the suggestion card say, so no component words it on its own", () => {
+    expect(LIBRARY.name).toBe("Thư viện");
+    expect(MY_SESSIONS_NAME).toBe("Buổi của tôi");
+    expect(fillTemplate(NEXT_STEP.holding, { count: 10 })).toBe("Đang giữ 10 điều");
+    for (const file of ["src/components/header-menu.tsx", "src/components/reveal/next-step.tsx", "src/app/prep/[personaId]/page.tsx"]) {
+      const source = readFileSync(file, "utf8");
+      for (const text of ['"Thư viện"', '"Buổi của tôi"']) expect(source, `${file}: ${text}`).not.toContain(text);
+    }
+    expect(readFileSync("src/components/reveal/next-step.tsx", "utf8")).not.toContain("Đang giữ {");
   });
 
   it("word the next step as the PRD and the artboard do, with the persona's form of address in the button", () => {
@@ -195,6 +207,20 @@ describe("the strings of the library", () => {
   it("gives every string its own key", () => {
     const keys = productStrings().map((entry) => entry.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("keeps to the product's wording (NFR-14): no 'feedback', no promise of 'tự tin', never 'phỏng vấn' on its own", () => {
+    /** The rules, each with a text that breaks it: a rule that matches nothing would pass every string. */
+    const rules: [RegExp, string][] = [
+      [/feedback/iu, "Xem feedback của buổi"],
+      [/tự tin/iu, "Bạn sẽ tự tin hơn"],
+      [/phỏng vấn(?! người dùng)/iu, "Luyện phỏng vấn mỗi ngày"],
+    ];
+    for (const [rule, broken] of rules) expect(broken).toMatch(rule);
+    expect("Luyện phỏng vấn người dùng.").not.toMatch(rules[2][0]);
+
+    const broken = productStrings().flatMap((entry) => rules.filter(([rule]) => rule.test(entry.text)).map(([rule]) => `${entry.key}: ${rule.source}`));
+    expect(broken).toEqual([]);
   });
 });
 

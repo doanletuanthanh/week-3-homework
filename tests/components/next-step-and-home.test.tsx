@@ -1,8 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { SAMPLE_TOPIC_TITLE, SampleResult } from "@/components/home/sample-result";
+import { CreateTopicCard } from "@/components/library/create-topic-card";
 import { TopicCard } from "@/components/library/topic-card";
 import { NextStep } from "@/components/reveal/next-step";
 import type { LibraryTopic, NextPersona } from "@/server/library";
+import { HOME_SAMPLE, productStrings } from "@/strings/product-strings";
+import { curatedPersonas } from "../helpers/curated-scenarios";
+import { findSealed } from "../helpers/sealed-strings";
 
 const HOSTILE = '<img src=x onerror="alert(1)">';
 
@@ -115,5 +120,59 @@ describe("TopicCard: its heading level", () => {
     expect(markup).not.toContain("Đã luyện");
     expect(markup).toContain("3 persona");
     expect(markup).toContain('href="/topics/ux-chi-tieu"');
+  });
+});
+
+describe("SampleResult: the sample session under the home page's hero", () => {
+  const markup = renderToStaticMarkup(<SampleResult />);
+  const text = markup.replace(/<[^>]+>/gu, " ");
+
+  it("is the result the design shows, labelled as a sample, and no placeholder", () => {
+    expect(markup).toContain(`aria-label="${HOME_SAMPLE.caption}"`);
+    for (const shown of ["buổi mẫu · chị thu · kết quả", "Bạn đoán 7.", "Chị Thu đã kể: 3 trên 11.", "3 Đã kể", "1 Giữ lại", "7 Bỏ lỡ", "Nhận biết: 4", "lượt 11", "lượt 12"]) expect(text, shown).toContain(shown);
+    expect(markup).toContain("Chị ấy vừa nhắc tới một cách xoay xở. Bạn chuyển chủ đề.");
+    expect(markup).not.toContain('class="sk"');
+    expect(markup).not.toContain("aria-hidden=\"true\"><div class=\"window-bar\"");
+  });
+
+  it("marks the words the learner walked past, inside the persona's line", () => {
+    expect(HOME_SAMPLE.quote.split(HOME_SAMPLE.quote_marked)).toHaveLength(2);
+    expect(markup).toContain(`<mark>${HOME_SAMPLE.quote_marked}</mark>`);
+    expect(text.replace(/\s+/gu, " ")).toContain("chị có cách riêng để không tiêu quá tay .");
+  });
+
+  it("adds up: told, held and missed are every item, and the bar is drawn from the same numbers", () => {
+    expect(HOME_SAMPLE.told + HOME_SAMPLE.held + HOME_SAMPLE.missed).toBe(HOME_SAMPLE.total);
+    expect(HOME_SAMPLE.told_line).toContain(`${HOME_SAMPLE.told} trên ${HOME_SAMPLE.total}`);
+    expect(markup).toContain('class="f-secondary" style="width:27.3%"');
+    expect(markup).toContain('class="f-tertiary" style="width:9.1%"');
+  });
+
+  it("gives away nothing a persona of the library holds", () => {
+    for (const { file, scenario } of curatedPersonas()) expect(findSealed(markup, scenario), file).toEqual([]);
+  });
+
+  it("has every sentence in the fixed-string check", () => {
+    const checked = new Map(productStrings().map((entry) => [entry.key, entry.text]));
+    for (const [name, value] of Object.entries(HOME_SAMPLE)) if (typeof value === "string") expect(checked.get(`home_sample.${name}`), name).toBe(value);
+  });
+
+  it("names the topic by the title its file gives it, which is the library's to word", () => {
+    const thu = curatedPersonas().find(({ scenario }) => scenario.persona_id === "chi-thu")!;
+
+    expect(SAMPLE_TOPIC_TITLE).toBe(thu.topic.title);
+    expect(markup).toContain(SAMPLE_TOPIC_TITLE);
+    expect(HOME_SAMPLE.persona).toBe(thu.scenario.persona.name);
+    expect(productStrings().some((entry) => entry.text === SAMPLE_TOPIC_TITLE)).toBe(false);
+  });
+});
+
+describe("CreateTopicCard: the way to a topic of one's own", () => {
+  it("leads to the form and carries no 'Kiểm tra nhẹ' tag", () => {
+    const markup = renderToStaticMarkup(<CreateTopicCard />);
+
+    expect(links(markup)).toEqual([["Tạo chủ đề của bạn", "/custom-topic"]]);
+    expect(markup).not.toContain("Kiểm tra nhẹ");
+    expect(markup).not.toContain('class="pill');
   });
 });

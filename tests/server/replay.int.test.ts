@@ -70,7 +70,7 @@ async function payloads(learner: AppUser, sessionId: string) {
       scenario: found.scenario,
       topicTitle: found.topic.title,
       turns: await listTurns(db(), learner.id, sessionId),
-      waitlisted: false,
+      waitlisted: false, next: { kind: "all_practised" },
       replay: await loadReplay(db(), sessionId),
     }),
   };

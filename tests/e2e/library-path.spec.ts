@@ -57,8 +57,9 @@ let imported: ExtraPersona[] = [];
 test.describe("the library with the app and web app topics in it", () => {
   // The other specs expect chị Thu to be the one persona: the six come in for this file and go out after it.
   test.beforeAll(async () => {
-    await importCuratedLibrary();
+    // Named before the import: one that stops part-way still leaves `afterAll` the whole list to remove.
     imported = NEW.map(({ scenario, topic }) => ({ personaId: scenario.persona_id, displayName: scenario.persona.display_name, name: scenario.persona.name, topic }));
+    await importCuratedLibrary();
   });
   test.afterAll(async () => {
     await removePersonas(imported);
@@ -237,14 +238,14 @@ test.describe("the library with the app and web app topics in it", () => {
     // End → guess → reveal.
     expect((await postEnd(page.request, sessionId, { canvasText: "" })).status).toBe(200);
     await page.goto(revealUrl);
-    await expect(page.getByRole("heading", { name: "Bạn nghĩ chị Hạnh đã kể cho bạn bao nhiêu trong 10 điều?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: `Bạn nghĩ chị Hạnh đã kể cho bạn bao nhiêu trong ${HANH.items.length} điều?` })).toBeVisible();
     const slider = page.getByRole("slider", { name: "Số điều chị Hạnh đã kể" });
     await slider.focus();
     await page.keyboard.press("Home");
     await page.keyboard.press("ArrowRight");
-    await expect(slider).toHaveAttribute("aria-valuetext", "1 trên 10");
+    await expect(slider).toHaveAttribute("aria-valuetext", `1 trên ${HANH.items.length}`);
     await page.getByRole("button", { name: "Xem kết quả" }).click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bạn đoán 1.Chị Hạnh đã kể: 1 trên 10.", { timeout: 20_000 });
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Bạn đoán 1.Chị Hạnh đã kể: 1 trên ${HANH.items.length}.`, { timeout: 20_000 });
     expect((await db.session(sessionId)).status).toBe("done");
     // The reveal opens what she told and keeps the other nine items of this session's persona to their tags.
     await expect(page.getByText(HANH.items[0].content)).toBeVisible();
@@ -253,7 +254,7 @@ test.describe("the library with the app and web app topics in it", () => {
     // The suggestion: the other persona of the topic.
     await expect(suggestion(page).locator(".eyebrow")).toHaveText("Cùng chủ đề");
     await expect(suggestion(page).getByRole("heading", { level: 3 })).toHaveText(KHOA.persona.name);
-    await expect(suggestion(page).locator(".next-seal")).toHaveText("Đang giữ 10 điều");
+    await expect(suggestion(page).locator(".next-seal")).toHaveText(`Đang giữ ${KHOA.items.length} điều`);
     await expect(suggestion(page).locator("svg.avatar text")).toHaveText("K");
     const go = suggestion(page).getByRole("link", { name: "Luyện tiếp với anh Khoa" });
     await expect(go).toHaveAttribute("href", "/prep/anh-khoa");

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/db/client";
 import { createEvalRun, finishEvalRun } from "@/db/repo/eval";
 import { adjudications, evalRuns, leakFlags, scenarios, sessions, stringApprovals } from "@/db/schema";
@@ -32,6 +32,9 @@ const noOperator = () => {
 };
 
 const flagRows = () => getDb().select().from(leakFlags).orderBy(leakFlags.episode);
+
+// A scene checks and approves every fixed string through the commands, one write after another: the time grows with their number.
+vi.setConfig({ testTimeout: 30_000 });
 
 beforeEach(resetDatabase);
 

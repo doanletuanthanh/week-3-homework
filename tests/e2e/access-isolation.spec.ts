@@ -119,6 +119,10 @@ test.describe("another learner's session", () => {
     // The owner has it.
     expect((await page.goto(theirs))?.status()).toBe(200);
     await expect(page.getByRole("heading", { level: 1, name: topic })).toBeVisible();
+    // The owner's library lists it, under its own heading.
+    await page.goto("/library");
+    await expect(page.getByRole("region", { name: "Chủ đề bạn tự tạo" }).locator(`a[href="${theirs}"]`)).toContainText(topic);
+    await page.goto(theirs);
     // The owner's own visit is reported once the page is on screen: counted before anyone else asks.
     await expect.poll(async () => (await db.eventsOfUser(userId)).filter((event) => event.name === "topic_opened").length).toBe(1);
     const eventsBefore = (await db.eventsNamed("topic_opened")).length;
@@ -146,6 +150,14 @@ test.describe("another learner's session", () => {
         const data = await other.request.get(theirs, { headers: { RSC: "1" } });
         const body = await data.text();
         for (const text of [topic, "Chị Mai", "tưới cây"]) expect(body, text).not.toContain(text);
+
+        // The library lists it for nobody else: the page read whole, and its data for a client navigation.
+        await other.goto("/library");
+        await expect(other.locator('a.tcard[href="/topics/ux-chi-tieu"]')).toBeVisible();
+        await expect(other.getByRole("region", { name: "Chủ đề bạn tự tạo" })).toHaveCount(0);
+        const library = `${await other.content()}${await (await other.request.get("/library", { headers: { RSC: "1" } })).text()}`;
+        expect(library).toContain("Chi tiêu hằng ngày của người trẻ đi làm");
+        for (const text of [topic, "tưới cây", attempt.topicId!, attempt.sessionId!]) expect(library, text).not.toContain(text);
       }
       await other.waitForLoadState("networkidle");
     } finally {
@@ -153,6 +165,37 @@ test.describe("another learner's session", () => {
     }
     // Asking for it wrote nothing.
     expect(await db.eventsNamed("topic_opened")).toHaveLength(eventsBefore);
+  });
+
+  test("a visitor's presses on the role filter and visits to a topic write nothing but this browser's cookie", async ({ page, context }) => {
+    const written = async () => ({
+      accounts: await db.userCount(),
+      filterEvents: (await db.eventsNamed("role_filter_selected")).length,
+      topicEvents: (await db.eventsNamed("topic_opened")).length,
+      pendingActions: (await db.pendingActions()).length,
+    });
+    const before = await written();
+    const chip = (name: string) => page.getByRole("group", { name: "Lọc theo vai trò" }).getByRole("button", { name, exact: true });
+
+    await page.goto("/library");
+    // The four chips, a chip pressed again to clear it, and the empty state's way back.
+    for (const name of ["UX", "BA", "PM", "Khác", "Khác", "BA"]) {
+      const pressed = (await chip(name).getAttribute("aria-pressed")) === "true";
+      await chip(name).click();
+      await expect(chip(name)).toHaveAttribute("aria-pressed", pressed ? "false" : "true");
+    }
+    await page.getByRole("button", { name: "Xem mọi chủ đề" }).click();
+    await expect(page.locator('a.tcard[href="/topics/ux-chi-tieu"]')).toBeVisible();
+    await chip("UX").click();
+    await expect(chip("UX")).toHaveAttribute("aria-pressed", "true");
+    await page.locator('a.tcard[href="/topics/ux-chi-tieu"]').click();
+    await expect(page.getByRole("heading", { level: 1, name: "Chi tiêu hằng ngày của người trẻ đi làm" })).toBeVisible();
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    expect(await written()).toEqual(before);
+    // What the browser keeps: the one choice, which no script of the page can read.
+    expect((await context.cookies()).map(({ name, value, httpOnly }) => ({ name, value, httpOnly }))).toEqual([{ name: "il_role", value: "ux", httpOnly: true }]);
   });
 
   test("a visitor who is not signed in gets 401 from every route, with where to sign in", async ({ request }) => {
