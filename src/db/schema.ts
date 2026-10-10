@@ -23,6 +23,14 @@ import type { Scenario } from "@/scenario/schema";
 
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
+/** The role a curated topic is for. A custom topic has none (FR-52). */
+export const TOPIC_ROLES = ["ux", "ba", "pm"] as const;
+export type TopicRole = (typeof TOPIC_ROLES)[number];
+
+/** The chips of the library filter: a role, or "Khác" (every topic). */
+export const ROLE_FILTERS = [...TOPIC_ROLES, "other"] as const;
+export type RoleFilter = (typeof ROLE_FILTERS)[number];
+
 /** App-side learner row. `id` is the Supabase Auth user id; there is no FK into the `auth` schema. */
 export const users = pgTable("user", {
   id: uuid("id").primaryKey(),
@@ -33,6 +41,8 @@ export const users = pgTable("user", {
   freeCustomUsed: boolean("free_custom_used").notNull().default(false),
   /** Custom-topic attempts that failed their checks. System errors and refusals are not in it. */
   customFailedCount: integer("custom_failed_count").notNull().default(0),
+  /** The library filter the learner last chose (FR-50). Null: no chip chosen. */
+  roleFilter: text("role_filter", { enum: ROLE_FILTERS }),
   createdAt,
 });
 
@@ -45,6 +55,9 @@ export const topics = pgTable(
     title: text("title").notNull(),
     summary: text("summary").notNull(),
     kind: text("kind", { enum: TOPIC_KINDS }).notNull().default("curated"),
+    role: text("role", { enum: TOPIC_ROLES }),
+    /** Where the topic stands in the library; lower comes first. */
+    displayOrder: integer("display_order").notNull().default(0),
     /** Set for a custom topic: only this learner (and operators) can see it and its persona. */
     ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "cascade" }),
     createdAt,

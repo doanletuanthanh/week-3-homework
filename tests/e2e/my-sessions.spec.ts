@@ -25,7 +25,7 @@ async function signInAsListDemo(page: Page): Promise<AppUser> {
   await expect(agree.or(heading(page))).toBeVisible();
   if (await agree.isVisible()) await agree.click();
   await expect(heading(page)).toBeVisible();
-  return { id, email: DEMO_LIST_EMAIL, isAdmin: false, isDemo: true, noticeAcked: true };
+  return { id, email: DEMO_LIST_EMAIL, isAdmin: false, isDemo: true, noticeAcked: true, roleFilter: null };
 }
 
 /** Gives the demo account sessions until it has at least this many. A demo account has no one-session limit. */

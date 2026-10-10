@@ -20,6 +20,8 @@ const TOPIC: TopicFile = {
   id: "ux-chi-tieu",
   title: "Chi tiêu hằng ngày của người trẻ đi làm",
   summary: "Người mới đi làm tiêu, ghi và xoay xở tiền tới cuối tháng ra sao.",
+  role: "ux",
+  display_order: 10,
 };
 
 /** Writes a scenario and its topic file into a fresh folder, the layout `import` reads. */
@@ -69,7 +71,7 @@ describe("import: the chị Thu file", () => {
       language: "vi",
     });
     expect(row.content).toEqual(readChiThu());
-    expect(await getDb().select().from(topics)).toMatchObject([TOPIC]);
+    expect(await getDb().select().from(topics)).toMatchObject([{ id: TOPIC.id, title: TOPIC.title, summary: TOPIC.summary, role: "ux", displayOrder: 10 }]);
   });
 
   it("is the persona the home page links to, and a session opens on it with its opening line", async () => {

@@ -383,7 +383,7 @@ describe("il publish", () => {
     edited.opening_line = "Chào em, chị là Thu nè. Em hỏi gì cũng được nha.";
     const dir = mkdtempSync(join(tmpdir(), "il-publish-"));
     writeFileSync(join(dir, "chi-thu.json"), JSON.stringify(edited), "utf8");
-    writeFileSync(join(dir, "topic.json"), JSON.stringify({ id: "ux-chi-tieu", title: "Chi tiêu", summary: "Tóm tắt." }), "utf8");
+    writeFileSync(join(dir, "topic.json"), JSON.stringify({ id: "ux-chi-tieu", title: "Chi tiêu", summary: "Tóm tắt.", role: "ux", display_order: 10 }), "utf8");
     expect(await importScenarioFile(getDb(), join(dir, "chi-thu.json"))).toMatchObject({ ok: true, version: 2 });
     const { io, err } = capture();
 

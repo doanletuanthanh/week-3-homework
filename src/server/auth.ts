@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getEnv, type Env } from "@/config/env";
 import { getDb, type Executor } from "@/db/client";
+import type { RoleFilter } from "@/db/schema";
 import { upsertUser, upsertUserOfAccount } from "@/db/repo/users";
 import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { verifyClaims } from "./auth-claims";
@@ -14,6 +15,8 @@ export type AppUser = {
   isDemo: boolean;
   /** True when the learner accepted the current version of the data notice. */
   noticeAcked: boolean;
+  /** The library filter remembered on the account (FR-50). */
+  roleFilter: RoleFilter | null;
 };
 
 /**
@@ -40,6 +43,7 @@ export async function resolveUser(
     isAdmin: env.ADMIN_EMAILS.includes(row.email),
     isDemo: env.DEMO_ACCOUNT_EMAILS.includes(row.email),
     noticeAcked: row.visibilityAckVersion === DATA_NOTICE_VERSION,
+    roleFilter: row.roleFilter,
   };
 }
 

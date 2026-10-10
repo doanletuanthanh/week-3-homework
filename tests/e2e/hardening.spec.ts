@@ -275,7 +275,7 @@ test.describe("accessibility notes of the review", () => {
   test("'Tải thêm' says how many rows it added, each time, and puts focus on the first of them", async ({ page }) => {
     const id = await ensureAccount(DEMO_LIST_EMAIL);
     await signIn(page.context(), DEMO_LIST_EMAIL);
-    const demo: AppUser = { id, email: DEMO_LIST_EMAIL, isAdmin: false, isDemo: true, noticeAcked: true };
+    const demo: AppUser = { id, email: DEMO_LIST_EMAIL, isAdmin: false, isDemo: true, noticeAcked: true, roleFilter: null };
     await page.goto("/data-notice?next=/my-sessions");
     const agree = page.getByRole("button", { name: "Tôi hiểu" });
     const heading = page.getByRole("heading", { level: 1, name: "Buổi của tôi" });

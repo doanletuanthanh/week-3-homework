@@ -433,7 +433,7 @@ describe("a token that outlives its account", () => {
     const first = await resolveUser(db(), googleClaims("linh@example.com", id), NO_LISTS, strict);
     const again = await resolveUser(db(), googleClaims("Linh.Moi@example.com", id), NO_LISTS, strict);
 
-    expect(first).toEqual({ id, email: "linh@example.com", isAdmin: false, isDemo: false, noticeAcked: false });
+    expect(first).toEqual({ id, email: "linh@example.com", isAdmin: false, isDemo: false, noticeAcked: false, roleFilter: null });
     expect(again).toMatchObject({ id, email: "linh.moi@example.com" });
     expect(await db().select().from(users)).toHaveLength(1);
   });

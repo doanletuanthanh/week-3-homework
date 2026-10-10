@@ -11,7 +11,7 @@ export type SessionRow = typeof sessions.$inferSelect;
 export type TurnRow = typeof turns.$inferSelect;
 
 /** A curated topic is everyone's; a custom one is its owner's alone. `viewerId` is null for a guest. */
-const visibleTo = (viewerId: string | null) =>
+export const visibleTo = (viewerId: string | null) =>
   viewerId === null ? isNull(topics.ownerUserId) : or(isNull(topics.ownerUserId), eq(topics.ownerUserId, viewerId));
 
 /** Newest version of a persona, with its topic. Not filtered by learner: for the operator's commands only. */
@@ -39,15 +39,17 @@ export async function getVisibleScenario(db: Executor, personaId: string, viewer
   return row ?? null;
 }
 
+/** Which versions a new session may start on: see `getPlayableScenario`. */
+export const playableStatus = (requirePublished: boolean) =>
+  requirePublished ? eq(scenarios.status, "published") : notInArray(scenarios.status, ["unpublished", "archived", "taken_down"]);
+
 /**
  * The version a new session starts on: the newest published one, or, while the publish gate is
  * not enforced, the newest one that has not been pulled (unpublished, archived or taken down).
  * A custom persona is found for its owner only.
  */
 export async function getPlayableScenario(db: Executor, personaId: string, requirePublished: boolean, viewerId: string | null) {
-  const playable = requirePublished
-    ? eq(scenarios.status, "published")
-    : notInArray(scenarios.status, ["unpublished", "archived", "taken_down"]);
+  const playable = playableStatus(requirePublished);
   const [row] = await db
     .select({ scenario: scenarios, topic: topics })
     .from(scenarios)

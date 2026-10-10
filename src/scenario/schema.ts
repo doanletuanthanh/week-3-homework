@@ -78,5 +78,17 @@ export const scenarioShapeSchema = z.strictObject({
 export type Scenario = z.infer<typeof scenarioSchema>;
 export type ScenarioItem = z.infer<typeof itemSchema>;
 
-export const topicSchema = z.strictObject({ id: slug, title: text, summary: text });
+/**
+ * The file of a curated topic. An import writes every field over what is stored, so none is
+ * optional: a file that left one out would wipe it.
+ */
+export const topicSchema = z.strictObject({
+  id: slug,
+  title: text,
+  summary: text,
+  /** The role the library files the topic under. */
+  role: z.enum(["ux", "ba", "pm"]),
+  /** Where the topic stands in the library; lower comes first. */
+  display_order: z.number().int().min(0),
+});
 export type TopicFile = z.infer<typeof topicSchema>;

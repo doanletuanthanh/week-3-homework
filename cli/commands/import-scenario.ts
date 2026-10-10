@@ -18,7 +18,10 @@ export async function importScenarioFile(db: Database, file: string): Promise<Im
   const input = await readJsonFile(file);
   const topicFile = join(dirname(file), "topic.json");
   const topic = topicSchema.safeParse(await readJsonFile(topicFile));
-  if (!topic.success) throw new CliError(`File chủ đề "${topicFile}" không hợp lệ: cần id, title và summary.`);
+  if (!topic.success) {
+    const where = topic.error.issues.map((issue) => issue.path.join(".") || "(file)").join(", ");
+    throw new CliError(`File chủ đề "${topicFile}" không hợp lệ ở: ${where}. Cần đủ id, title, summary, role (ux, ba hoặc pm) và display_order (số nguyên ≥ 0).`);
+  }
 
   const { topic_id: topicId, persona_id: personaId } = (input ?? {}) as Record<string, unknown>;
   const otherPersonas =

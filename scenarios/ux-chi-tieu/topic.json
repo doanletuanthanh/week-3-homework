@@ -1,5 +1,7 @@
 {
   "id": "ux-chi-tieu",
   "title": "Chi tiêu hằng ngày của người trẻ đi làm",
-  "summary": "Người mới đi làm tiêu, ghi và xoay xở tiền tới cuối tháng ra sao."
+  "summary": "Người mới đi làm tiêu, ghi và xoay xở tiền tới cuối tháng ra sao.",
+  "role": "ux",
+  "display_order": 10
 }

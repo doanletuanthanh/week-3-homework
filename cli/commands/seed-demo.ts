@@ -73,7 +73,7 @@ export function runSeedDemo(args: string[], io: CliIo, db: Database | null, deps
     const transcript = await loadDemoTranscript(transcriptPath(personaId), personaId);
     const row = await findUserByEmail(db, email);
     if (!row) throw new CliError(`Chưa có tài khoản "${email}": đăng nhập vào InterviewLab bằng tài khoản này một lần rồi chạy lại.`);
-    const user: AppUser = { id: row.id, email: row.email, isAdmin: false, isDemo: true, noticeAcked: true };
+    const user: AppUser = { id: row.id, email: row.email, isAdmin: false, isDemo: true, noticeAcked: true, roleFilter: null };
 
     const opened = await openSession(db, user, personaId);
     if (!opened.ok) {

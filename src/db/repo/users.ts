@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import type { Executor } from "../client";
-import { users } from "../schema";
+import { users, type RoleFilter } from "../schema";
 
 export type UserRow = typeof users.$inferSelect;
 
@@ -37,6 +37,11 @@ export async function acknowledgeNotice(db: Executor, userId: string, version: n
     .update(users)
     .set({ visibilityAckVersion: version, visibilityAckAt: new Date() })
     .where(eq(users.id, userId));
+}
+
+/** Remembers the library filter on the account; null clears it. */
+export async function setRoleFilter(db: Executor, userId: string, role: RoleFilter | null): Promise<void> {
+  await db.update(users).set({ roleFilter: role }).where(eq(users.id, userId));
 }
 
 export async function findUserByEmail(db: Executor, email: string): Promise<UserRow | null> {

@@ -5,12 +5,13 @@ import { scenarios, topics } from "../schema";
 
 export class ScenarioImportError extends Error {}
 
-/** Creates the topic or updates its title and summary. */
+/** Creates the topic or updates what its file says: title, summary, role and place in the library. */
 async function upsertTopic(db: Executor, topic: TopicFile): Promise<void> {
+  const fields = { title: topic.title, summary: topic.summary, role: topic.role, displayOrder: topic.display_order };
   await db
     .insert(topics)
-    .values(topic)
-    .onConflictDoUpdate({ target: topics.id, set: { title: topic.title, summary: topic.summary } });
+    .values({ id: topic.id, ...fields })
+    .onConflictDoUpdate({ target: topics.id, set: fields });
 }
 
 /**

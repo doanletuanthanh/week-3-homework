@@ -13,7 +13,7 @@ export const SESSION_PAGE_SIZE = 20;
 /** The label a session carries in "Buổi của tôi" (PRD §7). */
 export type SessionListState = "preparing" | "failed_eval" | "in_progress" | "done" | "withdrawn";
 
-const STATE_OF: Record<(typeof SESSION_STATUSES)[number], SessionListState> = {
+export const STATE_OF: Record<(typeof SESSION_STATUSES)[number], SessionListState> = {
   generating: "preparing",
   failed_eval: "failed_eval",
   interviewing: "in_progress",

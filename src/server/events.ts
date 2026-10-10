@@ -1,5 +1,5 @@
 import type { Executor } from "@/db/client";
-import { events, type DeviceClass, type FailureCode, type Focus, type ModerationConstraint, type WaitlistContext } from "@/db/schema";
+import { events, type DeviceClass, type FailureCode, type Focus, type ModerationConstraint, type RoleFilter, type WaitlistContext } from "@/db/schema";
 import type { ReplayLevel, ReplayResult } from "@/engine/replay-result";
 
 /** FR-38 events the app writes. */
@@ -13,6 +13,10 @@ export type AppEvent =
       name: "custom_topic_finished";
       props: { outcome: "passed" | "failed" | "system_error"; failure_code: FailureCode | null; cost_usd: number; duration_ms: number; runs: number };
     }
+  /** A signed-in learner pressed a chip of the library filter; null is the chip being cleared. Guests write none. */
+  | { name: "role_filter_selected"; props: { role: RoleFilter | null } }
+  /** A signed-in learner opened a topic's page. Guests write none. */
+  | { name: "topic_opened"; props: { topic_id: string; kind: "curated" | "custom" } }
   /** "Kịch bản này có vấn đề" was pressed. */
   | { name: "custom_problem_reported"; props: Record<string, never> }
   | { name: "turn"; props: { turn_index: number; latency_ms: number } }

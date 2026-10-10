@@ -17,7 +17,7 @@ describe("resolveUser", () => {
 
     const user = await resolveUser(getDb(), claims, lists);
 
-    expect(user).toEqual({ id: claims.sub, email: "linh@example.com", isAdmin: false, isDemo: false, noticeAcked: false });
+    expect(user).toEqual({ id: claims.sub, email: "linh@example.com", isAdmin: false, isDemo: false, noticeAcked: false, roleFilter: null });
     const [row] = await getDb().select().from(users).where(eq(users.id, claims.sub));
     expect(row).toMatchObject({ email: "linh@example.com", visibilityAckVersion: null, visibilityAckAt: null });
   });
