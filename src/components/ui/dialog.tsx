@@ -8,6 +8,8 @@ type Props = {
   onClose: () => void;
   /** Id of the element that names the dialog. */
   labelledBy: string;
+  /** Id of the sentence that says what the dialog's action does, read out with its name. */
+  describedBy?: string;
   role?: "dialog" | "alertdialog";
   children: ReactNode;
 };
@@ -16,7 +18,7 @@ type Props = {
  * A modal dialog on the native element: the browser keeps focus inside it, makes the page behind
  * it inert, and gives focus back to the button that opened it.
  */
-export function Dialog({ open, onClose, labelledBy, role = "dialog", children }: Props) {
+export function Dialog({ open, onClose, labelledBy, describedBy, role = "dialog", children }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export function Dialog({ open, onClose, labelledBy, role = "dialog", children }:
       className="dlg"
       role={role}
       aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
       // A second Esc makes the browser close the dialog by itself: it stays open while `open` says so.
       onClose={(event) => {
         if (open) event.currentTarget.showModal();

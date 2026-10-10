@@ -95,12 +95,15 @@ export function ReplayOffer({ sessionId, replay, personaName }: Props) {
           if (sending === null) setSkipOpen(false);
         }}
         labelledBy="skip-title"
+        describedBy="skip-consequence"
         role="alertdialog"
       >
         <h2 id="skip-title" className="headline-md">
           Bỏ qua lần luyện lại?
         </h2>
-        <p className="body-md c-variant dlg-text">Bạn sẽ không thử lại được khoảnh khắc này.</p>
+        <p id="skip-consequence" className="body-md c-variant dlg-text">
+          Bạn sẽ không thử lại được khoảnh khắc này.
+        </p>
         <div className="dlg-actions">
           <button type="button" className="btn btn-tonal btn-md" onClick={() => setSkipOpen(false)} disabled={sending !== null}>
             Ở lại

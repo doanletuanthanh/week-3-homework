@@ -8,6 +8,7 @@ import { customCommand } from "./commands/custom";
 import { evalCommand } from "./commands/eval";
 import { importCommand } from "./commands/import-scenario";
 import { judgementEvalCommand } from "./commands/judgement-eval";
+import { measureLatencyCommand } from "./commands/measure-latency";
 import { publishCommand, unpublishCommand } from "./commands/publish";
 import { seedDemoCommand } from "./commands/seed-demo";
 import { approveStringsCommand, checkStringsCommand } from "./commands/strings";
@@ -70,6 +71,7 @@ async function main(): Promise<number> {
     publish: publishCommand(connected, operatorEmail),
     unpublish: unpublishCommand(connected, operatorEmail),
     "judgement-eval": judgementEvalCommand(llmDeps),
+    "measure-latency": measureLatencyCommand({ cookie: process.env.IL_MEASURE_COOKIE }),
     // Reads the whole environment as the app does, so a bad value stops the command before it starts a session.
     "seed-demo": seedDemoCommand(connected, () => ({ demoEmails: getEnv().DEMO_ACCOUNT_EMAILS, llmDeps: llmDeps() })),
   };

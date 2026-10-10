@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertIcon, ArrowLeftIcon, CrossIcon } from "@/components/icons";
+import { TranscriptTurn } from "@/components/transcript-turn";
 import type { BrowserTurn } from "@/engine/seal";
 
 type Props = {
@@ -22,8 +23,6 @@ type Props = {
 const HIGHLIGHT_MS = 2000;
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ready"; turns: BrowserTurn[] };
-
-const pad = (index: number) => String(index).padStart(2, "0");
 
 /** The learner's question, with the words the verifier agreed they added underlined. Text nodes only. */
 function LearnerText({ turn }: { turn: BrowserTurn }) {
@@ -153,24 +152,15 @@ export function TranscriptDrawer({ sessionId, personaName, turn, onClose, branch
           {load.state === "ready" && (
             <ol>
               {load.turns.map((entry) => (
-                <li key={entry.index} className={`turn${highlighted === entry.index ? " now" : ""}`} data-turn={entry.index}>
-                  <div className="turn-k">
-                    <span className="k">Lượt {pad(entry.index)}</span>
-                    {entry.leading && <span className="lab lab-never">Dẫn dắt</span>}
-                  </div>
-                  <div>
-                    {entry.learnerText !== null && (
-                      <p className="tl">
-                        <span className="who-l">BẠN</span>
-                        <LearnerText turn={entry} />
-                      </p>
-                    )}
-                    <p className="tl">
-                      <span className="who-l">{personaName.toLocaleUpperCase("vi")}</span>
-                      {entry.personaText}
-                    </p>
-                  </div>
-                </li>
+                <TranscriptTurn
+                  key={entry.index}
+                  index={entry.index}
+                  personaName={personaName}
+                  learnerText={entry.learnerText !== null ? <LearnerText turn={entry} /> : null}
+                  personaText={entry.personaText}
+                  leading={Boolean(entry.leading)}
+                  highlighted={highlighted === entry.index}
+                />
               ))}
             </ol>
           )}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRightIcon, LockIcon, NoPersonIcon } from "@/components/icons";
+import { TranscriptTurn } from "@/components/transcript-turn";
 import type { ViewTurn } from "@/server/session-view";
 
 type Props = {
@@ -11,8 +12,6 @@ type Props = {
   turnCount: number;
   turns: ViewTurn[];
 };
-
-const turnLabel = (index: number) => `Lượt ${String(index).padStart(2, "0")}`;
 
 /**
  * A session whose persona was pulled with its sessions (PRD §7): what was said stays readable and
@@ -56,23 +55,11 @@ export function WithdrawnScreen({ personaName, topicTitle, date, turnCount, turn
             Chỉ đọc
           </span>
         </div>
-        {turns.map((turn) => (
-          <div className="turn" key={turn.index}>
-            <span className="k">{turnLabel(turn.index)}</span>
-            <div>
-              {turn.learnerText !== null && (
-                <p className="tl">
-                  <span className="who-l">BẠN</span>
-                  {turn.learnerText}
-                </p>
-              )}
-              <p className="tl">
-                <span className="who-l">{personaName.toLocaleUpperCase("vi")}</span>
-                {turn.personaText}
-              </p>
-            </div>
-          </div>
-        ))}
+        <ol className="turn-list">
+          {turns.map((turn) => (
+            <TranscriptTurn key={turn.index} index={turn.index} personaName={personaName} learnerText={turn.learnerText} personaText={turn.personaText} />
+          ))}
+        </ol>
       </section>
     </main>
   );

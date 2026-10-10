@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ErrorRetry } from "@/components/ui/error-retry";
 import type { SessionListItem } from "@/server/session-list";
 import { SessionRow } from "./session-row";
@@ -19,6 +19,14 @@ export function SessionList({ initialItems, initialNextOffset }: Props) {
   const [loading, setLoading] = useState(false);
   /** Null while nothing has failed; otherwise how many retries failed after the first failure. */
   const [failedRetries, setFailedRetries] = useState<number | null>(null);
+  /** The rows the last "Tải thêm" added: where they start and how many they are. */
+  const [added, setAdded] = useState<{ from: number; count: number } | null>(null);
+  const rows = useRef<HTMLUListElement>(null);
+
+  // The button that was pressed may be gone with the last page: focus goes on to the first new row.
+  useEffect(() => {
+    if (added) rows.current?.children[added.from]?.querySelector("a")?.focus();
+  }, [added]);
 
   async function loadMore() {
     if (nextOffset === null || loading) return;
@@ -39,7 +47,9 @@ export function SessionList({ initialItems, initialNextOffset }: Props) {
     const loaded = page;
     setFailedRetries(null);
     // A session started in another tab since the page opened shifts the list: no row is shown twice.
-    setItems((current) => [...current, ...loaded.items.filter((item) => !current.some((shown) => shown.id === item.id))]);
+    const fresh = loaded.items.filter((item) => !items.some((shown) => shown.id === item.id));
+    setItems([...items, ...fresh]);
+    setAdded(fresh.length > 0 ? { from: items.length, count: fresh.length } : null);
     setNextOffset(loaded.nextOffset);
   }
 
@@ -52,11 +62,15 @@ export function SessionList({ initialItems, initialNextOffset }: Props) {
         <span>Kết quả</span>
         <span className="shead-state">Trạng thái</span>
       </div>
-      <ul className="srows">
+      <ul className="srows" ref={rows}>
         {items.map((item) => (
           <SessionRow key={item.id} item={item} />
         ))}
       </ul>
+      {/* Always on the page, so the rows a load added are read out. The total makes each load's line a new one. */}
+      <p className="sr" aria-live="polite">
+        {added && `Đã thêm ${added.count} buổi, đang hiện ${added.from + added.count} buổi.`}
+      </p>
       {nextOffset !== null && (
         <div className="smore">
           {failedRetries === null ? (

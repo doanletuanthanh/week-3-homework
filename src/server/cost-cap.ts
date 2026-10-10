@@ -35,5 +35,9 @@ export async function canStartSession(db: Executor, isDemo: boolean): Promise<bo
     getConfig(db, "session_demo_reserve_usd"),
     sessionSpendToday(db),
   ]);
-  return spent < (isDemo ? cap : cap - reserve);
+  // In whole millionths of a dollar: `1.3 - 1` is a hair above `0.3` in floating point, and a
+  // cap typed to the cent would let one more session start.
+  return micro(spent) < micro(isDemo ? cap : cap - reserve);
 }
+
+const micro = (usd: number) => Math.round(usd * 1_000_000);

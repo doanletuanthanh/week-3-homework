@@ -1,4 +1,4 @@
-import { Skeleton } from "./skeleton";
+import { Skeleton, SkeletonStatus } from "./skeleton";
 
 /**
  * The standard loading state of each page (PRD §6.0). Each is the fallback of a boundary inside
@@ -9,7 +9,8 @@ import { Skeleton } from "./skeleton";
 /** Màn 9: the heading, then rows in the shape of the list. */
 export function SessionListSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Đang tải Buổi của tôi">
+    <div>
+      <SkeletonStatus label="Đang tải Buổi của tôi" />
       <div className="mine-head">
         <div>
           <span className="eyebrow">Lịch sử luyện tập</span>
@@ -39,7 +40,8 @@ export function SessionListSkeleton() {
 /** Màn 3: the persona card and the rules beside it. */
 export function PrepSkeleton() {
   return (
-    <main className="container prep" aria-busy="true" aria-label="Đang tải màn chuẩn bị">
+    <main className="container prep">
+      <SkeletonStatus label="Đang tải màn chuẩn bị" />
       <Skeleton width={260} height={14} />
       <div className="prep-grid">
         <div className="card prep-card">
@@ -74,7 +76,8 @@ export function PrepSkeleton() {
  */
 export function SessionSkeleton() {
   return (
-    <main className="reveal" aria-busy="true" aria-label="Đang tải buổi luyện">
+    <main className="reveal">
+      <SkeletonStatus label="Đang tải buổi luyện" />
       <div className="reveal-col">
         <section className="card-lg reveal-skel">
           <Skeleton width={180} height={12} />

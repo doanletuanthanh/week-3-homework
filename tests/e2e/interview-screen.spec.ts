@@ -71,7 +71,8 @@ test.describe("Màn 4: what the interview screen shows", () => {
     await expect(page.locator(".bubble-p")).toHaveCount(2);
 
     expect(findSealed(await page.content(), scenario)).toEqual([]);
-    const shown = (await page.locator("main").innerText()).toLowerCase();
+    // The screen itself: for a moment after a reload its loading state is on the page beside it.
+    const shown = (await page.locator("main.iv").innerText()).toLowerCase();
     for (const word of ["nhãn", "openness", "hook", "dẫn dắt", "mở khóa", "đã mở", "gợi ý"]) expect(shown).not.toContain(word);
     // The seal counter is the only number about the items, and it is the total.
     expect(shown).not.toMatch(/\d+\s*\/\s*11|\d+ trên 11/);

@@ -236,12 +236,15 @@ export function ReplayScreen({ sessionId, persona, date, level, forkAfterTurn, c
           if (!stopping) setStopOpen(false);
         }}
         labelledBy="stop-title"
+        describedBy="stop-consequence"
         role="alertdialog"
       >
         <h2 id="stop-title" className="headline-md">
           Dừng luyện lại?
         </h2>
-        <p className="body-md c-variant dlg-text">Điều bị giữ sẽ được mở ra.</p>
+        <p id="stop-consequence" className="body-md c-variant dlg-text">
+          Điều bị giữ sẽ được mở ra.
+        </p>
         {stopError && (
           <p className="ferr" role="alert">
             <AlertIcon size={16} />

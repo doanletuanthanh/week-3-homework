@@ -17,17 +17,26 @@ Approved 2026-10-03. Product requirements: `_bmad-output/planning-artifacts/prds
 | Tracing | LangSmith | Full prompts and replies, plus metadata: session, turn, call role. Flush before the function ends. Off for full and reduced eval runs (free plan: 5k traces/month, 14-day retention) |
 | Background work | `after()` + job row + heartbeat, `maxDuration = 300` | Reveal and custom-scenario generation. Poll endpoint marks stale jobs failed; no cron |
 | Full evaluation | Local CLI sharing the engine code and database | Never runs in a web request |
-| Tests | Vitest for engine logic; Postgres in Docker for DB tests | |
+| Tests | Vitest (unit, and integration against the local Supabase stack in Docker); Playwright on a production build with a model stub | No test needs a key. CI: `.github/workflows/ci.yml` |
+| Security headers | Fixed headers in `next.config.ts`; Content-Security-Policy with a nonce per request in `src/proxy.ts` | Scripts are nonce-only, so every page is rendered per request. The browser talks to the app's origin alone. `style-src` allows inline styles |
 
 ## Deviations from the PRD
 
-- **Custom-scenario hard timeout is ~270 s, not 10 minutes** (Vercel Hobby cap). The p95 ≤ 2 minute target is unchanged. Moving to Vercel Workflow restores 10 minutes if measured p95 exceeds ~200 s.
+- **A custom-scenario attempt has the PRD's 10 minutes as up to three runs of at most 270 s each** (Vercel Hobby cap per function), each going on from what the one before stored. The p95 ≤ 2 minute target is unchanged.
+- **The reduced evaluation of a generated scenario (FR-54) is dropped**: a custom scenario is only lightly checked (`validate` and an output safety check) and is not played before the learner gets it.
 - **No separate worker process.** Turns and reveal run in request/`after()`, full eval on the developer's machine. Priority of live turns over batch work (FR-37) is kept by an optional separate API key for generation and eval roles.
 - **Unpublished personas are playable by every learner** until the `require_published` config row is turned on; the publish gate still runs and records its result.
 - **Anonymous quota counters survive account deletion**, keyed by a keyed hash of the Google account, with no learner content.
 - **LangSmith receives full prompts and replies in every environment.** The data notice names it; traces are not removed by account deletion and expire with LangSmith retention.
 
+## Measured numbers
+
+None yet: the app has not been deployed. `pnpm il measure-latency` measures turn and reveal latency (NFR-2: turn p95 ≤ 6 s, reveal ≤ 15 s); the results go here and in `docs/launch-checklist.md`.
+
 ## Before real learners
+
+The full list, with status, is `docs/launch-checklist.md`.
+
 
 - Switch the Gemini key to a billing-enabled project: free-tier content is used to improve Google products (PRD §12.4).
 - Move off Vercel Hobby if the product charges anyone.

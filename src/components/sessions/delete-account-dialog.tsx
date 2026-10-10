@@ -70,14 +70,14 @@ export function DeleteAccountDialog({ blocked }: Props) {
         )}
       </div>
 
-      <Dialog open={open} onClose={close} labelledBy="delete-title" role="alertdialog">
+      <Dialog open={open} onClose={close} labelledBy="delete-title" describedBy="delete-consequence" role="alertdialog">
         <span className="dlg-mark dlg-mark-danger">
           <TrashIcon size={22} />
         </span>
         <h2 id="delete-title" className="headline-md">
           {DELETE_ACCOUNT.title}
         </h2>
-        <div className="dlg-text">
+        <div className="dlg-text" id="delete-consequence">
           <p className="body-md c-variant">{DELETE_ACCOUNT.body}</p>
           <p className="body-sm c-variant">{DELETE_ACCOUNT.kept}</p>
         </div>

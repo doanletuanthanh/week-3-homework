@@ -1,11 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { contentSecurityPolicy } from "@/server/content-security-policy";
+
+const CSP_HEADER = "Content-Security-Policy";
 
 /**
- * Refreshes the Supabase session cookie. It authorises nothing: every page, server action and
- * route handler verifies the user itself.
+ * Refreshes the Supabase session cookie and sets the Content-Security-Policy. It authorises
+ * nothing: every page, server action and route handler verifies the user itself.
  */
 export async function proxy(request: NextRequest) {
+  const csp = contentSecurityPolicy({
+    nonce: btoa(crypto.randomUUID()),
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    dev: process.env.NODE_ENV === "development",
+  });
+  // Next.js reads the nonce from the policy on the request and puts it on its own scripts.
+  request.headers.set(CSP_HEADER, csp);
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -24,6 +35,7 @@ export async function proxy(request: NextRequest) {
   );
 
   await supabase.auth.getClaims();
+  response.headers.set(CSP_HEADER, csp);
   return response;
 }
 
