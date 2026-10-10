@@ -1,6 +1,6 @@
 ---
 title: "Phase 4: Home, header and next persona"
-status: todo
+status: done
 phase: 4
 priority: P1
 effort: "1.5d"
@@ -33,7 +33,7 @@ Every way into and out of the library: the home page as designed, "Thư viện" 
 ## Architecture
 
 - `src/app/page.tsx`: drops `getFirstPersonaId`; calls `listLibraryTopics(db, { requirePublished, userId: null }).slice(0, 3)` and renders `TopicCard` from phase 2 without the "Đã luyện" line (the home page is the same for everyone). The reveal preview window stays as it is.
-- `NextStep` props become `{ waitlisted: boolean; next: { personaId, displayName, topicTitle, sameTopic } | null }`. `waitlisted` is loaded in `src/app/sessions/[id]/page.tsx` (line 124, verified) and passed through `reveal-screen.tsx` to `NextStep`: call `pickNextPersona` there with the learner's `roleFilter` and pass `next` the same way.
+- `NextStep` props become `{ waitlisted: boolean; next: NextStep }`, the three-outcome value of `pickNextPersona` (as built; the first draft had `next | null`). `waitlisted` is loaded in `src/app/sessions/[id]/page.tsx` (line 124, verified) and passed through `reveal-screen.tsx` to `NextStep`: call `pickNextPersona` there with the learner's `roleFilter` and pass `next` the same way.
 <!-- Updated: Validation Session 1 - wiring point and empty-state file corrected against the code -->
 - Lead-in strings (new, in `product-strings.ts`, checked by `pnpm il check-strings`): same topic "Cùng chủ đề, một người khác:"; other topic "Một chủ đề khác:". Wording to be confirmed against the `Reveal` artboard's item 7 before coding; if the artboard has its own text, use that.
 - Delete `getFirstPersonaId` once nothing imports it.
@@ -54,9 +54,23 @@ Every way into and out of the library: the home page as designed, "Thư viện" 
 
 ## Success criteria
 
-- [ ] The end-to-end path of launch-checklist D6 passes locally with the library in it: home → library → topic → prep → … → reveal → "Luyện tiếp với …" → prep of the next persona.
-- [ ] With every persona practised, the reveal shows the old text and the waitlist; pressing twice writes one row.
-- [ ] No link in the app points at a persona by a hard-coded id.
+- [x] The end-to-end path of launch-checklist D6 passes locally with the library in it: home → library → topic → prep → … → reveal → "Luyện tiếp với …" → prep of the next persona.
+- [x] With every persona practised, the reveal shows the old text and the waitlist; pressing twice writes one row.
+- [x] No link in the app points at a persona by a hard-coded id.
+
+## Deviations and notes from the implementation
+
+- **The suggestion card follows the `Reveal` artboard**, which has its own text: an eyebrow "Cùng chủ đề", the persona's name, "Đang giữ N điều", the button "Luyện tiếp với [display_name]". For another topic the eyebrow is "Một chủ đề khác" and the topic's title is shown under the name. The second link is "Về thư viện" (the artboard says "Thư viện"). `NextPersona` gained `name`, `avatarKey` and `itemCount` for it; a test fixes its key list.
+- **`NextStep` takes the whole outcome** (`next: NextStep` from `src/server/library.ts`), not `next | null`: there are three outcomes and `null` cannot tell two of them apart.
+- **`all_practised` and `none_exist` link to the library** ("Vào thư viện"), where the old card linked to the home page.
+- **The suggestion is computed for a result only** (`revealed`, `replaying`, `done`); `buildSessionView` takes it as an optional input and says "all practised" without one, which is what the callers that build no result get.
+- **A visitor on a phone has no folded menu:** the header shows the one link "Thư viện" beside "Đăng nhập". A learner's folded menu has both links.
+- **The library link is marked, without `aria-current`, on `/topics/*`**: a topic's page is inside the library.
+- **Màn 3 of a persona that cannot be started** (pulled, or played before the account was deleted) now leads back to its topic ("Về chủ đề"), as the PRD says; for a topic of the learner's own, to "Buổi của tôi". It was "Về trang chủ". Carried over from the phase 3 review.
+- **The home page's library section is left out when no topic can be played** (publish gate on with drafts only); the buttons stay.
+- **`getFirstPersonaId` is deleted.** `tests/e2e/helpers/personas.ts` imports extra personas for a test and removes them after: the other specs expect chị Thu to be the one persona.
+- **Strings:** 9 more product strings (`home.*`, `next_step.*`, `library.enter`, `library.name`, `topic.to_topic`), 28 since phase 2 began. Text that was already on the home page before this plan stays inline, as it was.
+- **No code review yet:** by the user's decision (2026-10-10) phases 4 to 6 are reviewed together after phase 6.
 
 ## Risk assessment
 

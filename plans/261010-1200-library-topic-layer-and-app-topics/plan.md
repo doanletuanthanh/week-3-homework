@@ -60,7 +60,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 1 | [Topic data and library queries](./phase-01-start.md) | Done | — | 1.5d |
 | 2 | [Library screen and role filter](./phase-02-library-screen-and-role-filter.md) | Done | 1 | 1.5d |
 | 3 | [Topic screen and persona cards](./phase-03-topic-screen-and-persona-cards.md) | Done | 1 | 1.5d |
-| 4 | [Home, header and next persona](./phase-04-home-header-and-next-persona.md) | Pending | 2, 3 | 1.5d |
+| 4 | [Home, header and next persona](./phase-04-home-header-and-next-persona.md) | Done | 2, 3 | 1.5d |
 | 5 | [App and web app topics](./phase-05-app-and-web-app-topics.md) | Pending | 1 | 4.5d |
 | 6 | [Tests, docs and checks](./phase-06-tests-docs-and-checks.md) | Pending | 4, 5 | 1d |
 
@@ -79,7 +79,7 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 - Review the content of the six new personas before they are imported into the real database (phase 5).
 - Approve the LLM spend of the quick evaluation runs in phase 5 before they start.
 - Run `pnpm il import` for the new files against the deployed database.
-- Run `pnpm il check-strings product` and `pnpm il approve-strings product` on each database: phases 2 and 3 added 19 product strings (13 + 6), and `il publish` refuses every persona until they are approved.
+- Run `pnpm il check-strings product` and `pnpm il approve-strings product` on each database: phases 2 to 4 added 28 product strings (13 + 6 + 9), and `il publish` refuses every persona until they are approved.
 
 ## Success criteria
 
@@ -92,9 +92,13 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e`, `pnpm build` pass.
 - [ ] `docs/launch-checklist.md` and the bootstrap plan no longer say there is no library.
 
+## Review
+
+Phases 1 to 3 were each reviewed when they finished. Phases 4, 5 and 6 are reviewed together after phase 6 (user decision 2026-10-10).
+
 ## Open questions
 
-None. The three questions of the first draft were settled in validation session 1, the two of phase 2 in session 3 (below).
+None. `topic_opened` counts visits (user decision 2026-10-10): one event per learner and topic within 30 minutes, checked on the server; a reload or a return inside that window is the same visit. The three questions of the first draft were settled in validation session 1, the two of phase 2 in session 3 (below).
 
 ## Validation Log
 

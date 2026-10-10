@@ -71,7 +71,8 @@ Màn 2b at `/topics/[topicId]`: the topic, the overlap warning, and one card per
 ## Deviations and notes from the implementation
 
 - **`topic_opened` is reported by the page from the browser**, not written while it renders: `TopicOpened` (a client effect) calls the server action `topicOpened`, which runs `reportTopicOpened`. The page asks the server for itself again once shown (`RefreshOnShow`, so a card is current after the back button), and a render-time write would have counted that as a second visit. This was reasoned from the code, not measured. The action writes only for a consenting learner and a topic that learner can see; the e2e spec checks one row per visit across a hover, the page's own refresh, a reload and a return.
-- **In development React runs effects twice**, so a visit writes two rows there. Production writes one.
+- **One event per visit** (user decision 2026-10-10, after the review): `reportTopicOpened` writes nothing when the same learner opened the same topic in the last 30 minutes (`TOPIC_VISIT_MINUTES`), so a reload, a return to the page, the double effect of development mode, or a request repeated by hand do not add rows. "One session" is read as that window: the server has no other notion of a browser session, and a mark kept in the browser could be dropped by whoever wanted to fill the table.
+<!-- Updated: after phase 4 - topic_opened counts visits, not page loads -->
 - **"Bắt đầu buổi mới" on a demo card is a form** posting the existing `startSession` action (FR-45: it creates the session at once). Every other card button is a link. `StartSessionButton` gained a `card` size.
 - **The day in "Đã luyện · dd/mm"** is the day the session started, as in "Buổi của tôi".
 - **"Bạn đã luyện k/n"** is shown to every signed-in learner, 0/n included, and counts a persona with any finished session, as the library does (so a demo account that started a new session after a finished one still reads 1/1).
