@@ -90,7 +90,7 @@ test.describe("Màn 9: one session through every state", () => {
       await expect(row().locator(".res")).toHaveCount(0);
       expect(await page.content()).not.toMatch(/Kể \d|Nhận biết/u);
       const sent = await listApi(page);
-      expect(sent).toEqual({ items: [{ id: sessionId, personaName: "Chị Thu", topicTitle: TOPIC, date: expect.stringMatching(/^\d{2}\/\d{2}$/u), state: "in_progress", result: null }], nextOffset: null });
+      expect(sent).toEqual({ items: [{ id: sessionId, personaName: "Chị Thu", displayName: "chị Thu", avatarKey: "thu", topicTitle: TOPIC, date: expect.stringMatching(/^\d{2}\/\d{2}$/u), state: "in_progress", result: null }], nextOffset: null });
     };
 
     // interviewing, no question yet → Màn 3, whose button leads into Màn 4. This learner comes

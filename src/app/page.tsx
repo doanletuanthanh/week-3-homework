@@ -102,7 +102,7 @@ export default async function HomePage() {
                 {index === 0 && (
                   <div className="widget">
                     <div className="widget-row">
-                      <PersonaAvatar size={26} />
+                      <PersonaAvatar size={26} avatarKey="thu" name="chị Thu" />
                       <span className="pill pill-tertiary">
                         <LockIcon size={11} strokeWidth={2.4} />
                         Đang giữ từ lượt đầu

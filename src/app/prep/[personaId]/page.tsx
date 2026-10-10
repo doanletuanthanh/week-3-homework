@@ -65,11 +65,17 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
   return (
     <main className="container prep">
       <nav aria-label="Đường dẫn" className="label-md crumbs">
-        <Link href={custom ? "/my-sessions" : "/"} className="c-variant">
-          {custom ? "Buổi của tôi" : "Trang chủ"}
+        <Link href={custom ? "/my-sessions" : "/library"} className="c-variant">
+          {custom ? "Buổi của tôi" : "Thư viện"}
         </Link>
         <ChevronRightIcon size={14} className="c-outline" />
-        <span className="c-variant">{found.topic.title}</span>
+        {custom ? (
+          <span className="c-variant">{found.topic.title}</span>
+        ) : (
+          <Link href={`/topics/${found.topic.id}`} className="c-variant">
+            {found.topic.title}
+          </Link>
+        )}
         <ChevronRightIcon size={14} className="c-outline" />
         <span aria-current="page">{persona.displayNameCapitalized}</span>
       </nav>
@@ -78,7 +84,7 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
         <article className="card prep-card">
           <div className="prep-body">
             <div className="prep-who">
-              <PersonaAvatar size={72} />
+              <PersonaAvatar size={72} avatarKey={found.scenario.avatarKey} name={persona.displayName} />
               <div>
                 <h1 className="headline-lg">{persona.name}</h1>
                 <p className="body-md c-variant">{persona.tagline}</p>

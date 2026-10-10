@@ -192,6 +192,20 @@ export const LIBRARY = {
   practised: "Đã luyện",
 } as const;
 
+/**
+ * Màn 2b · Chủ đề. `warning` is the overlap warning of FR-51, word for word from the PRD;
+ * `generated` is the line a topic the learner made carries.
+ */
+export const TOPIC = {
+  warning:
+    "Nếu đồ án của bạn cũng về chủ đề này, điều các nhân vật ở đây kể có thể thành giả thuyết trong đầu bạn trước khi gặp người thật. Họ là nhân vật hư cấu, không phải người dùng của bạn.",
+  generated: "Kịch bản do AI sinh, chỉ qua kiểm tra nhẹ. Mọi chi tiết là hư cấu.",
+  practised: "Bạn đã luyện",
+  empty: "Chủ đề này đang được cập nhật.",
+  not_found: "Không tìm thấy chủ đề này.",
+  to_library: "Về thư viện",
+} as const;
+
 export function fillTemplate(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/gu, (whole, key: string) => (key in values ? String(values[key]) : whole));
 }
@@ -230,5 +244,6 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(CUSTOM_REPORT).map(([name, text]) => ({ key: `custom_report.${name}`, text })),
     ...Object.entries(ROLE_LABEL).map(([name, text]) => ({ key: `role_label.${name}`, text })),
     ...Object.entries(LIBRARY).map(([name, text]) => ({ key: `library.${name}`, text })),
+    ...Object.entries(TOPIC).map(([name, text]) => ({ key: `topic.${name}`, text })),
   ];
 }

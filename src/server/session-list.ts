@@ -31,6 +31,9 @@ export type SessionListItem = {
   id: string;
   /** For a custom session with no scenario (being prepared, or never passed): the topic the learner typed. */
   personaName: string;
+  /** What the portrait is drawn from: the form of address and the illustration key. Both null while no persona exists. */
+  displayName: string | null;
+  avatarKey: string | null;
   topicTitle: string;
   /** The day the session started, as "dd/mm". */
   date: string;
@@ -49,6 +52,8 @@ export function toListItem(row: SessionListRow): SessionListItem {
   return {
     id: row.id,
     personaName: row.displayName === null ? (row.customTopicText ?? CUSTOM_TOPIC_LABEL) : capitalizeFirst(row.displayName),
+    displayName: row.displayName,
+    avatarKey: row.avatarKey,
     topicTitle: row.displayName === null ? CUSTOM_TOPIC_LABEL : (row.topicTitle ?? CUSTOM_TOPIC_LABEL),
     date: `${day}/${month}`,
     state: STATE_OF[row.status],

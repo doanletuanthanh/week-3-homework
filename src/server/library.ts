@@ -1,10 +1,12 @@
 import type { Executor } from "@/db/client";
 import {
+  getVisibleTopic,
   listCuratedPersonas,
   listDonePersonaIds,
   listPractisedPersonaIds,
   type CuratedPersonaRow,
   type OwnCustomTopicRow,
+  type PersonaCardRow,
   type PersonaSessionRow,
 } from "@/db/repo/library";
 import { listPlayedPersonas } from "@/db/repo/quota-tombstone";
@@ -83,6 +85,18 @@ export async function chooseRoleFilter(db: Executor, user: AppUser | null, value
   return role;
 }
 
+/**
+ * A topic's page was shown to a learner (FR-38): one event per time it is shown. Nothing is
+ * written for a guest, for a learner who has not accepted the data notice, or for a topic the
+ * learner cannot see, so the id a browser sends can only ever name a page it was given.
+ */
+export async function reportTopicOpened(db: Executor, user: AppUser | null, topicId: unknown): Promise<void> {
+  if (!user?.noticeAcked || typeof topicId !== "string") return;
+  const topic = await getVisibleTopic(db, topicId, user.id);
+  if (!topic) return;
+  await recordEvent(db, { userId: user.id, sessionId: null, isDemo: user.isDemo }, { name: "topic_opened", props: { topic_id: topic.id, kind: topic.kind } });
+}
+
 /** One card of "Chủ đề bạn tự tạo" (Màn 2). */
 export type OwnTopicCard = {
   topicId: string;
@@ -118,6 +132,44 @@ export type PersonaButton = "start" | "continue" | "review";
 export function personaButton(session: Pick<PersonaSessionRow, "status"> | null): PersonaButton {
   if (!session) return "start";
   return STATE_OF[session.status] === "done" ? "review" : "continue";
+}
+
+/**
+ * One persona card of Màn 2b, as the page renders it. Of the sealed items it holds how many
+ * there are and nothing else.
+ */
+export type PersonaCardView = {
+  personaId: string;
+  /** "Chị Thu, 26 tuổi". */
+  name: string;
+  /** Form of address ("chị Thu"): what the portrait's initial is read from. */
+  displayName: string;
+  avatarKey: string | null;
+  tagline: string;
+  researchGoal: string;
+  itemCount: number;
+  button: PersonaButton;
+  /** The session the button opens: the learner's newest counting one. Null for "Bắt đầu". */
+  sessionId: string | null;
+  /** The day that session started, as "dd/mm". Null without a session. */
+  sessionDate: string | null;
+};
+
+/** The only path from a persona row and the learner's session with it to a card of Màn 2b. */
+export function toPersonaCardView(persona: PersonaCardRow, session: PersonaSessionRow | null): PersonaCardView {
+  const started = session ? dayOf(session.startedAt) : null;
+  return {
+    personaId: persona.personaId,
+    name: persona.name,
+    displayName: persona.displayName,
+    avatarKey: persona.avatarKey,
+    tagline: persona.tagline,
+    researchGoal: persona.researchGoal,
+    itemCount: persona.itemCount,
+    button: personaButton(session),
+    sessionId: session?.id ?? null,
+    sessionDate: started ? `${started.day}/${started.month}` : null,
+  };
 }
 
 export type NextPersona = { personaId: string; displayName: string; topicId: string; topicTitle: string; sameTopic: boolean };

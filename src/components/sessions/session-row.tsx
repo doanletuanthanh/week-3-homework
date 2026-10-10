@@ -54,7 +54,7 @@ export function SessionRow({ item }: { item: SessionListItem }) {
   return (
     <li>
       <Link className="srow" href={`/sessions/${item.id}`}>
-        <PersonaAvatar size={44} />
+        <PersonaAvatar size={44} avatarKey={item.avatarKey} name={item.displayName} />
         <div className="srow-who">
           <p className="label-lg">{item.personaName}</p>
           <p className="body-sm c-variant">{item.topicTitle}</p>

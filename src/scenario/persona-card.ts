@@ -28,3 +28,13 @@ export function personaCard(scenario: Scenario): PersonaCard {
     itemCount: scenario.items.length,
   };
 }
+
+/**
+ * The letter that stands for a persona with no illustration: the first of the given name, which
+ * in a Vietnamese form of address is the last word ("chị Thu" → "T", not "C").
+ */
+export function personaInitial(displayName: string): string {
+  // The last word that has a letter: a generated name may end in something else ("anh Dũng (IT)" has none there).
+  const given = displayName.split(/\s+/u).findLast((word) => /^\p{L}/u.test(word)) ?? "";
+  return (Array.from(given)[0] ?? "").toLocaleUpperCase("vi");
+}

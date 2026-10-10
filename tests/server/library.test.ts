@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SESSION_STATUSES } from "@/db/schema";
 import { topicSchema } from "@/scenario/schema";
-import { filterTopics, groupByTopic, parseRoleFilter, personaButton, toOwnTopicCard, type LibraryTopic } from "@/server/library";
+import type { PersonaCardRow } from "@/db/repo/library";
+import { filterTopics, groupByTopic, parseRoleFilter, personaButton, toOwnTopicCard, toPersonaCardView, type LibraryTopic } from "@/server/library";
 import { clockOf } from "@/server/session-view";
-import { LIBRARY, ROLE_LABEL, productStrings } from "@/strings/product-strings";
+import { LIBRARY, ROLE_LABEL, TOPIC, productStrings } from "@/strings/product-strings";
+import { findSealed, readChiThu } from "../helpers/sealed-strings";
 
 const persona = (personaId: string, topicId: string, topicRole: "ux" | "ba" | "pm" | null = "ux") => ({
   personaId,
@@ -163,6 +165,16 @@ describe("the strings of the library", () => {
     const checked = new Map(productStrings().map((entry) => [entry.key, entry.text]));
     for (const [name, text] of Object.entries(LIBRARY)) expect(checked.get(`library.${name}`), name).toBe(text);
     for (const [name, text] of Object.entries(ROLE_LABEL)) expect(checked.get(`role_label.${name}`), name).toBe(text);
+    for (const [name, text] of Object.entries(TOPIC)) expect(checked.get(`topic.${name}`), name).toBe(text);
+  });
+
+  it("word the topic's warning, its line for a generated scenario and its two end states as the PRD does", () => {
+    expect(TOPIC.warning).toBe(
+      "Nếu đồ án của bạn cũng về chủ đề này, điều các nhân vật ở đây kể có thể thành giả thuyết trong đầu bạn trước khi gặp người thật. Họ là nhân vật hư cấu, không phải người dùng của bạn.",
+    );
+    expect(TOPIC.generated).toBe("Kịch bản do AI sinh, chỉ qua kiểm tra nhẹ. Mọi chi tiết là hư cấu.");
+    expect(TOPIC.empty).toBe("Chủ đề này đang được cập nhật.");
+    expect(TOPIC.not_found).toBe("Không tìm thấy chủ đề này.");
   });
 
   it("word the 'Khác' line and the empty state as the PRD does", () => {
@@ -174,5 +186,58 @@ describe("the strings of the library", () => {
   it("gives every string its own key", () => {
     const keys = productStrings().map((entry) => entry.key);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe("toPersonaCardView (Màn 2b, PRD §7)", () => {
+  const chiThu = readChiThu();
+  const row: PersonaCardRow = {
+    personaId: "chi-thu",
+    topicId: "ux-chi-tieu",
+    displayName: "chị Thu",
+    avatarKey: "thu",
+    tagline: "Kế toán ở một công ty logistics",
+    origin: "authored",
+    name: "Chị Thu, 26 tuổi",
+    researchGoal: chiThu.research_goal,
+    itemCount: chiThu.items.length,
+    firstImportedAt: new Date("2026-09-20T03:00:00Z"),
+  };
+  // 18:30 UTC is already the next day on the learners' clock.
+  const session = (status: (typeof SESSION_STATUSES)[number]) => ({ personaId: "chi-thu", id: "session-1", status, startedAt: new Date("2026-09-25T18:30:00Z") });
+
+  it("no session: 'Bắt đầu', with no session to open and no day", () => {
+    expect(toPersonaCardView(row, null)).toMatchObject({ button: "start", sessionId: null, sessionDate: null });
+  });
+
+  it.each(["interviewing", "revealed", "replaying"] as const)("%s: 'Tiếp tục buổi luyện' on that session", (status) => {
+    expect(toPersonaCardView(row, session(status))).toMatchObject({ button: "continue", sessionId: "session-1" });
+  });
+
+  it("done: 'Xem lại kết quả' on that session, with the day it started in Vietnam", () => {
+    expect(toPersonaCardView(row, session("done"))).toMatchObject({ button: "review", sessionId: "session-1", sessionDate: "26/09" });
+  });
+
+  it("carries who the persona is, the research question and how many items there are, under these keys only", () => {
+    const card = toPersonaCardView(row, session("done"));
+    expect(card).toMatchObject({
+      personaId: "chi-thu",
+      name: "Chị Thu, 26 tuổi",
+      displayName: "chị Thu",
+      avatarKey: "thu",
+      tagline: "Kế toán ở một công ty logistics",
+      researchGoal: "Vì sao người trẻ bắt đầu rồi bỏ việc theo dõi chi tiêu?",
+      itemCount: 11,
+    });
+    // A new field has to be added here on purpose: the card is sent to the browser.
+    expect(Object.keys(card).sort()).toEqual(["avatarKey", "button", "displayName", "itemCount", "name", "personaId", "researchGoal", "sessionDate", "sessionId", "tagline"]);
+    expect(findSealed(JSON.stringify(card), chiThu)).toEqual([]);
+  });
+
+  it("drops a field the row may gain later instead of passing it on", () => {
+    const widened = { ...row, content: chiThu, items: chiThu.items } as PersonaCardRow;
+    const sent = JSON.stringify(toPersonaCardView(widened, null));
+    expect(findSealed(sent, chiThu)).toEqual([]);
+    expect(sent).not.toContain("sample_question");
   });
 });

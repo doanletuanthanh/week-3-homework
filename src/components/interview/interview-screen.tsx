@@ -17,7 +17,7 @@ import { postTurn, sendJson } from "./turn-request";
 
 type Props = {
   sessionId: string;
-  persona: { displayName: string; displayNameCapitalized: string; researchGoal: string; itemCount: number };
+  persona: { displayName: string; displayNameCapitalized: string; avatarKey: string | null; researchGoal: string; itemCount: number };
   initialTurns: Turn[];
   initialNotes: string;
   /** Turn 30 ended the session but the notes are not frozen yet: this screen sends the end request. */
@@ -220,6 +220,7 @@ export function InterviewScreen({ sessionId, persona, initialTurns, initialNotes
     <main className="iv" data-notes-open={notesOpen}>
       <SessionBar
         personaName={persona.displayNameCapitalized}
+        avatarKey={persona.avatarKey}
         researchGoal={persona.researchGoal}
         itemCount={persona.itemCount}
         turnCount={turnCount}

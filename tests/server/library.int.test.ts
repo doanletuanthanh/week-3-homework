@@ -4,13 +4,13 @@ import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/client";
-import { getTopicWithPersonas, listCuratedPersonas, listOwnCustomTopics, listSessionsForPersonas } from "@/db/repo/library";
+import { getTopicWithPersonas, getVisibleTopic, listCuratedPersonas, listOwnCustomTopics, listSessionsForPersonas } from "@/db/repo/library";
 import { addPlayedPersonas } from "@/db/repo/quota-tombstone";
 import { setRoleFilter } from "@/db/repo/users";
 import { events, scenarios, sessions, users } from "@/db/schema";
 import type { Scenario, TopicFile } from "@/scenario/schema";
 import { resolveUser } from "@/server/auth";
-import { chooseRoleFilter, filterTopics, listLibraryTopics, personaButton, pickNextPersona } from "@/server/library";
+import { chooseRoleFilter, filterTopics, listLibraryTopics, personaButton, pickNextPersona, reportTopicOpened, toPersonaCardView } from "@/server/library";
 import { quotaKeyOf } from "@/server/quota";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { INVALID, attempt, attemptRow } from "../helpers/custom-db";
@@ -407,5 +407,141 @@ describe("chooseRoleFilter (FR-50)", () => {
 
     expect(await storedFilter(minh.id)).toBe("ba");
     expect(await storedFilter(linh.id)).toBe("pm");
+  });
+});
+
+describe("reportTopicOpened (FR-38, signed-in learners only)", () => {
+  const openedEvents = () => db().select().from(events).where(eq(events.name, "topic_opened")).orderBy(events.at);
+  const consenting = async (email: string, lists?: Parameters<typeof createLearner>[1]) => ({ ...(await createLearner(email, lists)), noticeAcked: true });
+
+  it("writes one event each time a learner is shown a curated topic", async () => {
+    const linh = await consenting("linh@example.com");
+
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+
+    expect((await openedEvents()).map((event) => [event.userId, event.sessionId, event.props])).toEqual([
+      [linh.id, null, { topic_id: CHI_TIEU, kind: "curated" }],
+      [linh.id, null, { topic_id: CHI_TIEU, kind: "curated" }],
+    ]);
+  });
+
+  it("names a topic the learner made as custom", async () => {
+    const minh = await consenting("minh@example.com");
+    const own = await customTopic(minh);
+    const before = (await openedEvents()).length;
+
+    await reportTopicOpened(db(), minh, own.topicId);
+
+    expect((await openedEvents()).slice(before).map((event) => [event.userId, event.props])).toEqual([[minh.id, { topic_id: own.topicId, kind: "custom" }]]);
+  });
+
+  it("writes nothing for a guest, nor for a learner who has not accepted the data notice", async () => {
+    const linh = await createLearner("linh@example.com");
+    expect(linh.noticeAcked).toBe(false);
+
+    await reportTopicOpened(db(), null, CHI_TIEU);
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+
+    expect(await openedEvents()).toEqual([]);
+  });
+
+  it("writes nothing for another learner's own topic, a topic that does not exist, or an id that is not text", async () => {
+    const minh = await consenting("minh@example.com");
+    const an = await consenting("an@example.com");
+    const theirs = await customTopic(minh);
+    const before = (await openedEvents()).length;
+
+    for (const id of [theirs.topicId, "khong-co", "", "x".repeat(5000), null, undefined, 7, { id: CHI_TIEU }, [CHI_TIEU]]) await reportTopicOpened(db(), an, id);
+
+    expect(await openedEvents()).toHaveLength(before);
+  });
+
+  it("leaves a demo account out of the events", async () => {
+    const demo = await consenting("demo@example.com", { ADMIN_EMAILS: [], DEMO_ACCOUNT_EMAILS: ["demo@example.com"] });
+    expect(demo.isDemo).toBe(true);
+
+    await reportTopicOpened(db(), demo, CHI_TIEU);
+
+    expect(await openedEvents()).toEqual([]);
+  });
+});
+
+describe("getVisibleTopic", () => {
+  it("finds a curated topic for anyone, and a learner's own topic for that learner alone", async () => {
+    const minh = await createLearner("minh@example.com");
+    const an = await createLearner("an@example.com");
+    const own = await customTopic(minh);
+
+    expect(await getVisibleTopic(db(), CHI_TIEU, null)).toMatchObject({ id: CHI_TIEU, kind: "curated", role: "ux" });
+    expect(await getVisibleTopic(db(), own.topicId, minh.id)).toMatchObject({ id: own.topicId, kind: "custom", role: null });
+    expect(await getVisibleTopic(db(), own.topicId, an.id)).toBeNull();
+    expect(await getVisibleTopic(db(), own.topicId, null)).toBeNull();
+    expect(await getVisibleTopic(db(), "khong-co", minh.id)).toBeNull();
+  });
+
+  it("answers 'no such topic' for a text that is not a topic id, a zero byte included, instead of failing", async () => {
+    for (const id of ["", " ", "UX-CHI-TIEU", "ux_chi_tieu", "ux-chi-tieu ", "ux-chi-tieu\u0000", "\u0000", "' OR 1=1--", "../prep/chi-thu", "a".repeat(201)]) {
+      expect(await getVisibleTopic(db(), id, null), JSON.stringify(id)).toBeNull();
+      expect(await getTopicWithPersonas(db(), id, { ...OPEN, viewerId: null }), JSON.stringify(id)).toBeNull();
+    }
+  });
+});
+
+describe("the cards of a topic's page (Màn 2b)", () => {
+  const cardsOf = async (topicId: string, learner: { id: string } | null) => {
+    const found = await getTopicWithPersonas(db(), topicId, { ...OPEN, viewerId: learner?.id ?? null });
+    const mine = learner ? await listSessionsForPersonas(db(), learner.id, found!.personas.map((persona) => persona.personaId)) : [];
+    return found!.personas.map((persona) => toPersonaCardView(persona, mine.find((session) => session.personaId === persona.personaId) ?? null));
+  };
+
+  it("give each persona the button of the learner's newest counting session, and a guest 'Bắt đầu' everywhere", async () => {
+    await importPersona("anh-dung");
+    await importPersona("ban-vy");
+    const linh = await createLearner("linh@example.com");
+    const done = await startSession(linh, PERSONA_ID);
+    await setStatus(done.id, "done");
+    const open = await startSession(linh, "anh-dung");
+
+    expect((await cardsOf(CHI_TIEU, linh)).map((card) => [card.personaId, card.button, card.sessionId])).toEqual([
+      [PERSONA_ID, "review", done.id],
+      ["anh-dung", "continue", open.id],
+      ["ban-vy", "start", null],
+    ]);
+    expect((await cardsOf(CHI_TIEU, null)).map((card) => [card.button, card.sessionId])).toEqual([
+      ["start", null],
+      ["start", null],
+      ["start", null],
+    ]);
+  });
+
+  it("a withdrawn session does not count: the card says 'Bắt đầu' again", async () => {
+    const linh = await createLearner("linh@example.com");
+    const stopped = await startSession(linh, PERSONA_ID);
+    await setStatus(stopped.id, "withdrawn");
+
+    expect((await cardsOf(CHI_TIEU, linh)).map((card) => [card.button, card.sessionId])).toEqual([["start", null]]);
+  });
+
+  it("a demo account's card opens its newest session with the persona", async () => {
+    const demo = await createLearner("demo@example.com", { ADMIN_EMAILS: [], DEMO_ACCOUNT_EMAILS: ["demo@example.com"] });
+    const first = await startSession(demo, PERSONA_ID);
+    await setStatus(first.id, "done");
+    await db().update(sessions).set({ startedAt: sql`now() - interval '1 hour'` }).where(eq(sessions.id, first.id));
+    const second = await startSession(demo, PERSONA_ID);
+
+    expect((await cardsOf(CHI_TIEU, demo)).map((card) => [card.button, card.sessionId])).toEqual([["continue", second.id]]);
+  });
+
+  it("hold nothing sealed for a learner's own generated persona either", async () => {
+    const minh = await createLearner("minh@example.com");
+    const own = await customTopic(minh);
+
+    const cards = await cardsOf(own.topicId, minh);
+
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toMatchObject({ button: "continue", sessionId: own.sessionId, avatarKey: null });
+    const [stored] = await db().select({ content: scenarios.content }).from(scenarios).where(eq(scenarios.topicId, own.topicId));
+    expect(findSealed(JSON.stringify(cards), stored.content)).toEqual([]);
   });
 });

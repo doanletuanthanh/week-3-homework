@@ -5,7 +5,7 @@ import type { LibraryTopic } from "@/server/library";
 import { LIBRARY, ROLE_LABEL } from "@/strings/product-strings";
 
 /** The colours of a role. They never stand alone: the pill beside them says the role in words. */
-const ROLE_STYLE: Record<TopicRole, { tile: string; pill: string }> = {
+export const ROLE_STYLE: Record<TopicRole, { tile: string; pill: string }> = {
   ux: { tile: "tt-ux", pill: "pill-green" },
   ba: { tile: "tt-ba", pill: "pill-tertiary" },
   pm: { tile: "tt-pm", pill: "pill-pm" },

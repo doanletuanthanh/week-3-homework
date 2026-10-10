@@ -49,7 +49,8 @@ test.describe("the imported persona on the prep screen", () => {
       page.getByText("chị Thu là nhân vật hư cấu, điều chị Thu kể không phải insight cho đề tài của bạn."),
     ).toBeVisible();
     const crumbs = page.getByRole("navigation", { name: "Đường dẫn" });
-    await expect(crumbs).toContainText("Chi tiêu hằng ngày của người trẻ đi làm");
+    await expect(crumbs.getByRole("link", { name: "Thư viện" })).toHaveAttribute("href", "/library");
+    await expect(crumbs.getByRole("link", { name: "Chi tiêu hằng ngày của người trẻ đi làm" })).toHaveAttribute("href", "/topics/ux-chi-tieu");
     await expect(crumbs.locator('[aria-current="page"]')).toHaveText("Chị Thu");
   });
 

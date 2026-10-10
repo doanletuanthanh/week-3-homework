@@ -92,7 +92,7 @@ describe("learner text with HTML in it is rendered as text", () => {
 
   it("a custom topic as the name of its row in 'Buổi của tôi'", () => {
     const markup = renderToStaticMarkup(
-      <SessionRow item={{ id: "0b0e6c0e-1111-4222-8333-444455556666", personaName: HOSTILE, topicTitle: HOSTILE, date: "09/10", state: "preparing", result: null }} />,
+      <SessionRow item={{ id: "0b0e6c0e-1111-4222-8333-444455556666", personaName: HOSTILE, displayName: null, avatarKey: null, topicTitle: HOSTILE, date: "09/10", state: "preparing", result: null }} />,
     );
     expectEscaped(markup, 2);
   });

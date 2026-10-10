@@ -167,6 +167,7 @@ export type SessionListRow = {
   revealJson: RevealJson | null;
   /** Null for a custom session whose scenario does not exist (yet). */
   displayName: string | null;
+  avatarKey: string | null;
   topicTitle: string | null;
   /** The topic the learner typed, for a custom session. */
   customTopicText: string | null;
@@ -181,6 +182,7 @@ export async function listSessionRows(db: Executor, userId: string, page: { offs
       startedAt: sessions.startedAt,
       revealJson: sql<RevealJson | null>`CASE WHEN ${sessions.status} = 'done' THEN ${sessions.revealJson} END`,
       displayName: scenarios.displayName,
+      avatarKey: scenarios.avatarKey,
       topicTitle: topics.title,
       customTopicText: generationAttempts.topicText,
     })

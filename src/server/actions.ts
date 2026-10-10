@@ -8,7 +8,7 @@ import { getSession, getVisibleScenario } from "@/db/repo/sessions";
 import { acknowledgeNotice } from "@/db/repo/users";
 import { DATA_NOTICE_VERSION } from "@/strings/product-strings";
 import { getUser, noticePath, requireAckedUser, requireUser } from "./auth";
-import { chooseRoleFilter } from "./library";
+import { chooseRoleFilter, reportTopicOpened } from "./library";
 import { resumePendingAction, storePendingAction } from "./pending-actions";
 import { adoptRememberedRoleFilter, rememberRoleFilter } from "./role-filter";
 import { safeNextPath } from "./safe-next";
@@ -112,4 +112,9 @@ export async function selectRoleFilter(formData: FormData): Promise<void> {
   // The account is the only source for a consenting learner; the cookie is a guest's.
   await rememberRoleFilter(user?.noticeAcked ? null : role);
   revalidatePath("/library");
+}
+
+/** Màn 2b is on a learner's screen: called by the page itself, once per time it is shown. */
+export async function topicOpened(topicId: string): Promise<void> {
+  await reportTopicOpened(getDb(), await getUser(), topicId);
 }

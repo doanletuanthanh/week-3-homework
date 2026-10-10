@@ -65,6 +65,20 @@ export async function listCuratedPersonas(db: Executor, requirePublished: boolea
 
 export type TopicRow = { id: string; title: string; summary: string; kind: "curated" | "custom"; role: TopicRole | null };
 
+/** The shape of every topic id, curated or custom. An id read from a URL that is not one names no topic. */
+const TOPIC_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+/** A topic this learner (or guest) may see: a custom one exists for its owner alone. */
+export async function getVisibleTopic(db: Executor, topicId: string, viewerId: string | null): Promise<TopicRow | null> {
+  // Asked of the database, some texts are an error (a zero byte) and not "no such row".
+  if (topicId.length > 200 || !TOPIC_ID.test(topicId)) return null;
+  const [topic] = await db
+    .select({ id: topics.id, title: topics.title, summary: topics.summary, kind: topics.kind, role: topics.role })
+    .from(topics)
+    .where(and(eq(topics.id, topicId), visibleTo(viewerId)));
+  return topic ?? null;
+}
+
 /**
  * A topic with the personas a session can start on. Null when the topic does not exist or is
  * another learner's custom topic: the two are not told apart.
@@ -74,10 +88,7 @@ export async function getTopicWithPersonas(
   topicId: string,
   options: { requirePublished: boolean; viewerId: string | null },
 ): Promise<{ topic: TopicRow; personas: PersonaCardRow[] } | null> {
-  const [topic] = await db
-    .select({ id: topics.id, title: topics.title, summary: topics.summary, kind: topics.kind, role: topics.role })
-    .from(topics)
-    .where(and(eq(topics.id, topicId), visibleTo(options.viewerId)));
+  const topic = await getVisibleTopic(db, topicId, options.viewerId);
   if (!topic) return null;
   const personas = await db
     .selectDistinctOn([scenarios.personaId], personaColumns)

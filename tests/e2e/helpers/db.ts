@@ -65,6 +65,8 @@ export const db = {
   /** Turns the publish gate on for one test; `clearConfig` puts every setting back to its default. */
   requirePublished: () => getDb().insert(config).values({ key: "require_published", value: true, updatedBy: "e2e" }),
   clearConfig: () => getDb().delete(config),
+  /** Sets every version of a persona to a status an operator's command gives it. */
+  setScenarioStatus: (personaId: string, status: (typeof scenarios.$inferSelect)["status"]) => getDb().update(scenarios).set({ status }).where(eq(scenarios.personaId, personaId)),
   scenarioOf: async (personaId: string) => (await getDb().select().from(scenarios).where(eq(scenarios.personaId, personaId)))[0],
   /** Puts the persona back to an unevaluated draft: no run, flag, ruling, string check or approval. */
   resetPublishState: async () => {

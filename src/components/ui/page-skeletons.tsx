@@ -72,6 +72,47 @@ export function LibrarySkeleton() {
   );
 }
 
+/** Màn 2b: the breadcrumb, the topic's head, the warning, then cards in the shape of the persona cards. */
+export function TopicSkeleton() {
+  return (
+    <div>
+      <SkeletonStatus label="Đang tải chủ đề" />
+      <Skeleton width={260} height={14} />
+      <div className="topic-head">
+        <div className="topic-what">
+          <Skeleton width={64} height={64} radius={12} />
+          <div className="skel-stack">
+            <Skeleton width={120} height={20} radius={999} />
+            <Skeleton width={300} height={36} />
+            <Skeleton width={240} height={16} />
+          </div>
+        </div>
+      </div>
+      <Skeleton width="100%" height={72} radius={10} className="topic-warning" />
+      <div className="lib-grid">
+        {[60, 72, 54].map((width) => (
+          <div className="card pcard" key={width}>
+            <div className="pcard-body">
+              <div className="pcard-who">
+                <Skeleton width={64} height={64} radius="50%" />
+                <div className="skel-stack">
+                  <Skeleton width={150} height={24} />
+                  <Skeleton width={`${width}%`} height={14} />
+                </div>
+              </div>
+              <Skeleton width="100%" height={84} radius={12} />
+              <Skeleton width="100%" height={58} radius={8} />
+            </div>
+            <div className="actionbar">
+              <Skeleton width={96} height={36} radius={8} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Màn 3: the persona card and the rules beside it. */
 export function PrepSkeleton() {
   return (

@@ -107,6 +107,54 @@ test.describe("another learner's session", () => {
     await otherContext.close();
   });
 
+  test("another learner's own topic is the page of a topic that does not exist, for a learner and for a visitor", async ({ page, context, browser }) => {
+    test.setTimeout(120_000);
+    const topic = "app theo dõi lịch tưới cây cho người hay quên";
+    const { userId } = await signInAndAccept(page, context, "isolation-topic-owner", "/custom-topic");
+    await page.getByLabel("Bạn muốn phỏng vấn người dùng về chủ đề gì?").fill(topic);
+    await page.getByRole("button", { name: "Tạo kịch bản" }).click();
+    await expect(page).toHaveURL(/\/prep\/custom-[0-9a-f-]{36}$/u, { timeout: 60_000 });
+    const [attempt] = await db.attemptsOf(userId);
+    const theirs = `/topics/${attempt.topicId}`;
+    // The owner has it.
+    expect((await page.goto(theirs))?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: topic })).toBeVisible();
+    // The owner's own visit is reported once the page is on screen: counted before anyone else asks.
+    await expect.poll(async () => (await db.eventsOfUser(userId)).filter((event) => event.name === "topic_opened").length).toBe(1);
+    const eventsBefore = (await db.eventsNamed("topic_opened")).length;
+
+    const otherContext = await browser.newContext();
+    try {
+      const other = await otherContext.newPage();
+      /** What a page shows, without what differs from one request to the next. */
+      const shown = async (path: string) => {
+        const response = await other.goto(path);
+        return { status: response?.status(), main: await other.locator("main").innerHTML(), title: await other.title() };
+      };
+
+      // A visitor, then a signed-in learner: both get what a topic that does not exist gets.
+      for (const signedIn of [false, true]) {
+        if (signedIn) await signInAndAccept(other, otherContext, "isolation-topic-intruder", "/");
+        const answer = await shown(theirs);
+        expect(answer.status, `signed in: ${signedIn}`).toBe(404);
+        expect(answer, `signed in: ${signedIn}`).toEqual(await shown("/topics/khong-co"));
+        expect(answer.main).toContain("Không tìm thấy chủ đề này.");
+        await other.goto(theirs);
+        const html = await other.content();
+        for (const text of [topic, "Chị Mai", "tưới cây", attempt.sessionId!]) expect(html, text).not.toContain(text);
+        // The same through the data a client navigation asks for.
+        const data = await other.request.get(theirs, { headers: { RSC: "1" } });
+        const body = await data.text();
+        for (const text of [topic, "Chị Mai", "tưới cây"]) expect(body, text).not.toContain(text);
+      }
+      await other.waitForLoadState("networkidle");
+    } finally {
+      await otherContext.close();
+    }
+    // Asking for it wrote nothing.
+    expect(await db.eventsNamed("topic_opened")).toHaveLength(eventsBefore);
+  });
+
   test("a visitor who is not signed in gets 401 from every route, with where to sign in", async ({ request }) => {
     const id = randomUUID();
     for (const [route, calls] of Object.entries(SESSION_ROUTES)) {

@@ -897,3 +897,40 @@ a.srow:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
   .lib-empty{padding:40px 20px}
   .lib-own-head{margin-top:40px}
 }
+
+/* Chủ đề (Màn 2b) */
+.topic{padding-top:40px;padding-bottom:80px}
+.topic-head{display:flex;align-items:flex-end;justify-content:space-between;gap:40px;margin:28px 0 24px}
+.topic-what{display:flex;gap:20px;align-items:flex-start;min-width:0}
+.topic-ic{width:64px;height:64px}
+.topic-pills{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.topic-title{margin-bottom:6px;overflow-wrap:anywhere}
+.topic-done{width:220px;flex:none;display:flex;flex-direction:column;gap:8px;padding-bottom:6px}
+.topic-done-row{display:flex;justify-content:space-between}
+.topic-done .bar > i{border-radius:999px}
+.topic-warning{margin-bottom:28px;box-shadow:inset 0 0 0 1px var(--surface-container-high)}
+.topic-warning svg{flex:none}
+.pcard{position:relative;overflow:hidden;display:flex;flex-direction:column}
+.pcard-body{padding:28px 28px 20px;display:flex;flex-direction:column;gap:20px;flex:1}
+.pcard-who{display:flex;align-items:center;gap:16px;padding-top:8px}
+.pcard-who h2{overflow-wrap:anywhere}
+.pcard-seal{margin-top:auto}
+.pcard .actionbar{padding:16px 28px;justify-content:flex-end;flex-wrap:wrap}
+/* A persona with no illustration: the initial of its given name on one of four neutral tones. */
+.avatar text{font:600 28px/1 var(--sans);fill:var(--on-surface)}
+.av-tone-0 rect{fill:#DCCFBD}
+.av-tone-1 rect{fill:#CFD8E3}
+.av-tone-2 rect{fill:#E6DDF2}
+.av-tone-3 rect{fill:#F1EEE6}
+@media (max-width:767px){
+  .topic{padding-top:24px;padding-bottom:48px}
+  .topic-head{flex-direction:column;align-items:stretch;gap:20px;margin:20px 0}
+  .topic-ic{width:48px;height:48px}
+  .topic-what{gap:14px}
+  .topic-title{font-size:28px;line-height:36px}
+  .topic-done{width:auto;padding-bottom:0}
+  .pcard-body{padding:24px 20px 16px}
+  .pcard .actionbar{padding:14px 20px}
+  .pcard .actionbar .btn{flex:1;min-height:44px}
+  .pcard .actionbar form{flex:1;display:flex}
+}

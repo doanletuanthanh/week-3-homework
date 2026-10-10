@@ -15,6 +15,31 @@ test.describe("guest", () => {
     await expect(page.getByText("Đăng nhập Google khi bắt đầu")).toBeVisible();
   });
 
+  test("reads the library, a topic and its persona's prep screen without signing in, and nothing is written", async ({ page }) => {
+    const eventsBefore = (await db.eventsNamed("topic_opened")).length;
+
+    expect((await page.goto("/library"))?.status()).toBe(200);
+    await page.locator('a.tcard[href="/topics/ux-chi-tieu"]').click();
+    await expect(page).toHaveURL("/topics/ux-chi-tieu");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chi tiêu hằng ngày của người trẻ đi làm");
+    await expect(page.getByRole("link", { name: "Đăng nhập", exact: true })).toBeVisible();
+
+    await page.getByRole("link", { name: "Bắt đầu", exact: true }).click();
+    await expect(page).toHaveURL("/prep/chi-thu");
+    await expect(page.getByText("Đăng nhập Google khi bắt đầu")).toBeVisible();
+
+    await page.getByRole("navigation", { name: "Đường dẫn" }).getByRole("link", { name: "Chi tiêu hằng ngày của người trẻ đi làm" }).click();
+    await expect(page).toHaveURL("/topics/ux-chi-tieu");
+    await page.waitForLoadState("networkidle");
+    expect(await db.eventsNamed("topic_opened")).toHaveLength(eventsBefore);
+  });
+
+  test("gets a 404 for a topic that does not exist", async ({ page }) => {
+    const response = await page.goto("/topics/khong-co");
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "Không tìm thấy chủ đề này." })).toBeVisible();
+  });
+
   test("gets a 404 for a persona that does not exist", async ({ page }) => {
     const response = await page.goto("/prep/khong-co");
     expect(response?.status()).toBe(404);

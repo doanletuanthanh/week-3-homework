@@ -8,8 +8,8 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 test.describe("layout at this viewport", () => {
-  test("home, prep and sign-in fit the viewport", async ({ page }) => {
-    for (const path of ["/", "/prep/chi-thu", "/sign-in"]) {
+  test("home, a topic, prep and sign-in fit the viewport", async ({ page }) => {
+    for (const path of ["/", "/topics/ux-chi-tieu", "/topics/khong-co", "/prep/chi-thu", "/sign-in"]) {
       await page.goto(path);
       await expectNoHorizontalScroll(page);
     }

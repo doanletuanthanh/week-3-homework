@@ -21,6 +21,7 @@ function rowOf(overrides: Partial<SessionListRow>): SessionListRow {
     startedAt: new Date("2026-09-25T15:30:00Z"),
     revealJson: null,
     displayName: "chị Thu",
+    avatarKey: "thu",
     topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm",
     customTopicText: null,
     ...overrides,
@@ -30,12 +31,15 @@ function rowOf(overrides: Partial<SessionListRow>): SessionListRow {
 describe("a custom session that has no scenario (PRD Màn 9)", () => {
   it("shows the topic the learner typed in place of the persona's name, and no number", () => {
     for (const status of ["generating", "failed_eval"] as const) {
-      const item = toListItem(rowOf({ status, displayName: null, topicTitle: null, customTopicText: "app hẹn hò trong khu dân cư đang sống", revealJson: reveal }));
+      const item = toListItem(rowOf({ status, displayName: null, avatarKey: null, topicTitle: null, customTopicText: "app hẹn hò trong khu dân cư đang sống", revealJson: reveal }));
       expect(item).toMatchObject({
         personaName: "app hẹn hò trong khu dân cư đang sống",
         topicTitle: "Chủ đề tự tạo",
         state: status === "generating" ? "preparing" : "failed_eval",
         result: null,
+        // No persona yet: nothing to draw a portrait from.
+        displayName: null,
+        avatarKey: null,
       });
     }
   });
@@ -43,6 +47,12 @@ describe("a custom session that has no scenario (PRD Màn 9)", () => {
   it("shows the persona and the typed topic as its topic once the scenario exists", () => {
     const item = toListItem(rowOf({ displayName: "anh Nam", topicTitle: "app hẹn hò trong khu dân cư đang sống", customTopicText: "app hẹn hò trong khu dân cư đang sống" }));
     expect(item).toMatchObject({ personaName: "Anh Nam", topicTitle: "app hẹn hò trong khu dân cư đang sống", state: "in_progress" });
+  });
+
+  it("carries what the portrait is drawn from: the form of address and the illustration key", () => {
+    expect(toListItem(rowOf({}))).toMatchObject({ displayName: "chị Thu", avatarKey: "thu" });
+    // A generated persona has no illustration: its initial stands for it.
+    expect(toListItem(rowOf({ displayName: "anh Nam", avatarKey: null }))).toMatchObject({ displayName: "anh Nam", avatarKey: null });
   });
 });
 
@@ -88,7 +98,7 @@ describe("toListItem: the numbers (FR-39)", () => {
       // Nothing is held back once the session is done, so this is the full number of the main interview.
       recognized: { state: "count", value: reveal.counts.recognizedFull },
     });
-    expect(Object.keys(item).sort()).toEqual(["date", "id", "personaName", "result", "state", "topicTitle"]);
+    expect(Object.keys(item).sort()).toEqual(["avatarKey", "date", "displayName", "id", "personaName", "result", "state", "topicTitle"]);
     const sent = JSON.stringify(item);
     for (const sealed of sealedStrings) expect(sent).not.toContain(sealed);
   });

@@ -7,6 +7,7 @@ import { MAX_TURNS } from "@/config/limits";
 
 type Props = {
   personaName: string;
+  avatarKey: string | null;
   researchGoal: string;
   /** The seal counter. It is the same number for the whole session. */
   itemCount: number;
@@ -17,12 +18,12 @@ type Props = {
 };
 
 /** The bar above the chat: who, the research question, the turn count, the seal counter, the end button. */
-export function SessionBar({ personaName, researchGoal, itemCount, turnCount, onEnd, endDisabled }: Props) {
+export function SessionBar({ personaName, avatarKey, researchGoal, itemCount, turnCount, onEnd, endDisabled }: Props) {
   const [goalOpen, setGoalOpen] = useState(false);
 
   return (
     <div className="sbar">
-      <PersonaAvatar size={40} />
+      <PersonaAvatar size={40} avatarKey={avatarKey} name={personaName} />
       <h1 className="label-lg sbar-name">
         <span className="sr">Buổi phỏng vấn người dùng với </span>
         {personaName}

@@ -35,7 +35,7 @@ export type SessionView = { /** A generated scenario plays: every screen carries
   | {
       screen: "interview";
       sessionId: string;
-      persona: Persona & { researchGoal: string; itemCount: number };
+      persona: Persona & { avatarKey: string | null; researchGoal: string; itemCount: number };
       initialTurns: ViewTurn[];
       initialNotes: string;
       /** Turn 30 ended the session but the notes are not frozen yet: the screen sends the end request. */
@@ -134,7 +134,7 @@ export function buildSessionView(input: {
       custom,
       screen: "interview",
       sessionId,
-      persona: { ...persona, researchGoal: card.researchGoal, itemCount: card.itemCount },
+      persona: { ...persona, avatarKey: scenario.avatarKey, researchGoal: card.researchGoal, itemCount: card.itemCount },
       initialTurns: turns,
       initialNotes: session.canvasText,
       endedOnServer: session.endedAt !== null,
