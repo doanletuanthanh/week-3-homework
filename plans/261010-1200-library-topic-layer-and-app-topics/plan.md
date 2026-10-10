@@ -61,7 +61,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 2 | [Library screen and role filter](./phase-02-library-screen-and-role-filter.md) | Done | 1 | 1.5d |
 | 3 | [Topic screen and persona cards](./phase-03-topic-screen-and-persona-cards.md) | Done | 1 | 1.5d |
 | 4 | [Home, header and next persona](./phase-04-home-header-and-next-persona.md) | Done | 2, 3 | 1.5d |
-| 5 | [App and web app topics](./phase-05-app-and-web-app-topics.md) | Pending | 1 | 4.5d |
+| 5 | [App and web app topics](./phase-05-app-and-web-app-topics.md) | In progress: files, tests, import (local and real) and quick eval done; three personas open too little and need tuning; content approval not recorded | 1 | 4.5d |
 | 6 | [Tests, docs and checks](./phase-06-tests-docs-and-checks.md) | Pending | 4, 5 | 1d |
 
 Phase 5 is content work and touches only `scenarios/`; it can run beside phases 2–4.
@@ -88,7 +88,7 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 - [ ] Each persona card's button matches PRD §7 for the signed-in learner's session; a demo account also has "Bắt đầu buổi mới".
 - [ ] After a `done` session the reveal offers an unpractised persona of the same topic first, then of another topic; the "đã luyện mọi persona" text shows only when the role has personas and all are practised.
 - [ ] No library or topic payload contains an item's content, tag, hook or sample question: only the item count.
-- [ ] Six new scenario files pass `pnpm il validate`, including the cross-persona tag rule, and import as drafts.
+- [x] Six new scenario files pass `pnpm il validate`, including the cross-persona tag rule, and import as drafts.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e`, `pnpm build` pass.
 - [ ] `docs/launch-checklist.md` and the bootstrap plan no longer say there is no library.
 

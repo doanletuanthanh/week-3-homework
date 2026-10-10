@@ -48,7 +48,7 @@ No new code beyond tests. Doc edits are small and go to the file that owns each 
 
 ## Implementation steps
 
-1. `library-path.spec.ts` on the model stub: guest home → library → filter UX → topic → prep → sign-in and notice → short interview → guess → reveal → skip replay → "Luyện tiếp với …" → prep of the second persona; then the topic page shows "Bạn đã luyện 1/2" and "Xem lại kết quả" on the first card.
+1. (Written with phase 5, 2026-10-10; it has no replay step.) `library-path.spec.ts` on the model stub: guest home → library → filter UX → topic → prep → sign-in and notice → short interview → guess → reveal → skip replay → "Luyện tiếp với …" → prep of the second persona; then the topic page shows "Bạn đã luyện 1/2" and "Xem lại kết quả" on the first card.
 2. Add the two routes to the hardening spec (headers, no Content-Security-Policy refusal on a production build) and to the responsive spec.
 3. Keyboard and heading check by hand on the three pages; fix what fails.
 4. Re-read every new string against NFR-14 and run `pnpm il check-strings`.

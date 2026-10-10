@@ -1,6 +1,6 @@
 ---
 title: "Phase 5: App and web app topics"
-status: todo
+status: in-progress
 phase: 5
 priority: P1
 effort: "4.5d"
@@ -77,11 +77,53 @@ First one persona per topic (chị Hạnh, anh Tùng, chị My), through validat
 
 ## Success criteria
 
-- [ ] Six files pass `pnpm il validate` with zero violations, with their topic sibling as context.
-- [ ] `pnpm il import` stores six drafts and three topics with role `ux` on a clean local database.
+- [x] Six files pass `pnpm il validate` with zero violations, with their topic sibling as context.
+- [x] `pnpm il import` stores six drafts and three topics with role `ux` on a clean local database.
 - [ ] One hand-played session per persona reaches the reveal with at least one item told and no item spoken before its unlock (checked with `pnpm il trace <session>`).
 - [ ] The user has approved the content, recorded here with the date.
-- [ ] `tests/scenario/curated-scenarios.test.ts` passes in `pnpm test`.
+- [x] `tests/scenario/curated-scenarios.test.ts` passes in `pnpm test`.
+
+## Results
+
+State on 2026-10-10. Steps 1 to 4, 6 and 8 are done for all six personas, and the six are imported into the real database as drafts (user instruction 2026-10-10). Step 5 (a session played by hand against a real model) and the tuning after step 6 are not done; the user has not yet recorded an approval of the content.
+
+Quick evaluation, one good and one bad simulated run of 30 turns each, on the real database:
+
+| Persona | Version | Good run opened | Bad run opened | In the 50–75 % target | Leak flags (not adjudicated) | Hook delivery | Cost (USD) | Run id |
+|---|---|---|---|---|---|---|---|---|
+| `chi-hanh` | 2 | 5 / 10 (50 %) | 0 | yes | 0 | 7/7 | 0.66 | `3c1810a8` |
+| `anh-khoa` | 1 | 3 / 10 (30 %) | 1 | no | 0 | 9/9 | 0.69 | `edd9fd52` |
+| `anh-tung` | 1 | 6 / 10 (60 %) | 1 | yes | 1 | 7/7 | 0.67 | `da190000` |
+| `co-lan` | 1 | 7 / 10 (70 %) | 1 | yes | 1 | 8/8 | 0.75 | `bc5c7f8a` |
+| `chi-my` | 1 | 3 / 10 (30 %) | 0 | no | 2 | 4/4 | 0.69 | `918dcd1b` |
+| `ban-phuc` | 1 | 2 / 10 (20 %) | 0 | no | 1 | 4/4 | 0.69 | `2b32405c` |
+
+Total spend about 4.15 USD (estimate was 0.54 per persona). No item contradicted itself before and after opening in any run.
+
+What the runs say:
+
+- `chi-hanh`, `anh-tung`, `co-lan` are inside the target.
+- `anh-khoa`, `chi-my`, `ban-phuc` open too little (the chị Thu lesson again); `ban-phuc` also misses the "good run opens ≥ 3 items" threshold. They need the hooks and tags reworked before a full evaluation. Not done here.
+- Five leak flags across four personas are raised and not adjudicated (`pnpm il adjudicate`); a flag is a candidate, not a confirmed leak.
+- One run is one sample: the shares can move by an item or two on a repeat.
+
+`chi-hanh` is at version 2 because its first import held the secret term `bảng chung`, which without diacritics is `bằng chứng`, a word of the analysis prompt: the engine refused the first call of the run (context isolation). The term was replaced and a unit test now builds the three in-session prompts for every curated file.
+
+Checks that ran:
+
+- `tests/scenario/curated-scenarios.test.ts` (unit): walks `scenarios/`; every file passes `validateScenario` with its topic sibling's tags, is named after its persona, uses all four paths, keeps prerequisite chains one step deep, puts no secret term in any sample question, and passes the model-free part of the FR-36 check (`preCheck`), and has no secret term that the fixed wording of an in-session prompt contains.
+- `tests/cli/import-curated-library.int.test.ts` (integration, local stack): a clean database plus every file gives 4 topics under `ux` in order 10/20/30/40 and 7 authored drafts; `il validate` passes each new file against the tags stored for its sibling; a second import is version 2; the library lists 1 + 2 + 2 + 2 personas and nothing with the publish gate on; no library or topic payload holds a sealed string; a session on each new persona opens with its own first line; the next persona is the topic sibling, then another UX topic.
+- `tests/e2e/library-path.spec.ts` (Playwright, model stub, production build): Màn 2 with four topics and the four chips; Màn 1 preview; Màn 2b of the three topics; Màn 3 of the six personas; the guest walk in and back and the kept start after sign-in; chị Hạnh practised → anh Khoa offered → "Bạn đã luyện 1/2"; a session with a stubbed reply on every new persona. Every page is searched for the sealed strings of all seven personas.
+
+## Deviations and notes from the implementation
+
+- **The FR-36 model check did not run.** `pnpm il check-strings <persona>` calls a model and stores its result in the database, so it belongs with the import into each database (a user task in `plan.md`). The parts of it that need no model are in the unit test.
+- **No `avatar_key`.** `PersonaAvatar` draws one illustration (`thu`); the six show the initial of their given name, as PRD Màn 2b allows.
+- **Persona order inside a topic** is first-import time, then id (`getTopicWithPersonas`). Import the files in the order of the table above so the first-written persona of each topic comes first.
+- **A secret term is matched without diacritics.** `tiện thật` matched `tiền thất` in a tag of the same file and was replaced; worth knowing before editing terms.
+- **Test seeding.** `resetDatabase` still imports chị Thu only. `importCuratedLibrary()` in `tests/helpers/test-db.ts` adds the rest; the e2e spec removes them again in `afterAll`, because the other specs count one persona. `tests/helpers/curated-scenarios.ts` is the one place that walks `scenarios/`.
+- **`tests/e2e/library-path.spec.ts` was written here** instead of in phase 6 (user request 2026-10-10: tests with this phase). Phase 6 step 1 is covered by it; the hardening and responsive additions of step 2 are still phase 6.
+- **The real database** has all 13 migrations applied (checked 2026-10-10, read-only); this phase adds none. The six personas were imported there on 2026-10-10 on the user's instruction; `require_published` is off, so learners can start a session on them now.
 
 ## Risk assessment
 
