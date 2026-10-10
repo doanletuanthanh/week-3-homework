@@ -204,3 +204,25 @@ describe("a session on a generated scenario (FR-56)", () => {
     expect(offer).not.toContain(target.sample_question);
   });
 });
+
+describe("the next step of a result (FR-31)", () => {
+  const next = {
+    kind: "next",
+    persona: { personaId: "anh-dung", displayName: "anh Dũng", name: "Anh Dũng, 29 tuổi", avatarKey: null, itemCount: 10, topicId: "ux-chi-tieu", topicTitle: "Chi tiêu hằng ngày", sameTopic: true },
+  } as const;
+  const withNext = (session: SessionRow) => buildSessionView({ session, scenario, topicTitle: "Chi tiêu hằng ngày", turns, waitlisted: false, next });
+
+  it.each(["revealed", "replaying", "done"] as const)("%s: the result carries the suggestion it was given, unchanged", (status) => {
+    expect(withNext(sessionOf({ ...ready, status }))).toMatchObject({ screen: "reveal", next });
+  });
+
+  it("a result built without one says every persona was practised, as before there was a library", () => {
+    expect(view(sessionOf({ ...ready, status: "done" }))).toMatchObject({ screen: "reveal", next: { kind: "all_practised" } });
+  });
+
+  it("no other screen carries a suggestion", () => {
+    for (const session of [sessionOf({}), sessionOf(ended), sessionOf({ ...ended, status: "revealed", guess: 4, revealedAt: new Date() }), sessionOf({ ...ready, status: "withdrawn" })]) {
+      expect(JSON.stringify(withNext(session))).not.toContain("anh-dung");
+    }
+  });
+});

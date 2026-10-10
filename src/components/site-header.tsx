@@ -2,8 +2,8 @@ import Link from "next/link";
 import { signOut } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { failIfAsked } from "@/server/test-faults";
-import { HeaderMenu, MySessionsLink } from "./header-menu";
-import { HistoryIcon, MenuIcon, SignOutIcon, UserIcon } from "./icons";
+import { HeaderLink, HeaderMenu } from "./header-menu";
+import { GridIcon, HistoryIcon, MenuIcon, SignOutIcon, UserIcon } from "./icons";
 
 function Logo() {
   return (
@@ -30,9 +30,9 @@ function Logo() {
 }
 
 /**
- * Site header (PRD §6.0). Signed out: "Đăng nhập". Signed in: "Buổi của tôi" and the account menu
- * with "Đăng xuất"; below 768px the two fold into one menu behind a button. This slice has no
- * library, so there is no "Thư viện" link.
+ * Site header (PRD §6.0). Everyone: "Thư viện". Signed out: "Đăng nhập". Signed in: "Buổi của tôi"
+ * and the account menu with "Đăng xuất"; below 768px a learner's links fold into one menu behind
+ * a button, and a visitor's one link stays beside "Đăng nhập".
  */
 export async function SiteHeader() {
   await failIfAsked("layout");
@@ -47,11 +47,10 @@ export async function SiteHeader() {
           <span className="vsep hdr-wide" />
           <span className="hdr-badge hdr-wide">UX · BA · PM</span>
         </div>
-        {user && (
-          <nav className="nav hdr-wide" aria-label="Chính">
-            <MySessionsLink />
-          </nav>
-        )}
+        <nav className="nav hdr-wide" aria-label="Chính">
+          <HeaderLink to="library" />
+          {user && <HeaderLink to="mySessions" />}
+        </nav>
         <div className="hdr-r">
           {user ? (
             <>
@@ -81,9 +80,12 @@ export async function SiteHeader() {
               </HeaderMenu>
               <HeaderMenu className="user-menu hdr-narrow" summaryClassName="hdr-menu" summaryLabel="Menu" summary={<MenuIcon size={22} />}>
                 <nav className="menu" aria-label="Chính">
-                  <MySessionsLink>
+                  <HeaderLink to="library">
+                    <GridIcon size={16} />
+                  </HeaderLink>
+                  <HeaderLink to="mySessions">
                     <HistoryIcon size={16} />
-                  </MySessionsLink>
+                  </HeaderLink>
                   <div className="hr" />
                   <form action={signOut}>
                     <button type="submit" className="menu-out">
@@ -95,9 +97,15 @@ export async function SiteHeader() {
               </HeaderMenu>
             </>
           ) : (
-            <Link className="btn btn-surface btn-md" href="/sign-in">
-              Đăng nhập
-            </Link>
+            <>
+              {/* A visitor has one destination: it needs no menu on a narrow screen. */}
+              <nav className="nav hdr-narrow" aria-label="Chính">
+                <HeaderLink to="library" />
+              </nav>
+              <Link className="btn btn-surface btn-md" href="/sign-in">
+                Đăng nhập
+              </Link>
+            </>
           )}
         </div>
       </div>

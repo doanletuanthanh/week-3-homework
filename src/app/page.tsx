@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { ArrowRightIcon, ChatIcon, GoogleIcon, GridIcon, LayersIcon, LockIcon, ReplayIcon } from "@/components/icons";
+import { TopicCard } from "@/components/library/topic-card";
 import { PersonaAvatar } from "@/components/persona-avatar";
 import { getDb } from "@/db/client";
-import { getFirstPersonaId } from "@/db/repo/sessions";
+import { getConfig } from "@/db/repo/config";
+import { listLibraryTopics } from "@/server/library";
+import { CUSTOM_LABEL, HOME, LIBRARY } from "@/strings/product-strings";
+
+/** How many topics the home page shows of the library. */
+const PREVIEW_TOPICS = 3;
 
 const STEPS = [
   {
-    title: "Gặp persona",
+    title: "Chọn chủ đề và persona",
     body: "Mỗi persona giữ 8–12 điều chưa nói, chỉ kể khi bạn hỏi đúng cách.",
     icon: <GridIcon />,
   },
@@ -27,9 +33,13 @@ const STEPS = [
   },
 ];
 
-/** Màn 1 · Trang chủ. Guests can read it; the one persona of this slice is reached from the hero. */
+/**
+ * Màn 1 · Trang chủ. The same page for everyone: it leads to the library and to a topic of one's
+ * own, and shows the first topics of the library without anyone's progress.
+ */
 export default async function HomePage() {
-  const personaId = await getFirstPersonaId(getDb());
+  const db = getDb();
+  const topics = (await listLibraryTopics(db, { requirePublished: await getConfig(db, "require_published"), userId: null })).slice(0, PREVIEW_TOPICS);
 
   return (
     <main>
@@ -46,21 +56,17 @@ export default async function HomePage() {
             <span className="italic c-primary">Xem chính xác bạn đã bỏ lỡ điều gì.</span>
           </h1>
           <p className="body-lg c-variant">Mắc lỗi ở đây, đừng mắc trước người thật.</p>
-          {personaId && (
-            <>
-              <Link className="btn btn-primary btn-lg" href={`/prep/${personaId}`}>
-                Bắt đầu luyện
-                <ArrowRightIcon />
-              </Link>
-              <Link className="btn btn-tonal btn-lg hero-second" href="/custom-topic">
-                Tạo chủ đề của bạn
-              </Link>
-              <p className="body-sm c-outline hint">
-                <GoogleIcon size={14} />
-                Đăng nhập Google khi bắt đầu
-              </p>
-            </>
-          )}
+          <Link className="btn btn-primary btn-lg" href="/library">
+            {LIBRARY.enter}
+            <ArrowRightIcon />
+          </Link>
+          <Link className="btn btn-tonal btn-lg hero-second" href="/custom-topic">
+            {LIBRARY.create_action}
+          </Link>
+          <p className="body-sm c-outline hint">
+            <GoogleIcon size={14} />
+            Đăng nhập Google khi bắt đầu
+          </p>
 
           {/* Reveal preview: stays a placeholder until a demo session can be seeded. */}
           <div className="window hero-window" aria-hidden="true">
@@ -83,6 +89,30 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {topics.length > 0 && (
+        <section className="home-lib" aria-labelledby="home-lib-title">
+          <div className="container">
+            <div className="home-lib-head">
+              <div>
+                <span className="eyebrow">{LIBRARY.name}</span>
+                <h2 id="home-lib-title" className="headline-lg">
+                  {HOME.library_title}
+                </h2>
+              </div>
+              <Link className="btn btn-surface btn-md" href="/library">
+                {HOME.library_all}
+                <ArrowRightIcon size={16} />
+              </Link>
+            </div>
+            <div className="lib-grid">
+              {topics.map((topic) => (
+                <TopicCard key={topic.id} topic={topic} level={3} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="steps">
         <div className="container">
@@ -112,6 +142,29 @@ export default async function HomePage() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="home-close" aria-labelledby="home-close-title">
+        <div className="container">
+          <div className="card-lg home-close-card">
+            <div className="home-close-text">
+              <span className="eyebrow">{LIBRARY.create_action}</span>
+              <h2 id="home-close-title" className="headline-lg">
+                {LIBRARY.create_title}
+              </h2>
+              <p className="body-lg c-variant">{HOME.create_body}</p>
+            </div>
+            <div className="home-close-actions">
+              <span className="pill pill-outline">{CUSTOM_LABEL.light_check}</span>
+              <Link className="btn btn-primary btn-lg" href="/custom-topic">
+                {LIBRARY.create_action}
+              </Link>
+              <Link className="btn btn-surface btn-lg" href="/library">
+                {LIBRARY.enter}
+              </Link>
+            </div>
           </div>
         </div>
       </section>

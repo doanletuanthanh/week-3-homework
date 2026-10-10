@@ -934,3 +934,31 @@ a.srow:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
   .pcard .actionbar .btn{flex:1;min-height:44px}
   .pcard .actionbar form{flex:1;display:flex}
 }
+
+/* Trang chủ (Màn 1): the library preview and the closing band; a visitor's header link on a phone */
+.home-lib{padding:0 0 104px}
+.home-lib-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:32px}
+.home-lib-head .eyebrow{margin-bottom:8px}
+.home-close{padding:0 0 104px}
+.home-close-card{display:flex;align-items:center;justify-content:space-between;gap:40px;padding:40px;background:var(--surface-container-low)}
+.home-close-text{min-width:0;max-width:640px}
+.home-close-text .eyebrow{margin-bottom:8px}
+.home-close-text h2{margin-bottom:8px}
+.home-close-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:none}
+.hdr-r .nav{background:none;padding:0}
+/* Màn 6 item 7: the persona offered next */
+.next-who{display:flex;align-items:center;gap:14px}
+.next-who h3{overflow-wrap:anywhere}
+.next-seal{display:flex;align-items:center;gap:6px;margin-top:4px}
+.next-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.next-card .btn-primary{box-shadow:var(--shadow-sm)}
+@media (max-width:767px){
+  .home-lib,.home-close{padding-bottom:64px}
+  .home-close-card{flex-direction:column;align-items:stretch;gap:24px;padding:24px 20px}
+  .home-close-actions .btn{flex:1 1 100%}
+  .home-lib-head .btn{width:100%}
+  .hdr-r .nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px}
+  .next-actions{align-self:stretch}
+  .next-actions .btn{flex:1 1 100%;min-height:44px}
+}
+@media print{.home-lib,.home-close{display:none}}

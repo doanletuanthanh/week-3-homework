@@ -28,9 +28,13 @@ export function PractisedBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-/** A curated topic of the library (Màn 2). The whole card opens the topic. */
-export function TopicCard({ topic }: { topic: LibraryTopic }) {
+/**
+ * A curated topic of the library (Màn 2, and the preview on Màn 1). The whole card opens the
+ * topic. `level`: the heading level that fits where the card stands.
+ */
+export function TopicCard({ topic, level = 2 }: { topic: LibraryTopic; level?: 2 | 3 }) {
   const style = topic.role ? ROLE_STYLE[topic.role] : null;
+  const Title = level === 2 ? "h2" : "h3";
   return (
     <Link className="card tcard" href={`/topics/${topic.id}`}>
       <div className="tbody">
@@ -41,7 +45,7 @@ export function TopicCard({ topic }: { topic: LibraryTopic }) {
           {topic.role && style && <span className={`pill ${style.pill}`}>{ROLE_LABEL[topic.role]}</span>}
         </div>
         <div>
-          <h2 className="headline-md tcard-title">{topic.title}</h2>
+          <Title className="headline-md tcard-title">{topic.title}</Title>
           <p className="body-md c-variant">{topic.summary}</p>
         </div>
         {topic.doneCount !== null && <PractisedBar done={topic.doneCount} total={topic.personaCount} />}

@@ -7,11 +7,12 @@ import { RefreshOnShow } from "@/components/sessions/refresh-on-show";
 import { SessionList } from "@/components/sessions/session-list";
 import { SessionListSkeleton } from "@/components/ui/page-skeletons";
 import { getDb } from "@/db/client";
-import { getFirstPersonaId, hasGeneratingSession } from "@/db/repo/sessions";
+import { hasGeneratingSession } from "@/db/repo/sessions";
 import { requireAckedUser, type AppUser } from "@/server/auth";
 import { dueAttemptOf, runGeneration } from "@/server/generation";
 import { listSessions } from "@/server/session-list";
 import { failIfAsked } from "@/server/test-faults";
+import { LIBRARY } from "@/strings/product-strings";
 
 export const metadata = { title: "Buổi của tôi · InterviewLab" };
 
@@ -20,8 +21,7 @@ export const maxDuration = 300;
 
 /**
  * Màn 9 · Buổi của tôi: every session of the learner, newest first, each opening on the screen
- * of its state, and the account with its deletion. This slice has no library, so the empty state
- * leads to the one persona instead.
+ * of its state, and the account with its deletion. With no session yet it leads to the library.
  */
 async function MySessions({ user }: { user: AppUser }) {
   const db = getDb();
@@ -31,7 +31,6 @@ async function MySessions({ user }: { user: AppUser }) {
   // "Kịch bản sẽ ở trong Buổi của tôi": a custom scenario whose runner was cut off goes on from here.
   const dueAttempt = generating ? await dueAttemptOf(db, user) : null;
   if (dueAttempt) after(() => runGeneration(getDb(), dueAttempt).catch((error: unknown) => console.error(error)));
-  const personaId = page.total === 0 ? await getFirstPersonaId(db) : null;
 
   return (
     <>
@@ -53,8 +52,8 @@ async function MySessions({ user }: { user: AppUser }) {
         <section className="card-lg mine-empty">
           <HistoryIcon size={40} className="c-outline" />
           <h2 className="headline-md">Bạn chưa luyện buổi nào</h2>
-          <Link className="btn btn-primary btn-lg" href={personaId ? `/prep/${personaId}` : "/"}>
-            Bắt đầu luyện
+          <Link className="btn btn-primary btn-lg" href="/library">
+            {LIBRARY.enter}
             <ArrowRightIcon />
           </Link>
         </section>

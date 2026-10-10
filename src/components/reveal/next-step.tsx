@@ -2,14 +2,62 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AlertIcon, CheckIcon } from "@/components/icons";
+import { AlertIcon, ArrowRightIcon, CheckIcon, LockIcon } from "@/components/icons";
 import { sendJson } from "@/components/interview/turn-request";
+import { PersonaAvatar } from "@/components/persona-avatar";
+import type { NextStep as NextStepChoice } from "@/server/library";
+import { LIBRARY, NEXT_STEP, TOPIC, fillTemplate } from "@/strings/product-strings";
 
 /**
- * Màn 6 item 7. This slice has one persona, so every learner who gets here has practised them
- * all: the page says so and offers the waitlist. Pressing it again writes nothing new.
+ * The first card of the next step (FR-31): a persona the learner has not practised, of the same
+ * topic first; or that every persona of the role was practised; or, when the role has none, just
+ * the way to the library. It never says "you practised them all" about a role with no persona.
  */
-export function NextStep({ waitlisted }: { waitlisted: boolean }) {
+function Suggestion({ next }: { next: NextStepChoice }) {
+  if (next.kind === "next") {
+    const { persona } = next;
+    return (
+      <div className="card next-card">
+        <span className="eyebrow">{persona.sameTopic ? NEXT_STEP.same_topic : NEXT_STEP.other_topic}</span>
+        <div className="next-who">
+          <PersonaAvatar size={48} avatarKey={persona.avatarKey} name={persona.displayName} />
+          <div>
+            <h3 className="headline-sm">{persona.name}</h3>
+            {/* The topic is named when it is not the one just practised. */}
+            {!persona.sameTopic && <p className="body-sm c-variant">{persona.topicTitle}</p>}
+            <p className="label-md c-tertiary next-seal">
+              <LockIcon size={14} />
+              Đang giữ {persona.itemCount} điều
+            </p>
+          </div>
+        </div>
+        <div className="next-actions">
+          <Link className="btn btn-primary btn-card" href={`/prep/${persona.personaId}`}>
+            {fillTemplate(NEXT_STEP.continue_with, { persona: persona.displayName })}
+            <ArrowRightIcon size={16} />
+          </Link>
+          <Link href="/library" className="lnk">
+            {TOPIC.to_library}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="card next-card">
+      {next.kind === "all_practised" && <p className="body-md">{NEXT_STEP.all_practised}</p>}
+      <Link href="/library" className="lnk">
+        {LIBRARY.enter}
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Màn 6 item 7: what to practise next, and the waitlist for more personas. Pressing the waitlist
+ * button again writes nothing new.
+ */
+export function NextStep({ waitlisted, next }: { waitlisted: boolean; next: NextStepChoice }) {
   const [joined, setJoined] = useState(waitlisted);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -26,12 +74,7 @@ export function NextStep({ waitlisted }: { waitlisted: boolean }) {
 
   return (
     <section className="next-step" aria-label="Bước tiếp theo">
-      <div className="card next-card">
-        <p className="body-md">Bạn đã luyện mọi persona của vai trò này.</p>
-        <Link href="/" className="lnk">
-          Về trang chủ
-        </Link>
-      </div>
+      <Suggestion next={next} />
       <div className="card next-card">
         {joined ? (
           <p className="body-md joined" role="status">

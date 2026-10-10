@@ -320,7 +320,7 @@ test.describe("Màn 2b: the card follows the learner's session (PRD §7)", () =>
 });
 
 test.describe("Màn 2b: the event of an opened topic (signed-in learners only)", () => {
-  test("one event each time the page is shown: arriving from the library, reloading, coming back", async ({ page, context }) => {
+  test("one event for a visit: not for the page's own refresh, a reload, or coming back to it", async ({ page, context }) => {
     const { userId } = await signInAndAccept(page, context, "topic-opened", "/library");
     const link = page.locator(`a.tcard[href="${TOPIC_PATH}"]`);
     await expect(link).toBeVisible();
@@ -332,32 +332,42 @@ test.describe("Màn 2b: the event of an opened topic (signed-in learners only)",
     await link.click();
     await expect(card(page)).toBeVisible();
     await expect.poll(async () => (await openedEvents(userId)).length).toBe(1);
-    // The page asks the server for itself again once shown: that is not a second visit.
-    await page.waitForLoadState("networkidle");
-    expect(await openedEvents(userId)).toHaveLength(1);
     expect((await openedEvents(userId))[0]).toMatchObject({ userId, sessionId: null, props: { topic_id: TOPIC_ID, kind: "curated" } });
 
+    /** The page was shown again and told the server so; the visit is still the one already counted. */
+    const expectSameVisit = async () => {
+      await expect(card(page)).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      expect(await openedEvents(userId)).toHaveLength(1);
+    };
+    // The page asks the server for itself again once shown.
+    await expectSameVisit();
+    // A reload, and one more.
     await page.reload();
-    await expect(card(page)).toBeVisible();
-    await expect.poll(async () => (await openedEvents(userId)).length).toBe(2);
-
+    await expectSameVisit();
+    await page.reload();
+    await expectSameVisit();
+    // Away to Màn 3 and back along the breadcrumb.
     await mainLink(page).click();
     await expect(page).toHaveURL("/prep/chi-thu");
     await crumbs(page).getByRole("link", { name: TOPIC_TITLE }).click();
-    await expect(card(page)).toBeVisible();
-    await expect.poll(async () => (await openedEvents(userId)).length).toBe(3);
-    await page.waitForLoadState("networkidle");
-    expect(await openedEvents(userId)).toHaveLength(3);
-
-    // And with the browser's back button: shown again, counted once more.
+    await expectSameVisit();
+    // Away again and back with the browser's back button.
     await mainLink(page).click();
     await expect(page).toHaveURL("/prep/chi-thu");
     await page.goBack();
     await expect(page).toHaveURL(TOPIC_PATH);
+    await expectSameVisit();
+
+    // Later the same day is another visit: counted once more, and again only once.
+    await db.ageEvents(userId, "topic_opened", 31);
+    await page.reload();
     await expect(card(page)).toBeVisible();
-    await expect.poll(async () => (await openedEvents(userId)).length).toBe(4);
+    await expect.poll(async () => (await openedEvents(userId)).length).toBe(2);
+    await page.reload();
+    await expect(card(page)).toBeVisible();
     await page.waitForLoadState("networkidle");
-    expect(await openedEvents(userId)).toHaveLength(4);
+    expect(await openedEvents(userId)).toHaveLength(2);
   });
 
   test("a learner who has not accepted the data notice writes none, and reads the page all the same", async ({ page, context }) => {

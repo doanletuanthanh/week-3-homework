@@ -2,6 +2,7 @@ import type { Executor } from "@/db/client";
 import {
   getVisibleTopic,
   listCuratedPersonas,
+  openedTopicRecently,
   listDonePersonaIds,
   listPractisedPersonaIds,
   type CuratedPersonaRow,
@@ -85,15 +86,21 @@ export async function chooseRoleFilter(db: Executor, user: AppUser | null, value
   return role;
 }
 
+/** How long one visit to a topic lasts for the "mở chủ đề" event: showing the page again within it is the same visit. */
+export const TOPIC_VISIT_MINUTES = 30;
+
 /**
- * A topic's page was shown to a learner (FR-38): one event per time it is shown. Nothing is
- * written for a guest, for a learner who has not accepted the data notice, or for a topic the
- * learner cannot see, so the id a browser sends can only ever name a page it was given.
+ * A topic's page was shown to a learner (FR-38): one event per visit, not per time the page
+ * loads. A reload, or a return to the page, within `TOPIC_VISIT_MINUTES` of the event is the
+ * same visit and writes nothing, so a browser that repeats the request cannot fill the table.
+ * Nothing is written for a guest, for a learner who has not accepted the data notice, or for a
+ * topic the learner cannot see: the id a browser sends can only ever name a page it was given.
  */
 export async function reportTopicOpened(db: Executor, user: AppUser | null, topicId: unknown): Promise<void> {
   if (!user?.noticeAcked || typeof topicId !== "string") return;
   const topic = await getVisibleTopic(db, topicId, user.id);
   if (!topic) return;
+  if (await openedTopicRecently(db, user.id, topic.id, TOPIC_VISIT_MINUTES)) return;
   await recordEvent(db, { userId: user.id, sessionId: null, isDemo: user.isDemo }, { name: "topic_opened", props: { topic_id: topic.id, kind: topic.kind } });
 }
 
@@ -172,7 +179,19 @@ export function toPersonaCardView(persona: PersonaCardRow, session: PersonaSessi
   };
 }
 
-export type NextPersona = { personaId: string; displayName: string; topicId: string; topicTitle: string; sameTopic: boolean };
+/** The persona offered after a session. Of its items it holds how many there are, as every card does. */
+export type NextPersona = {
+  personaId: string;
+  /** Form of address ("anh Dũng"). */
+  displayName: string;
+  /** "Anh Dũng, 29 tuổi". */
+  name: string;
+  avatarKey: string | null;
+  itemCount: number;
+  topicId: string;
+  topicTitle: string;
+  sameTopic: boolean;
+};
 
 /**
  * What to offer after a session. `all_practised` is only said when there was something to
@@ -206,6 +225,9 @@ export async function pickNextPersona(
     persona: {
       personaId: next.personaId,
       displayName: next.displayName,
+      name: next.name,
+      avatarKey: next.avatarKey,
+      itemCount: next.itemCount,
       topicId: next.topicId,
       topicTitle: next.topicTitle,
       sameTopic: next.topicId === input.topicId,

@@ -13,6 +13,7 @@ import { RevealScreen } from "@/components/reveal/reveal-screen";
 import { SessionSkeleton } from "@/components/ui/page-skeletons";
 import { WithdrawnScreen } from "@/components/withdrawn-screen";
 import { getDb } from "@/db/client";
+import { getConfig } from "@/db/repo/config";
 import { attemptRunIsDue, getPendingCustomSession, sweepStaleAttempts } from "@/db/repo/custom-topics";
 import { loadReplay } from "@/db/repo/replay";
 import { countLearnerTurns, getSession, listTurns } from "@/db/repo/sessions";
@@ -24,6 +25,7 @@ import { getCustomQuota } from "@/server/custom-topic";
 import { runGeneration } from "@/server/generation";
 import { revealRunIsDue, runReveal } from "@/server/reveal";
 import { hasEnteredSession } from "@/server/session-entry";
+import { pickNextPersona } from "@/server/library";
 import { buildSessionView, opensOnPrep, type SessionView } from "@/server/session-view";
 import { isUuid } from "@/server/uuid";
 
@@ -116,12 +118,23 @@ async function SessionScreen({ id }: { id: string }) {
   // The runner that the end request started may have died with its function.
   if (revealRunIsDue(session)) after(() => runReveal(getDb(), id).catch((error: unknown) => console.error(error)));
 
+  // Only a result offers a next persona; the other screens never ask.
+  const hasResult = session.status === "revealed" || session.status === "replaying" || session.status === "done";
   const view = buildSessionView({
     session,
     scenario,
     topicTitle: topic.title,
     turns: await listTurns(db, user.id, id),
     waitlisted: await isOnWaitlist(db, user.id, "no_more_personas"),
+    next: hasResult
+      ? await pickNextPersona(db, {
+          userId: user.id,
+          topicId: topic.id,
+          topicRole: topic.role,
+          roleFilter: user.roleFilter,
+          requirePublished: await getConfig(db, "require_published"),
+        })
+      : undefined,
     replay: session.status === "replaying" || session.status === "done" ? await loadReplay(db, id) : null,
   });
 
@@ -161,6 +174,7 @@ function StateScreen({ view }: { view: SessionView }) {
           header={view.header}
           reveal={view.reveal}
           waitlisted={view.waitlisted}
+          next={view.next}
           print={view.print}
           replay={view.replay}
           custom={view.custom ? { reported: view.problemReported } : null}

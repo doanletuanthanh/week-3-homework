@@ -3,6 +3,7 @@ import type { ScenarioRow, SessionRow } from "@/db/repo/sessions";
 import type { ReplayLevel, ReplayOutcome } from "@/engine/replay-result";
 import { toBrowserReveal, type BrowserReveal } from "@/engine/seal";
 import { personaCard } from "@/scenario/persona-card";
+import type { NextStep } from "./library";
 import { replayOutcomeOf } from "./replay-outcome";
 
 export type ViewTurn = { index: number; learnerText: string | null; personaText: string };
@@ -50,6 +51,8 @@ export type SessionView = { /** A generated scenario plays: every screen carries
       header: RevealHeader;
       reveal: BrowserReveal;
       waitlisted: boolean;
+      /** What to practise after this session (FR-31). It names another persona, never this one. */
+      next: NextStep;
       /** What the printed takeaway is headed with, and the name its PDF is saved under. */
       print: { topicTitle: string; date: string; fileName: string };
       /** How the replay ended, with how many questions it had. Set for a `done` session that had a replay moment. */
@@ -107,6 +110,8 @@ export function buildSessionView(input: {
   topicTitle: string;
   turns: ViewTurn[];
   waitlisted: boolean;
+  /** What to offer after the session. Left out by callers that do not render a result. */
+  next?: NextStep;
   /** The session's replay branch with its turns, when it has one. */
   replay?: LoadedReplay | null;
 }): SessionView {
@@ -181,6 +186,7 @@ export function buildSessionView(input: {
         header,
         reveal,
         waitlisted,
+        next: input.next ?? { kind: "all_practised" },
         print: {
           topicTitle,
           date: `${day}/${month}/${year}`,

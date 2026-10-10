@@ -124,7 +124,7 @@ test.describe("Màn 9: deleting the account", () => {
 
     await expect(page.locator("main [role=alert]")).toHaveText(PLAYED_BEFORE_DELETION);
     await expect(page.getByRole("button", { name: "Bắt đầu" })).toHaveCount(0);
-    await expect(page.getByRole("main").getByRole("link", { name: "Về trang chủ" })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: "Về chủ đề" })).toHaveAttribute("href", "/topics/ux-chi-tieu");
     await page.goto("/my-sessions");
     await expect(page.getByRole("heading", { name: "Bạn chưa luyện buổi nào" })).toBeVisible();
     expect(await db.sessionsOf(newId)).toEqual([]);

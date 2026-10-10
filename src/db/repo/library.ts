@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Executor } from "../client";
-import { generationAttempts, scenarios, sessions, topics, type TopicRole } from "../schema";
+import { events, generationAttempts, scenarios, sessions, topics, type TopicRole } from "../schema";
 import { playableStatus, visibleTo, type SessionRow } from "./sessions";
 
 /**
@@ -77,6 +77,23 @@ export async function getVisibleTopic(db: Executor, topicId: string, viewerId: s
     .from(topics)
     .where(and(eq(topics.id, topicId), visibleTo(viewerId)));
   return topic ?? null;
+}
+
+/** True when the learner's opening of this topic was reported within the last `minutes`. */
+export async function openedTopicRecently(db: Executor, userId: string, topicId: string, minutes: number): Promise<boolean> {
+  const [row] = await db
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        eq(events.name, "topic_opened"),
+        eq(events.userId, userId),
+        sql`${events.props}->>'topic_id' = ${topicId}`,
+        gt(events.at, sql`now() - make_interval(mins => ${minutes})`),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }
 
 /**

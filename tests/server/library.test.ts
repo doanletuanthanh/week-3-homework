@@ -5,7 +5,7 @@ import { topicSchema } from "@/scenario/schema";
 import type { PersonaCardRow } from "@/db/repo/library";
 import { filterTopics, groupByTopic, parseRoleFilter, personaButton, toOwnTopicCard, toPersonaCardView, type LibraryTopic } from "@/server/library";
 import { clockOf } from "@/server/session-view";
-import { LIBRARY, ROLE_LABEL, TOPIC, productStrings } from "@/strings/product-strings";
+import { HOME, LIBRARY, NEXT_STEP, ROLE_LABEL, TOPIC, fillTemplate, productStrings } from "@/strings/product-strings";
 import { findSealed, readChiThu } from "../helpers/sealed-strings";
 
 const persona = (personaId: string, topicId: string, topicRole: "ux" | "ba" | "pm" | null = "ux") => ({
@@ -166,6 +166,15 @@ describe("the strings of the library", () => {
     for (const [name, text] of Object.entries(LIBRARY)) expect(checked.get(`library.${name}`), name).toBe(text);
     for (const [name, text] of Object.entries(ROLE_LABEL)) expect(checked.get(`role_label.${name}`), name).toBe(text);
     for (const [name, text] of Object.entries(TOPIC)) expect(checked.get(`topic.${name}`), name).toBe(text);
+    for (const [name, text] of Object.entries(HOME)) expect(checked.get(`home.${name}`), name).toBe(text);
+    for (const [name, text] of Object.entries(NEXT_STEP)) expect(checked.get(`next_step.${name}`), name).toBe(text);
+  });
+
+  it("word the next step as the PRD and the artboard do, with the persona's form of address in the button", () => {
+    expect(NEXT_STEP.all_practised).toBe("Bạn đã luyện mọi persona của vai trò này.");
+    expect(NEXT_STEP.same_topic).toBe("Cùng chủ đề");
+    expect(fillTemplate(NEXT_STEP.continue_with, { persona: "anh Dũng" })).toBe("Luyện tiếp với anh Dũng");
+    expect(LIBRARY.enter).toBe("Vào thư viện");
   });
 
   it("word the topic's warning, its line for a generated scenario and its two end states as the PRD does", () => {

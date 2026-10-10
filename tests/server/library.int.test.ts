@@ -10,7 +10,7 @@ import { setRoleFilter } from "@/db/repo/users";
 import { events, scenarios, sessions, users } from "@/db/schema";
 import type { Scenario, TopicFile } from "@/scenario/schema";
 import { resolveUser } from "@/server/auth";
-import { chooseRoleFilter, filterTopics, listLibraryTopics, personaButton, pickNextPersona, reportTopicOpened, toPersonaCardView } from "@/server/library";
+import { chooseRoleFilter, filterTopics, listLibraryTopics, personaButton, pickNextPersona, reportTopicOpened, toPersonaCardView, TOPIC_VISIT_MINUTES } from "@/server/library";
 import { quotaKeyOf } from "@/server/quota";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { INVALID, attempt, attemptRow } from "../helpers/custom-db";
@@ -262,6 +262,21 @@ describe("pickNextPersona", () => {
     expect(await ask(linh.id)).toMatchObject({ kind: "next", persona: { personaId: "anh-dung", displayName: "bạn anh-dung", topicId: CHI_TIEU, sameTopic: true } });
   });
 
+  it("carries what the suggestion's card shows, under these keys only, and nothing sealed", async () => {
+    await importPersona("anh-dung");
+    const linh = await createLearner("linh@example.com");
+    await startSession(linh);
+
+    const step = await ask(linh.id);
+
+    if (step.kind !== "next") throw new Error("expected a suggestion");
+    const chiThu = readChiThu();
+    expect(step.persona).toMatchObject({ name: chiThu.persona.name, avatarKey: "thu", itemCount: chiThu.items.length, topicTitle: "Chi tiêu hằng ngày của người trẻ đi làm" });
+    // A new field has to be added here on purpose: the suggestion is sent to the browser.
+    expect(Object.keys(step.persona).sort()).toEqual(["avatarKey", "displayName", "itemCount", "name", "personaId", "sameTopic", "topicId", "topicTitle"]);
+    expect(findSealed(JSON.stringify(step), chiThu)).toEqual([]);
+  });
+
   it("then one of another topic of the same role, never of another role", async () => {
     await importPersona("a-one", topicFile("ba-a", "ba", 5));
     await importPersona("b-one", topicFile("ux-b", "ux", 30));
@@ -414,16 +429,48 @@ describe("reportTopicOpened (FR-38, signed-in learners only)", () => {
   const openedEvents = () => db().select().from(events).where(eq(events.name, "topic_opened")).orderBy(events.at);
   const consenting = async (email: string, lists?: Parameters<typeof createLearner>[1]) => ({ ...(await createLearner(email, lists)), noticeAcked: true });
 
-  it("writes one event each time a learner is shown a curated topic", async () => {
+  /** Moves every event written so far back in time, as if it had been written that long ago. */
+  const age = (minutes: number) => db().execute(sql`UPDATE event SET at = at - make_interval(mins => ${minutes}) WHERE name = 'topic_opened'`);
+
+  it("writes one event for a visit, however many times the page is shown during it", async () => {
     const linh = await consenting("linh@example.com");
 
-    await reportTopicOpened(db(), linh, CHI_TIEU);
+    for (let shown = 0; shown < 5; shown += 1) await reportTopicOpened(db(), linh, CHI_TIEU);
+
+    expect((await openedEvents()).map((event) => [event.userId, event.sessionId, event.props])).toEqual([[linh.id, null, { topic_id: CHI_TIEU, kind: "curated" }]]);
+  });
+
+  it("counts a new visit once the last one is older than the visit window, and not a minute before", async () => {
+    const linh = await consenting("linh@example.com");
     await reportTopicOpened(db(), linh, CHI_TIEU);
 
-    expect((await openedEvents()).map((event) => [event.userId, event.sessionId, event.props])).toEqual([
-      [linh.id, null, { topic_id: CHI_TIEU, kind: "curated" }],
-      [linh.id, null, { topic_id: CHI_TIEU, kind: "curated" }],
-    ]);
+    await age(TOPIC_VISIT_MINUTES - 1);
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+    expect(await openedEvents()).toHaveLength(1);
+
+    await age(2);
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+    expect(await openedEvents()).toHaveLength(2);
+  });
+
+  it("counts each learner and each topic on their own", async () => {
+    await importPersona("b-one", topicFile("ux-b", "ux", 30));
+    const linh = await consenting("linh@example.com");
+    const an = await consenting("an@example.com");
+
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+    await reportTopicOpened(db(), an, CHI_TIEU);
+    await reportTopicOpened(db(), linh, "ux-b");
+    await reportTopicOpened(db(), linh, CHI_TIEU);
+
+    expect((await openedEvents()).map((event) => [event.userId, (event.props as { topic_id: string }).topic_id]).sort()).toEqual(
+      [
+        [linh.id, CHI_TIEU],
+        [an.id, CHI_TIEU],
+        [linh.id, "ux-b"],
+      ].sort(),
+    );
   });
 
   it("names a topic the learner made as custom", async () => {

@@ -197,6 +197,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
 
     // 7. The next step.
     await expect(page.getByText("Bạn đã luyện mọi persona của vai trò này.")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Bước tiếp theo" }).getByRole("link", { name: "Vào thư viện" })).toHaveAttribute("href", "/library");
 
     // Nothing of the held item is anywhere in the page, the hidden print sheet included.
     const html = await page.content();

@@ -12,7 +12,7 @@ import { personaCard } from "@/scenario/persona-card";
 import { continueSession, startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { playedBeforeDeletion } from "@/server/quota";
-import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED } from "@/strings/product-strings";
+import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED, TOPIC } from "@/strings/product-strings";
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
@@ -205,8 +205,9 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
               <ArrowRightIcon />
             </Link>
           ) : !playable || playedBefore ? (
-            <Link className="btn btn-tonal btn-lg prep-start" href="/">
-              Về trang chủ
+            // Nothing to start: back to the topic, or for a topic of the learner's own, to their sessions.
+            <Link className="btn btn-tonal btn-lg prep-start" href={custom ? "/my-sessions" : `/topics/${found.topic.id}`}>
+              {custom ? "Buổi của tôi" : TOPIC.to_topic}
             </Link>
           ) : (
             <form action={startSession}>

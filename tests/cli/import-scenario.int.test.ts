@@ -7,7 +7,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/client";
-import { getFirstPersonaId, getScenarioByPersona } from "@/db/repo/sessions";
+import { getScenarioByPersona } from "@/db/repo/sessions";
 import * as schema from "@/db/schema";
 import { scenarios, topics } from "@/db/schema";
 import type { Scenario, TopicFile } from "@/scenario/schema";
@@ -75,7 +75,6 @@ describe("import: the chị Thu file", () => {
   });
 
   it("is the persona the home page links to, and a session opens on it with its opening line", async () => {
-    expect(await getFirstPersonaId(getDb())).toBe(PERSONA_ID);
 
     const learner = await createLearner("linh@example.com");
     const session = await startSession(learner);

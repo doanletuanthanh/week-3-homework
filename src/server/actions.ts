@@ -114,7 +114,7 @@ export async function selectRoleFilter(formData: FormData): Promise<void> {
   revalidatePath("/library");
 }
 
-/** Màn 2b is on a learner's screen: called by the page itself, once per time it is shown. */
+/** Màn 2b is on a learner's screen: called by the page itself each time it is shown; counted once per visit. */
 export async function topicOpened(topicId: string): Promise<void> {
   await reportTopicOpened(getDb(), await getUser(), topicId);
 }

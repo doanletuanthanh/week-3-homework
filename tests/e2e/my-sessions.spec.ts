@@ -58,20 +58,20 @@ test.describe("Màn 9: who sees it", () => {
     await expect(heading(page)).toBeVisible();
   });
 
-  test("empty: says so, leads to the persona, and still offers the account", async ({ page, context }) => {
+  test("empty: says so, leads to the library, and still offers the account", async ({ page, context }) => {
     const { email } = await signInAndAccept(page, context, "mine-empty");
 
     await expect(page).toHaveTitle("Buổi của tôi · InterviewLab");
     await expect(page.getByRole("heading", { level: 2, name: "Bạn chưa luyện buổi nào" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Bắt đầu luyện" })).toHaveAttribute("href", "/prep/chi-thu");
+    await expect(page.getByRole("main").getByRole("link", { name: "Vào thư viện" })).toHaveAttribute("href", "/library");
     await expect(page.locator(".slist")).toHaveCount(0);
     await expect(page.getByText(/^\d+ buổi$/u)).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Tài khoản" })).toContainText(email);
     await expect(page.getByRole("button", { name: "Xóa tài khoản và toàn bộ dữ liệu" })).toBeEnabled();
     expect(await listApi(page)).toEqual({ items: [], nextOffset: null });
 
-    await page.getByRole("link", { name: "Bắt đầu luyện" }).click();
-    await expect(page).toHaveURL("/prep/chi-thu");
+    await page.getByRole("main").getByRole("link", { name: "Vào thư viện" }).click();
+    await expect(page).toHaveURL("/library");
   });
 });
 

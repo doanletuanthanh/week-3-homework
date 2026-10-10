@@ -65,6 +65,11 @@ export const db = {
   /** Turns the publish gate on for one test; `clearConfig` puts every setting back to its default. */
   requirePublished: () => getDb().insert(config).values({ key: "require_published", value: true, updatedBy: "e2e" }),
   clearConfig: () => getDb().delete(config),
+  /** Moves an account's events of one name back in time, as if they had been written that long ago. */
+  ageEvents: (userId: string, name: string, minutes: number) =>
+    getDb().execute(sql`UPDATE event SET at = at - make_interval(mins => ${minutes}) WHERE user_id = ${userId} AND name = ${name}`),
+  /** Sets the library filter an account holds, as a chip press would. */
+  setRoleFilter: (userId: string, roleFilter: (typeof users.$inferSelect)["roleFilter"]) => getDb().update(users).set({ roleFilter }).where(eq(users.id, userId)),
   /** Sets every version of a persona to a status an operator's command gives it. */
   setScenarioStatus: (personaId: string, status: (typeof scenarios.$inferSelect)["status"]) => getDb().update(scenarios).set({ status }).where(eq(scenarios.personaId, personaId)),
   scenarioOf: async (personaId: string) => (await getDb().select().from(scenarios).where(eq(scenarios.personaId, personaId)))[0],

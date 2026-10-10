@@ -4,15 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 
-const MY_SESSIONS = "/my-sessions";
+const DESTINATIONS = {
+  library: { href: "/library", label: "Thư viện" },
+  mySessions: { href: "/my-sessions", label: "Buổi của tôi" },
+} as const;
 
-/** The header's one destination after sign-in, marked while the learner is on it. */
-export function MySessionsLink({ children }: { children?: ReactNode }) {
-  const current = usePathname() === MY_SESSIONS;
+/**
+ * A destination of the header, marked as the current page while the visitor is on it. The
+ * library is also marked, without being called the current page, on a topic's page: that page
+ * is inside it.
+ */
+export function HeaderLink({ to, children }: { to: keyof typeof DESTINATIONS; children?: ReactNode }) {
+  const pathname = usePathname();
+  const { href, label } = DESTINATIONS[to];
+  const current = pathname === href;
+  const inside = to === "library" && pathname.startsWith("/topics/");
   return (
-    <Link href={MY_SESSIONS} className={current ? "on" : undefined} aria-current={current ? "page" : undefined}>
+    <Link href={href} className={current || inside ? "on" : undefined} aria-current={current ? "page" : undefined}>
       {children}
-      Buổi của tôi
+      {label}
     </Link>
   );
 }

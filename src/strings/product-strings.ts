@@ -190,6 +190,26 @@ export const LIBRARY = {
   create_action: "Tạo chủ đề của bạn",
   own_title: "Chủ đề bạn tự tạo",
   practised: "Đã luyện",
+  enter: "Vào thư viện",
+  name: "Thư viện",
+} as const;
+
+/** Màn 1 · Trang chủ: the library section and the band that closes the page. */
+export const HOME = {
+  library_title: "Chọn một chủ đề, rồi chọn một persona",
+  library_all: "Xem cả thư viện",
+  create_body: "Gõ một chủ đề. InterviewLab tạo một nhân vật hư cấu để bạn luyện. Kịch bản tự tạo chỉ qua kiểm tra nhẹ.",
+} as const;
+
+/**
+ * Màn 6 item 7: what to practise next (FR-31). `{persona}` is the form of address of the persona
+ * offered. `all_practised` is said only when the learner's role has personas and each was practised.
+ */
+export const NEXT_STEP = {
+  same_topic: "Cùng chủ đề",
+  other_topic: "Một chủ đề khác",
+  continue_with: "Luyện tiếp với {persona}",
+  all_practised: "Bạn đã luyện mọi persona của vai trò này.",
 } as const;
 
 /**
@@ -204,6 +224,7 @@ export const TOPIC = {
   empty: "Chủ đề này đang được cập nhật.",
   not_found: "Không tìm thấy chủ đề này.",
   to_library: "Về thư viện",
+  to_topic: "Về chủ đề",
 } as const;
 
 export function fillTemplate(template: string, values: Record<string, string | number>): string {
@@ -245,5 +266,7 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(ROLE_LABEL).map(([name, text]) => ({ key: `role_label.${name}`, text })),
     ...Object.entries(LIBRARY).map(([name, text]) => ({ key: `library.${name}`, text })),
     ...Object.entries(TOPIC).map(([name, text]) => ({ key: `topic.${name}`, text })),
+    ...Object.entries(HOME).map(([name, text]) => ({ key: `home.${name}`, text })),
+    ...Object.entries(NEXT_STEP).map(([name, text]) => ({ key: `next_step.${name}`, text })),
   ];
 }

@@ -60,17 +60,6 @@ export async function getPlayableScenario(db: Executor, personaId: string, requi
   return row ?? null;
 }
 
-/** The persona the home page links to: this slice has exactly one authored persona. */
-export async function getFirstPersonaId(db: Executor): Promise<string | null> {
-  const [row] = await db
-    .select({ personaId: scenarios.personaId })
-    .from(scenarios)
-    .where(eq(scenarios.origin, "authored"))
-    .orderBy(asc(scenarios.createdAt))
-    .limit(1);
-  return row?.personaId ?? null;
-}
-
 /** The learner's session with a persona that counts for FR-5: a withdrawn one does not. */
 export async function findSessionForPersona(db: Executor, userId: string, personaId: string) {
   const [row] = await db

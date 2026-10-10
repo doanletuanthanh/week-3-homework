@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReplayOutcome } from "@/engine/replay-result";
 import type { BrowserReveal } from "@/engine/seal";
 import { ReportProblem } from "@/components/custom/report-problem";
+import type { NextStep as NextStepChoice } from "@/server/library";
 import type { RevealHeader } from "@/server/session-view";
 import { MissedList } from "./missed-list";
 import { NextStep } from "./next-step";
@@ -23,6 +24,8 @@ type Props = {
   /** Built by the server's seal: whatever is held back for the replay is not in it. */
   reveal: BrowserReveal;
   waitlisted: boolean;
+  /** What to practise next: another persona, or why there is none to offer. */
+  next: NextStepChoice;
   print: { topicTitle: string; date: string; fileName: string };
   /** How the replay ended. Set for a `done` session that had a replay moment, and never before. */
   replay: { outcome: ReplayOutcome; turnCount: number } | null;
@@ -37,7 +40,7 @@ type Props = {
  * the session is `done` nothing is held, the replay's result stands where the offer stood, and
  * the takeaway can be downloaded.
  */
-export function RevealScreen({ sessionId, persona, header, reveal, waitlisted, print, replay, custom = null }: Props) {
+export function RevealScreen({ sessionId, persona, header, reveal, waitlisted, next, print, replay, custom = null }: Props) {
   const [openTurn, setOpenTurn] = useState<number | null>(null);
   const [replayOpen, setReplayOpen] = useState(false);
   const done = reveal.mode === "done";
@@ -67,7 +70,7 @@ export function RevealScreen({ sessionId, persona, header, reveal, waitlisted, p
           {reveal.notes !== null && <NotesReview notes={reveal.notes} ungraded={reveal.recognized.state === "ungraded"} persona={persona} />}
           <Takeaway takeaway={reveal.takeaway} persona={persona} canDownload={done} sessionId={sessionId} print={print} />
           {custom && <ReportProblem sessionId={sessionId} reported={custom.reported} />}
-          <NextStep waitlisted={waitlisted} />
+          <NextStep waitlisted={waitlisted} next={next} />
         </div>
       </main>
       <TranscriptDrawer sessionId={sessionId} personaName={persona.displayNameCapitalized} turn={openTurn} onClose={() => setOpenTurn(null)} />

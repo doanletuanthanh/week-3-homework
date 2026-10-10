@@ -68,7 +68,7 @@ test.describe("Màn 10: who reaches it", () => {
 
   test("is linked from the home page and from Buổi của tôi", async ({ page, context }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "Tạo chủ đề của bạn" })).toHaveAttribute("href", "/custom-topic");
+    await expect(page.locator(".hero").getByRole("link", { name: "Tạo chủ đề của bạn" })).toHaveAttribute("href", "/custom-topic");
     await signInAndAccept(page, context, "ct-links");
     await page.getByRole("link", { name: "Tạo chủ đề của bạn" }).click();
     await expect(page).toHaveURL("/custom-topic");

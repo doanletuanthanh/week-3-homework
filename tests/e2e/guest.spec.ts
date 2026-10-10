@@ -2,12 +2,16 @@ import { expect, test } from "@playwright/test";
 import { db } from "./helpers/db";
 
 test.describe("guest", () => {
-  test("reads the home page and reaches the persona's prep screen without signing in", async ({ page }) => {
+  test("reads the home page and reaches the persona's prep screen through the library, without signing in", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Luyện phỏng vấn người dùng.");
     await expect(page.getByRole("link", { name: "Đăng nhập", exact: true })).toBeVisible();
 
-    await page.getByRole("link", { name: "Bắt đầu luyện" }).click();
+    await page.locator(".hero").getByRole("link", { name: "Vào thư viện" }).click();
+    await expect(page).toHaveURL("/library");
+    await page.locator('a.tcard[href="/topics/ux-chi-tieu"]').click();
+    await expect(page).toHaveURL("/topics/ux-chi-tieu");
+    await page.getByRole("link", { name: "Bắt đầu", exact: true }).click();
 
     await expect(page).toHaveURL("/prep/chi-thu");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chị Thu, 26 tuổi");
