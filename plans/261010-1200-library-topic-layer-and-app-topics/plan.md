@@ -42,7 +42,8 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 - Routes are English like the rest of the app: `/library`, `/topics/[topicId]`.
 - The library lists a persona under the rule `getPlayableScenario` already uses: published, or while `require_published` is `false`, any version not pulled. So the new drafts are playable, as chị Thu is.
 - The role filter is a form posting a server action: no client state, works before hydration, and the remembered choice is known on the server at render (no flash). Guest: a cookie; signed-in: `user.role_filter`.
-- The home page's reveal preview stays the skeleton placeholder until a real `seed-demo` run exists (checklist gate 12, a user task). PRD Màn 1 forbids invented numbers there.
+- ~~The home page's reveal preview stays the skeleton placeholder until a real `seed-demo` run exists (checklist gate 12, a user task). PRD Màn 1 forbids invented numbers there.~~ Replaced 2026-10-10 (user): the hero shows the sample result of the `Main` artboard, labelled \"buổi mẫu\" (`src/components/home/sample-result.tsx`). Its numbers are the artboard's, not a real session's; see Deviations.
+- The \"Kiểm tra nhẹ\" tag is off the two places that lead to making a topic: the home page's closing band and the library's create tile (user, 2026-10-10). It stays on Màn 10 and on everything generated (FR-56).
 - The three topics and six personas of phase 5 are confirmed as proposed (user, 2026-10-10). One persona per topic is written first; if the plan runs late those three ship with the screens and the other three follow.
 - `ux-chi-tieu` keeps one persona; anh Dũng and bạn Vy are left for later (user, 2026-10-10).
 - Unevaluated draft personas carry no label for learners (user, 2026-10-10), as chị Thu today.
@@ -51,6 +52,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 
 - **FR-50 and FR-38, narrowed:** `role_filter_selected` and `topic_opened` are written for signed-in learners only (user decision 2026-10-10). A guest's filter is remembered in a cookie and a guest's page load writes nothing, so an anonymous caller cannot fill the `event` table. Cost: BA/PM interest among guests (PRD assumption #6) is not measured.
 - **Màn 2 with JavaScript off (phase 2):** the page keeps its loading skeleton, so with JavaScript switched off it shows the skeleton only; the role chips work before the script bundles load (user decision 2026-10-10: keep the skeleton).
+- **Màn 1, the sample under the hero:** the PRD asks for a picture of the reveal from a real `seed-demo` session and no made-up numbers. The page shows the artboard's example instead (user decision 2026-10-10), marked as a sample. One line differs from the artboard: "Tự đặt hạn mức…" became "Giữ hạn mức riêng…", because "tự đặt" is a secret term of cô Lan and the page must hold nothing sealed.
 - **S2 content:** the PRD plans UX 2 topics × 3 personas. After this plan there are 4 UX topics with 1 + 2 + 2 + 2 personas.
 
 ## Phases
@@ -62,7 +64,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 | 3 | [Topic screen and persona cards](./phase-03-topic-screen-and-persona-cards.md) | Done | 1 | 1.5d |
 | 4 | [Home, header and next persona](./phase-04-home-header-and-next-persona.md) | Done | 2, 3 | 1.5d |
 | 5 | [App and web app topics](./phase-05-app-and-web-app-topics.md) | In progress: files, tests, import (local and real) and quick eval done; three personas open too little and need tuning; content approval not recorded | 1 | 4.5d |
-| 6 | [Tests, docs and checks](./phase-06-tests-docs-and-checks.md) | Pending | 4, 5 | 1d |
+| 6 | [Tests, docs and checks](./phase-06-tests-docs-and-checks.md) | Done: tests, docs, the full run and the review of phases 4 to 6; the four review questions settled 2026-10-11 | 4, 5 | 1d |
 
 Phase 5 is content work and touches only `scenarios/`; it can run beside phases 2–4.
 
@@ -79,22 +81,22 @@ Phase 5 is content work and touches only `scenarios/`; it can run beside phases 
 - Review the content of the six new personas before they are imported into the real database (phase 5).
 - Approve the LLM spend of the quick evaluation runs in phase 5 before they start.
 - Run `pnpm il import` for the new files against the deployed database.
-- Run `pnpm il check-strings product` and `pnpm il approve-strings product` on each database: phases 2 to 4 added 28 product strings (13 + 6 + 9), and `il publish` refuses every persona until they are approved.
+- (Done on the real database 2026-10-11: 123 of 123 approved. Still to do on any other database.) Run `pnpm il check-strings product` and `pnpm il approve-strings product approve --all` on each database (without `approve` the command only lists): phases 2 to 4 added 29 product strings (13 + 6 + 10), and `il publish` refuses every persona until they are approved.
 
 ## Success criteria
 
-- [ ] A guest goes home → "Vào thư viện" → a topic → a persona's prep screen, and back, with no sign-in.
-- [ ] `/library` shows 4 curated topics; UX shows 4, BA and PM show the empty state, "Khác" shows all with its line; the choice survives a reload (guest) and a sign-in on another browser (account).
-- [ ] Each persona card's button matches PRD §7 for the signed-in learner's session; a demo account also has "Bắt đầu buổi mới".
-- [ ] After a `done` session the reveal offers an unpractised persona of the same topic first, then of another topic; the "đã luyện mọi persona" text shows only when the role has personas and all are practised.
-- [ ] No library or topic payload contains an item's content, tag, hook or sample question: only the item count.
+- [x] A guest goes home → "Vào thư viện" → a topic → a persona's prep screen, and back, with no sign-in.
+- [x] `/library` shows 4 curated topics; UX shows 4, BA and PM show the empty state, "Khác" shows all with its line; the choice survives a reload (guest) and a sign-in on another browser (account).
+- [x] Each persona card's button matches PRD §7 for the signed-in learner's session; a demo account also has "Bắt đầu buổi mới".
+- [x] After a `done` session the reveal offers an unpractised persona of the same topic first, then of another topic; the "đã luyện mọi persona" text shows only when the role has personas and all are practised.
+- [x] No library or topic payload contains an item's content, tag, hook or sample question: only the item count.
 - [x] Six new scenario files pass `pnpm il validate`, including the cross-persona tag rule, and import as drafts.
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e`, `pnpm build` pass.
-- [ ] `docs/launch-checklist.md` and the bootstrap plan no longer say there is no library.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e`, `pnpm build` pass. (2026-10-10: 1074 unit, 601 integration, 316 Playwright.)
+- [x] `docs/launch-checklist.md` and the bootstrap plan no longer say there is no library.
 
 ## Review
 
-Phases 1 to 3 were each reviewed when they finished. Phases 4, 5 and 6 are reviewed together after phase 6 (user decision 2026-10-10).
+Phases 1 to 3 were each reviewed when they finished. Phases 4, 5 and 6 were reviewed together after phase 6 (user decision 2026-10-10): `plans/reports/code-reviewer-261010-2311-phases-04-06-library-home-content-and-checks.md`, no high finding; what was fixed, and how the user settled the four questions it left, are in the phase 6 file.
 
 ## Open questions
 

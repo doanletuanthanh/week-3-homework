@@ -50,7 +50,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 - **Deliberate deviation from FR-54: the reduced eval is dropped, and a custom scenario is only "kiểm tra nhẹ" (lightly checked).** A generated scenario is not played before the learner gets it (user decision 2026-10-09, after 0 of 10 sample topics passed the reduced gate at ~0.45 USD and ~3 min each). FR-54's reduced eval and its pass rule are dropped: the pipeline is generate → `validate` → output safety check. Màn 10's information block says "nó chưa được chạy thử lần nào" in place of the PRD's sentence about short automatic runs.
 - No worker process: reveal and generation run in `after()`; full eval runs from the local CLI.
 - No Review Console. Operator actions the PRD puts in C8/C10 that S1 or custom topics need (unpublish, take down a custom scenario, refund the free scenario, config and kill switch) are CLI commands.
-- No library (Màn 2/2b): home links to the one persona's prep screen; custom topics are reached from Buổi của tôi.
+- ~~No library (Màn 2/2b): home links to the one persona's prep screen; custom topics are reached from Buổi của tôi.~~ Replaced 2026-10-10 by the plan `plans/261010-1200-library-topic-layer-and-app-topics/`: Màn 2 and Màn 2b are built, and the home page leads into the library.
 - **Unpublished personas are playable by every learner** (user decision 2026-10-03). The publish gate (FR-35) is built and reports, but only blocks play when the `require_published` config row is turned on.
 - **Anonymous quota counters survive account deletion** (user decision 2026-10-03): one row keyed by a keyed hash of the Google account, holding counters only. The data notice says so. This narrows FR-66 "toàn bộ dữ liệu".
 - **LangSmith receives full prompts and replies in production** (user decision 2026-10-03). The data notice names the tracing service as a recipient; traces are not removed by account deletion and expire with LangSmith retention (14 days on the free plan).
@@ -71,7 +71,7 @@ Authorities: PRD `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-0
 
 ## Success criteria
 
-- [ ] Deployed URL passes the end-to-end demo: home → prep → sign-in + notice → interview with canvas → guess → reveal → replay → Mang về + print → Buổi của tôi (PRD §12.2 item 1, minus library screens).
+- [ ] Deployed URL passes the end-to-end demo: home → prep → sign-in + notice → interview with canvas → guess → reveal → replay → Mang về + print → Buổi của tôi (PRD §12.2 item 1, minus library screens; since 2026-10-10 the path goes through the library, see `docs/launch-checklist.md` D6).
 - [ ] Automated tests cover PRD §12.2 items 3, 4, 5, 6, 9 (non-Console), 10, 11, 12, 13, 14.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` pass.
 - [ ] A learner can create a custom topic and play it, with quotas, budget and kill switch enforced.

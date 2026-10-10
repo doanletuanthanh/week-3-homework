@@ -69,7 +69,7 @@ Every way into and out of the library: the home page as designed, "Thư viện" 
 - **Màn 3 of a persona that cannot be started** (pulled, or played before the account was deleted) now leads back to its topic ("Về chủ đề"), as the PRD says; for a topic of the learner's own, to "Buổi của tôi". It was "Về trang chủ". Carried over from the phase 3 review.
 - **The home page's library section is left out when no topic can be played** (publish gate on with drafts only); the buttons stay.
 - **`getFirstPersonaId` is deleted.** `tests/e2e/helpers/personas.ts` imports extra personas for a test and removes them after: the other specs expect chị Thu to be the one persona.
-- **Strings:** 9 more product strings (`home.*`, `next_step.*`, `library.enter`, `library.name`, `topic.to_topic`), 28 since phase 2 began. Text that was already on the home page before this plan stays inline, as it was.
+- **Strings:** 10 more product strings (first counted as 9; corrected in the review of 2026-10-10) (`home.*`, `next_step.*`, `library.enter`, `library.name`, `topic.to_topic`), 29 since phase 2 began. Text that was already on the home page before this plan stays inline, as it was.
 - **No code review yet:** by the user's decision (2026-10-10) phases 4 to 6 are reviewed together after phase 6.
 
 ## Risk assessment
