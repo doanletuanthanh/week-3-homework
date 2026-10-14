@@ -26,7 +26,7 @@ This plan replaces the fixed battery with a **Persona QA agent**: a LangGraph pl
 
 - Target cost: **≤ 0.1 USD per new persona** (revised from 0.5 USD the same day). The eval must be "very simple but as accurate as possible" and a **real agent system** (plan, act through tools, observe, reflect), not a fixed script.
 - Product focus: **developers practising user interviews before building an app**.
-- Models: **every role on `google:gemini-3.8-flash`**, judges included, because there is no OpenAI key. Do not downgrade to lite to save money. Cuts come from tokens, prompting and the eval design.
+- Models: **Google only** (no OpenAI key). Revised the same day: **Flash-Lite where a role's judgement set shows it is enough, 3.8 Flash elsewhere** (phase 2).
 - **No string matching, regex or if/else heuristics decide anything semantic.** Leaks, disclosures and question labels come from structured model verdicts, as item-id lists or enums validated by zod. Code only does typed engine-state checks and set arithmetic on ids. Rules, checks, probes and gate reasons are declared as data tables (`{ key, run }[]`), not branch chains. The existing `secret_terms` rule in `validate.ts` is left unchanged and nothing new depends on it.
 - Admin dashboard v1 includes: cost and usage, scenario review, learners and audit, config and custom topics.
 - Fold 1–2 new learner features into this plan (phase 9).
@@ -62,7 +62,7 @@ The hard cap `eval_lean_budget_usd = 0.10` aborts the run through the `recordCal
 | # | Phase | Status | Depends on | Effort |
 |---|-------|--------|------------|--------|
 | 1 | [Cost baseline and reporting](./phase-01-start.md) | Done (verified on prod via rolled-back tx) | — | 1d |
-| 2 | [Token and prompt cuts](./phase-02-token-and-prompt-cuts.md) | Pending | 1 | 2d |
+| 2 | [Model tiering by measured judgement sets](./phase-02-token-and-prompt-cuts.md) | Done: `.env.example` tiered; the user still has to set the deployment env | 1 | 1d |
 | 3 | [Persona QA agent (lean eval)](./phase-03-lean-eval-engine.md) | Pending | 1, 2 | 4d |
 | 4 | [Lean eval calibration](./phase-04-lean-eval-calibration.md) | Pending | 2, 3 | 1.5d |
 | 5 | [Publish gate v2 and eval job](./phase-05-publish-gate-v2-and-eval-job.md) | Pending | 4 | 2d |
@@ -83,13 +83,16 @@ Phase 6 can run in parallel with phases 2–3 after phase 1 (`src/app/admin` aga
 
 - [ ] `pnpm il eval <persona> --profile lean` costs < 0.10 USD (measured in `llm_call`) on every curated persona (9 today), and < 0.01 USD for an unchanged re-eval.
 - [ ] The lean eval flags 100% of the seeded leak mutants and passes all 9 clean curated personas (phase 4). Two runs give the same verdict.
-- [ ] Session cost per 30-turn interview is ≥ 25% lower than the phase 1 baseline, and no judgement-eval set regresses.
+- [ ] Every role runs the cheapest model that passes its judgement set 3/3 (phase 2). ANALYSIS stays on Flash (user decision), so sessions are ≈ 10% cheaper, mostly in the reveal.
 - [ ] `/admin` (admins only) shows spend by day, scope and role. A persona version can be evaluated, reviewed and published or unpublished from the browser. Config, custom attempts, learners and the audit log are visible, and every learner-data read is logged.
 - [ ] A learner sees their skill trend across sessions, and can check an interview guide for their app idea.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e` all pass.
 
 ## Open questions
 
-1. Implicit prompt caching thresholds and discounts for gemini-3.8-flash must be checked in the vendor docs before phase 2 relies on them.
+None.
+
+Resolved 2026-10-14: ANALYSIS stays on 3.8 Flash (user decision).
+Resolved 2026-10-14: implicit caching on 3.8 Flash needs ≥ 4,096 input tokens, so session prompts never qualify. Caching is dropped (phase 2). The QA agent uses Gemini Batch mode (−50%) for its independent calls by default, with a `--fast` flag for synchronous runs (user decision).
 
 Resolved 2026-10-14: the judges move to Gemini too (no OpenAI key). The cost of losing cross-family checking is covered by the phase 4 mutation recall and the judgement sets rerun in phase 2 step 1.

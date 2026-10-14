@@ -13,7 +13,7 @@ Approved 2026-10-03. Product requirements: `_bmad-output/planning-artifacts/prds
 | Authorization | `user_id` filter in one repository layer | RLS enabled on every table with no policies, anon/authenticated grants revoked, so the publishable key reads nothing |
 | Auth | Supabase Auth, Google OAuth, `@supabase/ssr` | Verify with `getClaims()` in every handler; admin and demo accounts come from `ADMIN_EMAILS` and `DEMO_ACCOUNT_EMAILS` |
 | Agent engine | LangGraph JS 1.x, no checkpointer | State lives in `turn` / `snapshot`; one DB transaction per turn after the graph returns |
-| Models | Gemini for analysis, persona, generators, moderation; OpenAI for judges and verifier | One env var per call role; different families for writer and checker on purpose |
+| Models | Gemini only: 3.8 Flash for the persona, analysis, generators, moderation and safety; 3.5 Flash-Lite for the turn judge, end judge and verifier | One env var per call role. Each role runs the cheapest model that passed its judgement set three times in three; roles without a set stay on Flash (`plans/reports/model-tiering-261014-2250-judgement-sets.md`). Writer and checker are no longer different families: separate calls and prompts, and the sets, stand in for that |
 | Tracing | LangSmith | Full prompts and replies, plus metadata: session, turn, call role. Flush before the function ends. Off for full and reduced eval runs (free plan: 5k traces/month, 14-day retention) |
 | Background work | `after()` + job row + heartbeat, `maxDuration = 300` | Reveal and custom-scenario generation. Poll endpoint marks stale jobs failed; no cron |
 | Full evaluation | Local CLI sharing the engine code and database | Never runs in a web request |

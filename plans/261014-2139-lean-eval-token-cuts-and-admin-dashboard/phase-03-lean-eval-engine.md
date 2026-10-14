@@ -19,7 +19,8 @@ Pattern: **plan-and-execute (ReWOO-style), not a free ReAct loop.** A ReAct agen
 - Functional, **safety floor**: a fixed set of probes always runs, and the agent may add probes but never remove these. The floor is one ANALYSIS-only unlock check per item and the 3 universal attacks. That keeps recall from depending on the agent's judgement.
 - Functional: the agent's decisions are typed: tool names from a registry, item ids, attack ids, enums. All of them are validated by zod against the scenario's real ids. No string matching, regex or keyword rules decide anything.
 - Functional: tool results are cached by hash (tool, args, the scenario fields read, the prompt version, the role spec). A re-eval reruns only the tool calls whose inputs changed.
-- Non-functional: all roles are `google:gemini-3.8-flash`. The budget cap `eval_lean_budget_usd` defaults to **0.10**. The agent sees `budgetLeftUsd` in its state and must fit its plan to it. The meter aborts at the cap, as in `src/server/generation.ts`.
+- Non-functional, **economy mode by default (user decision 2026-10-14)**: independent calls go through Gemini Batch mode at half price. These are `plan`, every probe in one `execute` round, and `judge`. One round is one batch job, so a run takes minutes to hours and is meant for the background eval job. `--fast` runs the same graph synchronously. The tool layer hides which transport is used. Roles follow phase 2's tiering.
+- Non-functional: all roles are Google models as tiered in phase 2. The budget cap `eval_lean_budget_usd` defaults to **0.10**. The agent sees `budgetLeftUsd` in its state and must fit its plan to it. The meter aborts at the cap, as in `src/server/generation.ts`.
 
 ## Architecture
 
