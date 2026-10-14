@@ -4,6 +4,7 @@ import type { Database } from "@/db/client";
 import type { CallModelDeps } from "@/llm/call-model";
 import { adjudicateCommand } from "./commands/adjudicate";
 import { configCommand } from "./commands/config";
+import { costReportCommand } from "./commands/cost-report";
 import { customCommand } from "./commands/custom";
 import { evalCommand } from "./commands/eval";
 import { importCommand } from "./commands/import-scenario";
@@ -71,6 +72,7 @@ async function main(): Promise<number> {
     publish: publishCommand(connected, operatorEmail),
     unpublish: unpublishCommand(connected, operatorEmail),
     "judgement-eval": judgementEvalCommand(llmDeps),
+    "cost-report": costReportCommand(connected),
     "measure-latency": measureLatencyCommand({ cookie: process.env.IL_MEASURE_COOKIE }),
     // Reads the whole environment as the app does, so a bad value stops the command before it starts a session.
     "seed-demo": seedDemoCommand(connected, () => ({ demoEmails: getEnv().DEMO_ACCOUNT_EMAILS, llmDeps: llmDeps() })),
