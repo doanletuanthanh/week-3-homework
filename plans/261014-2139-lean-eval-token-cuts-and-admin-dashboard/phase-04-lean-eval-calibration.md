@@ -12,6 +12,10 @@ dependencies: [2, 3]
 ## Overview
 Prove that the lean eval is accurate without paying for full runs. A mutation suite builds known-bad versions of the curated personas. The lean eval must catch all of them, and it must pass the clean originals.
 
+## Carried over from phase 3
+- Hand-labelled starter sets `evalsets/reply-judge.jsonl` (≥ 20 lines, half leaks, with paraphrases) and `evalsets/qa-plan.jsonl` (≥ 10 scenarios with the expected high-risk items), with `judgement-eval` kinds `reply-judge` and `qa-plan`.
+- **Verdict stability (measured 2026-10-14/15):** the same persona gave different verdicts in different runs. chi-thu installment opened in one batch run and failed 0/2 in the sync runs before and after it; co-lan leaked a topic in one run and none in the next. Measure each row's flip rate over ≥ 3 runs per persona, then choose the gate rule (majority of runs, k-of-n per probe) and price it against the cap. Batch runs cost ≈ 0.04 USD, so 3 runs fit 0.12–0.15 USD per persona.
+
 ## Requirements
 - Functional: `pnpm il eval-calibrate [--persona <id>|--all]` builds the mutants in memory, runs lean on each, and prints a confusion matrix.
 - Non-functional: the whole calibration (9 clean + mutants) costs < 3 USD in total, and runs once per prompt or eval change, not per persona publish.

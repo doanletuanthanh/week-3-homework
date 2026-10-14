@@ -63,7 +63,7 @@ The hard cap `eval_lean_budget_usd = 0.10` aborts the run through the `recordCal
 |---|-------|--------|------------|--------|
 | 1 | [Cost baseline and reporting](./phase-01-start.md) | Done (verified on prod via rolled-back tx) | — | 1d |
 | 2 | [Model tiering by measured judgement sets](./phase-02-token-and-prompt-cuts.md) | Done: `.env.example` tiered; the user still has to set the deployment env | 1 | 1d |
-| 3 | [Persona QA agent (lean eval)](./phase-03-lean-eval-engine.md) | Pending | 1, 2 | 4d |
+| 3 | [Persona QA agent (lean eval)](./phase-03-lean-eval-engine.md) | Done: sync ≈ 0.09 and batch ≈ 0.04 USD per persona; an unchanged re-eval costs 0; judge sets and stability moved to phase 4 | 1, 2 | 4d |
 | 4 | [Lean eval calibration](./phase-04-lean-eval-calibration.md) | Pending | 2, 3 | 1.5d |
 | 5 | [Publish gate v2 and eval job](./phase-05-publish-gate-v2-and-eval-job.md) | Pending | 4 | 2d |
 | 6 | [Admin shell and cost dashboard](./phase-06-admin-shell-and-cost-dashboard.md) | Pending | 1 | 2d |
@@ -81,7 +81,7 @@ Phase 6 can run in parallel with phases 2–3 after phase 1 (`src/app/admin` aga
 
 ## Success criteria
 
-- [ ] `pnpm il eval <persona> --profile lean` costs < 0.10 USD (measured in `llm_call`) on every curated persona (9 today), and < 0.01 USD for an unchanged re-eval.
+- [ ] `pnpm il eval <persona> --profile lean` costs < 0.10 USD (measured in `llm_call`) on every curated persona (7 on disk), and < 0.01 USD for an unchanged re-eval.
 - [ ] The lean eval flags 100% of the seeded leak mutants and passes all 9 clean curated personas (phase 4). Two runs give the same verdict.
 - [ ] Every role runs the cheapest model that passes its judgement set 3/3 (phase 2). ANALYSIS stays on Flash (user decision), so sessions are ≈ 10% cheaper, mostly in the reveal.
 - [ ] `/admin` (admins only) shows spend by day, scope and role. A persona version can be evaluated, reviewed and published or unpublished from the browser. Config, custom attempts, learners and the audit log are visible, and every learner-data read is logged.

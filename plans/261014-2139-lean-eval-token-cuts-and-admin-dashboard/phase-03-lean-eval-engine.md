@@ -1,13 +1,41 @@
 ---
 phase: 3
 title: "Persona QA agent (lean eval)"
-status: pending
+status: completed
 priority: P1
 effort: "4d"
 dependencies: [1, 2]
 ---
 
 # Phase 3: Persona QA agent (lean eval)
+
+## Progress (2026-10-14)
+- **Slice 3a done (synchronous agent).**
+  - Code: `src/graphs/qa-agent-graph.ts`, `src/eval/qa/*`, `src/llm/prompts/{qa-agent,eval-reply-judge}.ts`, `il eval <persona> --profile lean`, `finishQaRun`, `adjudicate list` reads lean runs, config `eval_lean_budget_usd` = 0.10.
+  - Tests: 20 new unit and graph tests; 1106/1106 unit tests, typecheck and lint pass. Code review done and its findings fixed.
+  - Real runs on production: 0.083–0.092 USD per persona, 38–44 calls (`plans/reports/qa-agent-261014-2330-first-real-runs.md`).
+- **Slice 3b done (Batch mode and tool cache).**
+  - `src/llm/gemini-batch.ts`: a collector that sends the calls arriving together as one Gemini Batch job per model, inline requests, polled. The batch price tier (×0.5) is in `pricing.ts` and `callModel`.
+  - Lean runs use batch by default; `--fast` calls the models directly; `--no-cache` re-measures and overwrites the cache.
+  - Measured on 2026-10-14: a batch inline request **ignores camelCase `generationConfig.responseJsonSchema` without an error** and honours snake_case `generation_config.response_json_schema`, so requests are written in snake_case. A job took 2–3 minutes.
+  - Tool cache: table `eval_tool_cache` (migration 0013, RLS on; applied to production 2026-10-14). The key is a hash of the probe, the scenario, the probe models, the probe prompts as they render, and `TOOL_CACHE_VERSION`. Judge, planner and reflect calls are not cached.
+  - Code review fixes:
+    - a failed status check retries instead of dropping a running (billed) job;
+    - RPC error codes are mapped to HTTP statuses for retry decisions;
+    - a job whose callers all cancelled is cancelled on the provider;
+    - the attempt timeout is past the 48 h job expiry;
+    - prompts are in the cache key;
+    - `--concurrency` stays capped at 16 for episode profiles;
+    - a missing API key fails up front.
+- **Changes from the design below, found while building and running:**
+  - **Negative probes dropped.** Whether a leading question opens an item depends on Call 1's label, not on the persona; the judgement sets cover that.
+  - **The public-field review is folded into `plan`, with `kind` content/topic_hint.** Content blocks; a topic hint is a warning. The planner over-flagged in the first runs.
+  - **A missed unlock check runs once more,** because Call 1 is not deterministic. 1/2 is a warning, 0/2 is a failure, and retries are budgeted.
+  - **A delivery asserts "told" only when the item opened,** because the floor owns the unlock question.
+  - **The seeded learner turn asks about the item's topic,** as live hook selection requires. A neutral opener made sample questions read as `leading`.
+  - **The budget prices probe and agent calls apart,** keeps the final judge's share, and refuses a cap below floor + plan + judge before spending. The hard stop reports `BudgetExceededError` (failure reason `budget`), not a model error.
+  - **No structural checks file:** `validate` already checks prerequisite cycles and unreachable trust thresholds.
+- **Observed:** verdicts vary between runs. co-lan leaked a topic in one run and passed the next. Phase 4's "same verdict over 2 runs" criterion must measure this.
 
 ## Overview
 A real agent, not a fixed test battery. It is a LangGraph plan → execute → judge → reflect loop. It reads a persona, decides where the persona is most likely to break, tests exactly there through engine tools, observes the results, and either probes deeper or stops. It also writes a verdict and suggested fixes. Target: **≤ 0.1 USD per new persona** (hard cap), about 0.06 USD estimated, and ~0 for a re-eval of an unchanged version.
@@ -87,11 +115,15 @@ What is dropped compared with the 0.37 USD design: the scripted 8-turn good path
 8. Graph tests: a pass, each threshold failure, a budget-exhaustion run (the floor completes and the optional actions are skipped), a reflect loop capped at 2 rounds, and a re-eval served from the cache.
 
 ## Success Criteria
-- [ ] Measured cost < 0.10 USD per new persona on all 9 curated personas. An unchanged re-eval costs < 0.01 USD.
-- [ ] The floor always runs, even when the planner returns no actions (test).
-- [ ] The reflect loop is bounded (≤ 2 rounds), and the budget cap is never exceeded by more than one in-flight call.
-- [ ] No regex, `.match`, `.includes` or `.test` decides a verdict in `src/eval/qa` or in the agent graph. Membership checks run on id `Set`s only.
-- [ ] Reply judge: recall 100%, precision ≥ 90% on its set.
+- [x] Measured cost < 0.10 USD per new persona on all 7 curated personas (there are 7 on disk, not 9).
+  - Batch: 0.039–0.040 USD (5 personas, about 20–26 min each).
+  - Sync: 0.083–0.092 USD (3 personas, about 2 min each).
+  - Details in `plans/reports/qa-agent-261014-2330-first-real-runs.md`.
+- [x] An unchanged re-eval costs < 0.01 USD: 0 calls, 0 USD (run-level report cache, measured on production 2026-10-15). A re-eval whose planner picks new additions pays only for those; the probes come from the cache (12 calls, 0.0151 USD measured before the run cache existed).
+- [x] The floor always runs, even when the planner returns no actions (graph test). A cap that cannot hold it is refused up front.
+- [x] The reflect loop is bounded (≤ 2 rounds, graph test). The budget pre-checks every addition, retry and reflect call; the hard stop reports `budget`. In batch mode the overshoot is bounded by one wave of in-flight calls (code review).
+- [x] No regex, `.match`, `.includes` or `.test` decides a verdict in `src/eval/qa` or the agent graph (code review). Membership checks run on id lists only.
+- [ ] Reply judge: recall 100%, precision ≥ 90% on its set. **Moved to phase 4**: the hand-labelled `evalsets/reply-judge.jsonl` and `qa-plan.jsonl` and their `judgement-eval` kinds are calibration work. A paraphrase of each sample question is written by the planner, not by a separate call.
 
 ## Risk Assessment
 - **The agent may pick the wrong attacks.** Mitigation: the floor guarantees a baseline, and phase 4's mutation recall must be 100%. If an operator is missed, add it to the floor (data change), not to the prompt alone.
