@@ -50,6 +50,7 @@ async function main(): Promise<number> {
   const { getEnv, roleSpecFromEnv } = await import("@/config/env");
   const { createChatModel } = await import("@/llm/create-model");
   const { recordLlmCall } = await import("@/db/repo/llm-calls");
+  const { GeminiBatchCollector } = await import("@/llm/gemini-batch");
   const connected = db;
   // Operator commands use the batch key when there is one, and keep their cost in `llm_call`
   // whenever a database is connected.
@@ -65,7 +66,14 @@ async function main(): Promise<number> {
     config: configCommand(connected, operatorEmail),
     trace: traceCommand(connected, operatorEmail),
     custom: customCommand(connected, operatorEmail),
-    eval: evalCommand(connected, () => ({ roleSpec: roleSpecFromEnv, llmDeps: llmDeps(), confirm, setTracing })),
+    eval: evalCommand(connected, () => ({
+      roleSpec: roleSpecFromEnv,
+      llmDeps: llmDeps(),
+      confirm,
+      setTracing,
+      // Lean runs use Gemini Batch Mode with the batch key when there is one.
+      batchCollector: (onJob) => new GeminiBatchCollector({ apiKey: getEnv().GOOGLE_API_KEY_BATCH ?? getEnv().GOOGLE_API_KEY ?? "", onJob }),
+    })),
     adjudicate: adjudicateCommand(connected, operatorEmail),
     "check-strings": checkStringsCommand(connected, llmDeps),
     "approve-strings": approveStringsCommand(connected, operatorEmail),

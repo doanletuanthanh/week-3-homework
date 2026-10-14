@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
+import type { QaReport } from "@/eval/qa/types";
 import type { EpisodeResult, EvalProfile, EvalReport } from "@/eval/types";
 import type { Database, Executor } from "../client";
 import {
@@ -45,7 +46,7 @@ export async function markEvalRunRunning(db: Executor, runId: string): Promise<v
   await db.update(evalRuns).set({ status: "running", failureReason: null }).where(eq(evalRuns.id, runId));
 }
 
-export async function markEvalRunFailed(db: Executor, runId: string, failureReason: "isolation" | "model"): Promise<void> {
+export async function markEvalRunFailed(db: Executor, runId: string, failureReason: "isolation" | "model" | "budget"): Promise<void> {
   await db.update(evalRuns).set({ status: "failed", failureReason }).where(eq(evalRuns.id, runId));
 }
 
@@ -89,6 +90,48 @@ export async function finishEvalRun(db: Database, runId: string, report: EvalRep
     if (flags.length > 0) await tx.insert(leakFlags).values(flags);
     return true;
   });
+}
+
+/**
+ * Closes a lean run: the QA agent's report, its actual cost, and one `leak_flag` row per leak, in
+ * one transaction. A leak is filed under its reply id; it has no turn of a session, so `turn` is 0.
+ * A run that is already closed is left as it is (false).
+ */
+export async function finishQaRun(db: Database, runId: string, report: QaReport): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const closed = await tx
+      .update(evalRuns)
+      .set({ status: "done", failureReason: null, reportJson: report, costActualUsd: report.cost.actualUsd, finishedAt: new Date() })
+      .where(and(eq(evalRuns.id, runId), ne(evalRuns.status, "done")))
+      .returning({ id: evalRuns.id });
+    if (closed.length === 0) return false;
+    const flags = report.leaks.map((leak) => ({
+      evalRunId: runId,
+      episode: leak.replyId,
+      turn: 0,
+      itemId: leak.itemId,
+      kind: leak.kind,
+      excerpt: leak.excerpt,
+      allowedHooks: [],
+      judgeReason: `Phép thử ${leak.action} làm lộ ${leak.itemId} khi chưa mở (${leak.kind}).`,
+    }));
+    if (flags.length > 0) await tx.insert(leakFlags).values(flags);
+    return true;
+  });
+}
+
+/**
+ * The newest finished run of one scenario whose leak flags admins rule on: a full run or a lean
+ * one, whichever finished last.
+ */
+export async function latestFlaggedRun(db: Executor, scenarioId: string): Promise<EvalRunRow | null> {
+  const [run] = await db
+    .select()
+    .from(evalRuns)
+    .where(and(eq(evalRuns.scenarioId, scenarioId), inArray(evalRuns.profile, ["full", "lean"]), eq(evalRuns.status, "done")))
+    .orderBy(desc(evalRuns.finishedAt))
+    .limit(1);
+  return run ?? null;
 }
 
 /** The newest finished full run of one scenario version, with the keys of its stored episodes. */

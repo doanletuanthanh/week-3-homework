@@ -61,6 +61,7 @@ const envSchema = z
     LLM_EVAL_INTERVIEWER: optionalRoleSpec,
     LLM_EVAL_LEAK_JUDGE: optionalRoleSpec,
     LLM_STRING_CHECK: optionalRoleSpec,
+    LLM_QA_PLANNER: optionalRoleSpec,
     GOOGLE_API_KEY: optionalKey,
     OPENAI_API_KEY: optionalKey,
     // Separate keys for evaluation and scenario generation, so their load cannot rate-limit live turns.

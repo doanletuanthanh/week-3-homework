@@ -8,7 +8,7 @@ import { getDb } from "@/db/client";
 import { recordLlmCall, type LlmCallRecord } from "@/db/repo/llm-calls";
 import type { LlmScope } from "@/db/schema";
 import { createChatModel } from "./create-model";
-import { costUsd, ZERO_USAGE, type TokenUsage } from "./pricing";
+import { costUsd, ZERO_USAGE, type PriceTier, type TokenUsage } from "./pricing";
 import type { Role, RoleSpec } from "./roles";
 
 /** Which budget a call belongs to, and the row it is attributed to. */
@@ -46,6 +46,8 @@ export type CallModelDeps = {
   attemptTimeoutMs: number;
   /** Cancels every call made with these dependencies: a run that is being stopped as a whole. */
   signal?: AbortSignal;
+  /** How a role's calls are billed; standard unless the run sends them through a batch API. */
+  priceTier?: (spec: RoleSpec) => PriceTier;
 };
 
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -190,7 +192,7 @@ export async function callModel<T>(
       const timeout = AbortSignal.timeout(deps.attemptTimeoutMs);
       const attemptSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
       const record = (ok: boolean, usage: TokenUsage) => {
-        const cost = costUsd(spec.model, usage);
+        const cost = costUsd(spec.model, usage, deps.priceTier?.(spec));
         const latencyMs = Date.now() - startedAt;
         return deps
           .recordCall({

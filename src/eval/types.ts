@@ -1,8 +1,11 @@
 import type { CheckKind } from "@/engine/reveal-types";
 import type { Label, QuestionType } from "@/engine/types";
+import type { QaReport } from "./qa/types";
 
-export const EVAL_PROFILES = ["quick", "full", "reduced"] as const;
+export const EVAL_PROFILES = ["quick", "full", "reduced", "lean"] as const;
 export type EvalProfile = (typeof EVAL_PROFILES)[number];
+/** The profiles that play whole simulated episodes; `lean` is the persona QA agent instead. */
+export type EpisodeProfile = Exclude<EvalProfile, "lean">;
 
 /**
  * Who asks the questions of an episode. `good` and `bad` are simulated learners, `adversarial`
@@ -97,3 +100,8 @@ export type EvalReport = {
   thresholds: Threshold[];
   cost: { estimateUsd: number; actualUsd: number };
 };
+
+/** A stored report of a run that played episodes, as opposed to one of the persona QA agent. */
+export function isEpisodeReport(report: EvalReport | QaReport | null): report is EvalReport {
+  return report !== null && report.profile !== "lean";
+}

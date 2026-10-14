@@ -42,7 +42,7 @@ function isRateLimit(error: unknown): boolean {
  * Runs one step of an episode again, after a growing wait, while the provider answers with a
  * rate limit. A step writes nothing until it succeeds, so repeating it is safe.
  */
-async function withRateLimitBackoff<T>(step: () => Promise<T>, options: EpisodeOptions): Promise<T> {
+export async function withRateLimitBackoff<T>(step: () => Promise<T>, options: EpisodeOptions): Promise<T> {
   const delays = options.rateLimitDelaysMs ?? DEFAULT_RATE_LIMIT_DELAYS_MS;
   const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   for (let attempt = 0; ; attempt += 1) {

@@ -3,6 +3,7 @@ import { latestFullRun, listFlags, publishScenario, unpublishPersona } from "@/d
 import { listOtherPersonaTags } from "@/db/repo/scenarios";
 import { getScenarioByPersona } from "@/db/repo/sessions";
 import { evaluateGate, type GateResult } from "@/eval/publish-gate";
+import { isEpisodeReport } from "@/eval/types";
 import { validateScenario } from "@/scenario/validate";
 import { needsDb, parseArgs, reportCliErrors } from "../args";
 import { CliError, type CliIo, type Command } from "../scenario-file";
@@ -26,7 +27,7 @@ export async function checkPublishGate(db: Database, personaId: string) {
   const gate: GateResult = evaluateGate({
     violations: validation.violations.map((violation) => `${violation.path || "(gốc)"} [${violation.code}] ${violation.message}`),
     run: latest
-      ? { profile: latest.run.profile, status: latest.run.status, episodeKeys: latest.episodeKeys, report: latest.run.reportJson }
+      ? { profile: latest.run.profile, status: latest.run.status, episodeKeys: latest.episodeKeys, report: isEpisodeReport(latest.run.reportJson) ? latest.run.reportJson : null }
       : null,
     flags: flags.map(({ flag, rulings }) => ({ id: flag.id, episode: flag.episode, rulings })),
     strings,

@@ -75,13 +75,20 @@ const TurnState = new StateSchema({
 
 const optionsOf = (config: RunnableConfig) => config.configurable as TurnRunOptions;
 
+type TurnInput = { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; question: string };
+type AnalysisOptions = Pick<TurnRunOptions, "scope" | "meta" | "signal" | "llmDeps" | "onContext">;
+
 /** Call 1: analyses the new question and judges the previous persona turn. Sees no locked content. */
-async function analyze(state: typeof TurnState.State, config: RunnableConfig) {
-  const { scope, meta, signal, llmDeps, onContext } = optionsOf(config);
-  const context = buildAnalysisContext(state.scenario, state.state, state.transcript, state.question);
-  onContext?.({ call: "ANALYSIS", context }, state.state);
+async function callAnalysis(input: TurnInput, options: AnalysisOptions): Promise<RawAnalysis> {
+  const { scope, meta, signal, llmDeps, onContext } = options;
+  const context = buildAnalysisContext(input.scenario, input.state, input.transcript, input.question);
+  onContext?.({ call: "ANALYSIS", context }, input.state);
   const reply = await callModel("ANALYSIS", buildAnalysisMessages(context), { schema: analysisSchema, meta, scope, signal }, llmDeps);
-  return { analysis: reply.output };
+  return reply.output;
+}
+
+async function analyze(state: typeof TurnState.State, config: RunnableConfig) {
+  return { analysis: await callAnalysis(state, optionsOf(config)) };
 }
 
 /** Code only: checks Call 1, applies the verdict, decides the unlock and the hook, builds Call 2's context. */
@@ -174,6 +181,16 @@ export async function runTurnGraph(
   // writes its `llm_call` row and fails as a model call.
   const result = await turnGraph.invoke(input, { configurable: options, runName: "turn", metadata: options.meta });
   return { analysis: result.analysis!, plan: result.plan!, personaText: result.personaText!, judgement: result.judgement };
+}
+
+/**
+ * The first half of a main turn: Call 1 and the code decision, with no persona reply. The plan is
+ * exactly what the full turn would act on, so evaluation can check what a question opens for one
+ * call instead of two.
+ */
+export async function analyzeTurn(input: TurnInput, options: AnalysisOptions): Promise<{ analysis: RawAnalysis; plan: TurnPlan }> {
+  const analysis = await callAnalysis(input, options);
+  return { analysis, plan: planTurn({ ...input, analysis }) };
 }
 
 /**

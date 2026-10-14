@@ -38,6 +38,11 @@ export const CONFIG = {
     default: 1,
     summary: "Chi phí giữ trước cho mỗi lần thử sinh kịch bản. Lần thử bị dừng khi tiêu tới mức này.",
   },
+  eval_lean_budget_usd: {
+    schema: z.number().positive(),
+    default: 0.1,
+    summary: "Trần chi phí của một lần eval lean (agent QA) cho một persona. Agent bỏ các phép thử thêm khi sắp chạm trần; tới trần thì mọi lần gọi đang chạy bị dừng.",
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG;

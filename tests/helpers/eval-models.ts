@@ -17,6 +17,7 @@ const SPEC_OF: Record<Role, RoleSpec> = {
   MODERATION: { provider: "openai", model: "gpt-6-luna", effort: "medium" },
   SCENARIO_GENERATOR: { provider: "openai", model: "gpt-6-sol", effort: "medium" },
   SAFETY: { provider: "openai", model: "gpt-6.1-sol", effort: "medium" },
+  QA_PLANNER: { provider: "openai", model: "gpt-6-luna", effort: "high" },
 };
 
 /**

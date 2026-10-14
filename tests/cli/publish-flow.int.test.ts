@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/db/client";
 import { createEvalRun, finishEvalRun } from "@/db/repo/eval";
 import { adjudications, evalRuns, leakFlags, scenarios, sessions, stringApprovals } from "@/db/schema";
+import type { EvalReport } from "@/eval/types";
 import { openSession } from "@/server/sessions";
 import { productStrings } from "@/strings/product-strings";
 import { runAdjudicate } from "../../cli/commands/adjudicate";
@@ -368,7 +369,7 @@ describe("il publish", () => {
     const full = await seedFullRun();
     const stored = (await getDb().select().from(evalRuns).where(eq(evalRuns.id, full.id)))[0];
     // The quick run carries the same all-green report a full run would; then the full run is removed.
-    await finishEvalRun(getDb(), run.id, { ...stored.reportJson!, profile: "quick" }, []);
+    await finishEvalRun(getDb(), run.id, { ...(stored.reportJson as EvalReport), profile: "quick" }, []);
     await getDb().delete(evalRuns).where(eq(evalRuns.id, full.id));
     await approveEverything(thanh);
     const { io, err } = capture();

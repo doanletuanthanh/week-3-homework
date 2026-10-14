@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { recordLlmCall } from "@/db/repo/llm-calls";
 import { evalEpisodes, evalRuns, leakFlags, llmCalls, scenarios } from "@/db/schema";
 import { evaluateGate } from "@/eval/publish-gate";
+import type { EvalReport } from "@/eval/types";
 import { runEval, type EvalCommandDeps } from "../../cli/commands/eval";
 import { NO_VERDICT, a, rawAnalysis } from "../helpers/engine-fixtures";
 import { NO_FINDINGS, repeat, roleModels } from "../helpers/eval-models";
@@ -82,7 +83,7 @@ describe("il eval --profile quick", () => {
 
     const gate = evaluateGate({
       violations: [],
-      run: { profile: run.profile, status: run.status, episodeKeys: ["good-1", "bad-1"], report: run.reportJson },
+      run: { profile: run.profile, status: run.status, episodeKeys: ["good-1", "bad-1"], report: run.reportJson as EvalReport },
       flags: [],
       strings: [],
     });
@@ -199,7 +200,7 @@ describe("il eval --resume", () => {
     expect(second.calls("EVAL_INTERVIEWER")).toHaveLength(1);
     const [after] = await runs();
     expect(after).toMatchObject({ id: run.id, status: "done", failureReason: null });
-    expect(after.reportJson!.opened).toEqual({ good: { runs: [0], median: 0 }, bad: { runs: [0], median: 0 } });
+    expect((after.reportJson as EvalReport).opened).toEqual({ good: { runs: [0], median: 0 }, bad: { runs: [0], median: 0 } });
     expect(await runs()).toHaveLength(1);
   });
 

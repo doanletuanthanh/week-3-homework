@@ -51,6 +51,7 @@ describe("il config", () => {
       "custom_path_enabled = true  (mặc định)",
       "generation_daily_budget_usd = 10  (mặc định)",
       "generation_reserve_usd = 1  (mặc định)",
+      "eval_lean_budget_usd = 0.1  (mặc định)",
     ]);
   });
 

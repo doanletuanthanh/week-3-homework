@@ -18,6 +18,7 @@ import type { TurnDecision } from "@/engine/plan-turn";
 import type { RevealJson, RevealParts } from "@/engine/reveal-types";
 import { REPLAY_RESULTS } from "@/engine/replay-result";
 import { LABELS, type HookEntry, type RawAnalysis, type UnlockedItem, type Verdict } from "@/engine/types";
+import type { CachedToolResult, QaReport } from "@/eval/qa/types";
 import type { EpisodeResult, EvalReport, LeakKind } from "@/eval/types";
 import type { Scenario } from "@/scenario/schema";
 
@@ -488,16 +489,16 @@ export const evalRuns = pgTable(
       .notNull()
       .references(() => scenarios.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
-    profile: text("profile", { enum: ["quick", "full", "reduced"] }).notNull(),
+    profile: text("profile", { enum: ["quick", "full", "reduced", "lean"] }).notNull(),
     status: text("status", { enum: ["queued", "running", "failed", "done"] }).notNull().default("running"),
     /** Learner turns per episode. */
     turns: integer("turns").notNull(),
-    reportJson: jsonb("report_json").$type<EvalReport>(),
+    reportJson: jsonb("report_json").$type<EvalReport | QaReport>(),
     costEstimateUsd: numeric("cost_estimate_usd", { precision: 14, scale: 9, mode: "number" }).notNull(),
     costActualUsd: numeric("cost_actual_usd", { precision: 14, scale: 9, mode: "number" }).notNull().default(0),
     readerNotes: jsonb("reader_notes").$type<ReaderNote[]>().notNull().default([]),
     /** Why a `failed` run stopped. `isolation` is a defect in the engine: such a run is never resumed. */
-    failureReason: text("failure_reason", { enum: ["isolation", "model"] }),
+    failureReason: text("failure_reason", { enum: ["isolation", "model", "budget"] }),
     createdAt,
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
@@ -584,3 +585,15 @@ export const stringApprovals = pgTable(
   },
   (table) => [unique("string_approval_text_key").on(table.scope, table.personaId, table.stringKey, table.textHash)],
 );
+
+/**
+ * What one probe of the persona QA agent showed, kept so an evaluation of the same scenario
+ * content on the same models does not pay for it again. The key is a hash of the probe, the
+ * scenario content, the probe models and a version the code bumps when a probe's meaning changes.
+ */
+export const evalToolCache = pgTable("eval_tool_cache", {
+  key: text("key").primaryKey(),
+  /** A probe's result, or the whole report of a run whose every input matched (`run:` keys). */
+  resultJson: jsonb("result_json").$type<CachedToolResult | QaReport>().notNull(),
+  createdAt,
+});

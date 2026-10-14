@@ -1,5 +1,5 @@
 import type { Database } from "@/db/client";
-import { getFlag, latestFullRun, listEpisodes, listFlags, saveAdjudication, type FlagWithRulings } from "@/db/repo/eval";
+import { getFlag, latestFlaggedRun, listEpisodes, listFlags, saveAdjudication, type FlagWithRulings } from "@/db/repo/eval";
 import { getScenarioByPersona } from "@/db/repo/sessions";
 import { flagStatus, type FlagStatus } from "@/eval/publish-gate";
 import { isUuid } from "@/server/uuid";
@@ -55,11 +55,11 @@ export function runAdjudicate(args: string[], io: CliIo, db: Database | null, op
       if (rest.length > 0) throw new CliError(USAGE);
       const found = await getScenarioByPersona(db, second);
       if (!found) throw new CliError(`Không tìm thấy persona "${second}".`);
-      const latest = await latestFullRun(db, found.scenario.id);
-      if (!latest) throw new CliError(`Phiên bản ${found.scenario.version} của ${second} chưa có lần eval đầy đủ nào hoàn tất.`);
-      const flags = await listFlags(db, latest.run.id);
+      const latest = await latestFlaggedRun(db, found.scenario.id);
+      if (!latest) throw new CliError(`Phiên bản ${found.scenario.version} của ${second} chưa có lần eval full hay lean nào hoàn tất.`);
+      const flags = await listFlags(db, latest.id);
       const mine = flags.filter((entry) => !entry.rulings.some((ruling) => ruling.adminEmail === email));
-      io.out(`Lần chạy ${latest.run.id}: ${flags.length} cờ, bạn còn ${mine.length} cờ chưa phân xử.`);
+      io.out(`Lần chạy ${latest.id} (${latest.profile}): ${flags.length} cờ, bạn còn ${mine.length} cờ chưa phân xử.`);
       for (const entry of mine) printFlag(io, entry);
       return 0;
     }

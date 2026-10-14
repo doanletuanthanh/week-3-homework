@@ -34,12 +34,19 @@ export function hasPrice(model: string): boolean {
   return model in PRICES;
 }
 
-export function costUsd(model: string, usage: TokenUsage): number {
+/**
+ * `batch`: the call went through the provider's batch API, billed at half the standard price for
+ * input, cached input and output alike (https://ai.google.dev/gemini-api/docs/batch-mode).
+ */
+export type PriceTier = "standard" | "batch";
+const TIER_FACTOR: Record<PriceTier, number> = { standard: 1, batch: 0.5 };
+
+export function costUsd(model: string, usage: TokenUsage, tier: PriceTier = "standard"): number {
   const price = PRICES[model];
   if (!price) throw new Error(`no price configured for model "${model}"`);
   const freshInput = Math.max(usage.inputTokens - usage.cachedInputTokens, 0);
   return (
-    (freshInput * price.input + usage.cachedInputTokens * price.cachedInput + usage.outputTokens * price.output) /
-    1_000_000
+    ((freshInput * price.input + usage.cachedInputTokens * price.cachedInput + usage.outputTokens * price.output) / 1_000_000) *
+    TIER_FACTOR[tier]
   );
 }
