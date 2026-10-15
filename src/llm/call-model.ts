@@ -48,6 +48,8 @@ export type CallModelDeps = {
   signal?: AbortSignal;
   /** How a role's calls are billed; standard unless the run sends them through a batch API. */
   priceTier?: (spec: RoleSpec) => PriceTier;
+  /** Evaluation only: the prompt a role is sent instead of the one it was built with, to measure a weakened prompt. */
+  rewriteMessages?: (role: Role, messages: BaseMessage[]) => BaseMessage[];
 };
 
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -137,11 +139,12 @@ export async function callModel<T>(
 ): Promise<CallModelResult<T>>;
 export async function callModel<T>(
   role: Role,
-  messages: BaseMessage[],
+  builtMessages: BaseMessage[],
   options: CallModelOptions<T>,
   depsOverride: Partial<CallModelDeps> = {},
 ): Promise<CallModelResult<T | string>> {
   const deps = { ...defaultDeps, ...depsOverride };
+  const messages = deps.rewriteMessages ? deps.rewriteMessages(role, builtMessages) : builtMessages;
   const spec = deps.roleSpec(role);
   const model = deps.createModel(spec);
   const { schema, scope, onDelta } = options;

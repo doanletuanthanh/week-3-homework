@@ -36,7 +36,7 @@ const ofTool = (input: ThresholdInput, tool: Observation["action"]["tool"], sour
 const itemOf = (observation: Observation) => ("itemId" in observation.action ? observation.action.itemId : null);
 
 /** The probe opened its item on its first run, or on the one run more a miss gets. */
-const opensOnce = (observation: Observation) =>
+export const opensOnce = (observation: Observation) =>
   observation.openedItemId === itemOf(observation) || observation.retryOpenedItemId === itemOf(observation);
 
 /**

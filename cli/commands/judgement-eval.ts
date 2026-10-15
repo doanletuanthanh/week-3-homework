@@ -21,7 +21,9 @@ import {
   type SetKind,
   type SetScore,
 } from "@/eval/judgement-eval";
+import { qaPlanCaseSchema, replyJudgeCaseSchema, runQaPlanSet, runReplyJudgeSet } from "@/eval/qa/judgement-sets";
 import type { CallModelDeps } from "@/llm/call-model";
+import type { Scenario } from "@/scenario/schema";
 import { validateScenario } from "@/scenario/validate";
 import { parseArgs, reportCliErrors } from "../args";
 import { CliError, readJsonFile, type CliIo, type Command } from "../scenario-file";
@@ -64,9 +66,21 @@ export function runJudgementEval(args: string[], io: CliIo, llmDeps?: Partial<Ca
         "leading-novelty": () => runNoveltySet(scenario, parseTestSet(raw, noveltyCaseSchema), options),
         moderation: () => runModerationSet(parseTestSet(raw, moderationCaseSchema), options),
         "output-safety": () => runSafetySet(scenario, parseTestSet(raw, safetyCaseSchema), options),
+        "reply-judge": () => runReplyJudgeSet(scenario, parseTestSet(raw, replyJudgeCaseSchema), options),
+        "qa-plan": async () => {
+          // Each case names its own scenario file; --scenario is not used.
+          const cases = parseTestSet(raw, qaPlanCaseSchema);
+          const scenarios = new Map<string, Scenario>();
+          for (const path of new Set(cases.map((entry) => entry.scenario))) {
+            const loaded = validateScenario(await readJsonFile(path)).scenario;
+            if (!loaded) throw new CliError(`Kịch bản "${path}" không qua validate.`);
+            scenarios.set(path, loaded);
+          }
+          return runQaPlanSet(cases, scenarios, options);
+        },
       };
       const score = await runs[kind]();
-      io.out(`Bộ thử ${kind}: ${score.size} ca, kịch bản ${scenario.persona_id}`);
+      io.out(`Bộ thử ${kind}: ${score.size} ca, ${kind === "qa-plan" ? "mỗi ca một kịch bản riêng" : `kịch bản ${scenario.persona_id}`}`);
       for (const line of formatScore(score)) io.out(line);
       return judgementExitCode(score);
     } catch (error) {

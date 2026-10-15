@@ -390,6 +390,25 @@ function agentPromptFingerprint(scenario: Scenario): string {
  */
 export async function runQaAgent(scenario: Scenario, options: Omit<QaRunOptions, "llmDeps"> & { llmDeps?: Partial<CallModelDeps> }): Promise<QaReport> {
   const { budget } = options;
+  // A scenario that fails validate is not probed: the engine assumes a valid one, and the failure is already known.
+  const { violations } = validateScenario(scenario);
+  if (violations.length > 0) {
+    const input = { violations: violations.map((violation) => `${violation.path}: ${violation.message}`), publicLeaks: [], observations: [], leaks: [] };
+    return {
+      profile: "lean",
+      version: options.version,
+      // Only validate ran: the other rows were never tested, so none of them may read as met.
+      thresholds: evaluateThresholds(input).map((row) => (row.key === "validate" ? row : { ...row, met: false, detail: "chưa chạy: kịch bản không qua validate" })),
+      warnings: ["Kịch bản không qua validate: agent không chạy phép thử nào."],
+      publicLeaks: [],
+      risks: [],
+      observations: [],
+      leaks: [],
+      findings: [],
+      rounds: [],
+      cost: { capUsd: budget.capUsd, actualUsd: 0, calls: 0 },
+    };
+  }
   // The floor cannot be cut, so a cap that cannot hold it, the plan call and the judge call is refused before anything is spent.
   const floorCalls = floorActions(scenario).reduce((sum, action) => sum + CALLS_OF[action.tool](action), 0);
   if (!budget.canAfford({ probes: floorCalls, agent: 1 })) {

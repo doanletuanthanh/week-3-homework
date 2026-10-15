@@ -114,7 +114,7 @@ export const safetyCaseSchema = z.strictObject({
 });
 export type SafetyCase = z.infer<typeof safetyCaseSchema>;
 
-export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety"] as const;
+export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan"] as const;
 export type SetKind = (typeof SET_KINDS)[number];
 
 /** NFR-7: a set proves a gate only from this size up. */
@@ -154,7 +154,7 @@ export function parseTestSet<T>(raw: string, schema: z.ZodType<T>): T[] {
 /** One NFR-7 rate against its hard gate. `value` is null when the set has no case that measures it. */
 export type Rate = { key: string; label: string; value: number | null; limit: number; atLeast: boolean; met: boolean; count: string };
 
-function rate(key: string, label: string, hits: number, total: number, limit: number, atLeast = false): Rate {
+export function rate(key: string, label: string, hits: number, total: number, limit: number, atLeast = false): Rate {
   const value = total === 0 ? null : hits / total;
   // A rate nothing measured cannot be called met.
   const met = value !== null && (atLeast ? value >= limit : value <= limit);
@@ -354,7 +354,7 @@ const toTranscript = (scenario: Scenario, exchanges: { learner: string; persona:
   ...exchanges.map((turn, position) => ({ index: position + 1, learnerText: turn.learner as string | null, personaText: turn.persona })),
 ];
 
-function itemIds(scenario: Scenario, caseId: string, ids: string[]): string[] {
+export function itemIds(scenario: Scenario, caseId: string, ids: string[]): string[] {
   for (const id of ids) {
     if (!scenario.items.some((item) => item.id === id)) throw new TestSetError(`${caseId}: kịch bản không có item "${id}".`);
   }

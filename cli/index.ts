@@ -7,6 +7,7 @@ import { configCommand } from "./commands/config";
 import { costReportCommand } from "./commands/cost-report";
 import { customCommand } from "./commands/custom";
 import { evalCommand } from "./commands/eval";
+import { evalCalibrateCommand } from "./commands/eval-calibrate";
 import { importCommand } from "./commands/import-scenario";
 import { judgementEvalCommand } from "./commands/judgement-eval";
 import { measureLatencyCommand } from "./commands/measure-latency";
@@ -58,6 +59,8 @@ async function main(): Promise<number> {
     createModel: (spec) => createChatModel(spec, { batch: true }),
     recordCall: connected ? (record) => recordLlmCall(connected, record) : async () => {},
   });
+  const batchCollector = (onJob: ConstructorParameters<typeof GeminiBatchCollector>[0]["onJob"]) =>
+    new GeminiBatchCollector({ apiKey: getEnv().GOOGLE_API_KEY_BATCH ?? getEnv().GOOGLE_API_KEY ?? "", onJob });
   const commands: Record<string, Command> = {
     validate: validateCommand(
       connected ? (topicId, personaId) => listOtherPersonaTags(connected, topicId, personaId) : undefined,
@@ -72,8 +75,9 @@ async function main(): Promise<number> {
       confirm,
       setTracing,
       // Lean runs use Gemini Batch Mode with the batch key when there is one.
-      batchCollector: (onJob) => new GeminiBatchCollector({ apiKey: getEnv().GOOGLE_API_KEY_BATCH ?? getEnv().GOOGLE_API_KEY ?? "", onJob }),
+      batchCollector,
     })),
+    "eval-calibrate": evalCalibrateCommand(connected, () => ({ llmDeps: llmDeps(), batchCollector, confirm })),
     adjudicate: adjudicateCommand(connected, operatorEmail),
     "check-strings": checkStringsCommand(connected, llmDeps),
     "approve-strings": approveStringsCommand(connected, operatorEmail),

@@ -1,0 +1,12 @@
+{"id": "qp-01", "scenario": "scenarios/ux-chi-tieu/chi-thu.json", "operator": "leak-in-identity", "expected_high": ["installment"], "note": "chi-thu: leak-in-identity nhắm vào installment"}
+{"id": "qp-02", "scenario": "scenarios/ux-chi-tieu/chi-thu.json", "operator": "leak-in-hook", "expected_high": ["installment"], "note": "chi-thu: leak-in-hook nhắm vào installment"}
+{"id": "qp-03", "scenario": "scenarios/ux-chi-tieu/chi-thu.json", "operator": "leak-in-surface-fact", "expected_high": ["installment"], "note": "chi-thu: leak-in-surface-fact nhắm vào installment"}
+{"id": "qp-04", "scenario": "scenarios/ux-chi-tieu/chi-thu.json", "operator": "weak-sample", "expected_high": ["tried-methods"], "note": "chi-thu: weak-sample nhắm vào tried-methods"}
+{"id": "qp-05", "scenario": "scenarios/ux-cong-viec-nhom/anh-khoa.json", "operator": "leak-in-identity", "expected_high": ["unpaid-work"], "note": "anh-khoa: leak-in-identity nhắm vào unpaid-work"}
+{"id": "qp-06", "scenario": "scenarios/ux-cong-viec-nhom/anh-khoa.json", "operator": "leak-in-hook", "expected_high": ["unpaid-work"], "note": "anh-khoa: leak-in-hook nhắm vào unpaid-work"}
+{"id": "qp-07", "scenario": "scenarios/ux-cong-viec-nhom/anh-khoa.json", "operator": "leak-in-surface-fact", "expected_high": ["unpaid-work"], "note": "anh-khoa: leak-in-surface-fact nhắm vào unpaid-work"}
+{"id": "qp-08", "scenario": "scenarios/ux-cong-viec-nhom/anh-khoa.json", "operator": "weak-sample", "expected_high": ["two-places"], "note": "anh-khoa: weak-sample nhắm vào two-places"}
+{"id": "qp-09", "scenario": "scenarios/ux-dat-san-the-thao/co-lan.json", "operator": "leak-in-identity", "expected_high": ["empty-hours-loss"], "note": "co-lan: leak-in-identity nhắm vào empty-hours-loss"}
+{"id": "qp-10", "scenario": "scenarios/ux-dat-san-the-thao/co-lan.json", "operator": "leak-in-hook", "expected_high": ["empty-hours-loss"], "note": "co-lan: leak-in-hook nhắm vào empty-hours-loss"}
+{"id": "qp-11", "scenario": "scenarios/ux-dat-san-the-thao/co-lan.json", "operator": "leak-in-surface-fact", "expected_high": ["empty-hours-loss"], "note": "co-lan: leak-in-surface-fact nhắm vào empty-hours-loss"}
+{"id": "qp-12", "scenario": "scenarios/ux-dat-san-the-thao/co-lan.json", "operator": "weak-sample", "expected_high": ["paper-ledger"], "note": "co-lan: weak-sample nhắm vào paper-ledger"}

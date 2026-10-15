@@ -37,6 +37,7 @@ A topic is a folder under `scenarios/` with a `topic.json` and one file per pers
 | Quick simulated interviews while tuning | `pnpm il eval <persona> --profile quick` |
 | The full evaluation (FR-34) | `pnpm il eval <persona> --profile full` |
 | Continue a run that stopped | `pnpm il eval --resume <run id>` |
+| Calibrate the lean eval: clean personas must pass every run, known-bad mutants must fail their declared row on the changed item | `pnpm il eval-calibrate [--persona <id>] [--operator <key>] [--runs N] [--only clean\|mutants] [--fast] [--yes]` |
 | List the leak flags of the full run, read one, rule on it | `pnpm il adjudicate list <persona>`, `pnpm il adjudicate show <flag id>`, `pnpm il adjudicate <flag id> leak\|not-leak "<reason>"` |
 | Check the fixed strings automatically (FR-36) | `pnpm il check-strings <persona\|product>` |
 | Approve or return fixed strings | `pnpm il approve-strings <persona\|product> [list]`, `... approve <key...>\|--all`, `... return <key> "<note>"` |
@@ -52,7 +53,7 @@ pnpm il judgement-eval evalsets/turn-verdict.jsonl
 pnpm il judgement-eval <file.jsonl> --kind <kind> --scenario <scenario file>
 ```
 
-Runs a hand-labelled set through the production prompt and prints the rates NFR-7 names. Kinds: `label-classifier`, `turn-verdict`, `canvas-judge`, `leading-novelty`, `moderation`, `output-safety`; the kind is taken from the file name when `--kind` is left out.
+Runs a hand-labelled set through the production prompt and prints the rates NFR-7 names. Kinds: `label-classifier`, `turn-verdict`, `canvas-judge`, `leading-novelty`, `moderation`, `output-safety`, `reply-judge` (lean eval reply judge), `qa-plan` (lean eval planner; each line names its own scenario file and mutation operator, so `--scenario` is not used); the kind is taken from the file name when `--kind` is left out.
 
 Format: one JSON object per line, with an `id`, the input fields of that kind, `expected`, and a free `note`. The files in `evalsets/` are the reference for each kind's fields. A set proves a gate only from 100 lines up; the committed sets are starters of 8 to 18 lines.
 
