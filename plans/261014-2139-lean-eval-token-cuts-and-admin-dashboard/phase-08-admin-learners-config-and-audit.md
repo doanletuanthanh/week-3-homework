@@ -1,7 +1,7 @@
 ---
 phase: 8
 title: "Admin learners, config, custom topics, audit"
-status: pending
+status: done
 priority: P2
 effort: "1.5d"
 dependencies: [6]
@@ -31,9 +31,19 @@ The remaining admin views: learners and their sessions, the config editor, custo
 4. Write the e2e smoke test: the admin opens each page. A learner gets 404.
 
 ## Success Criteria
-- [ ] Every page that reads learner content writes `admin_access_log`.
-- [ ] A config change takes effect on the next request. The existing `tests/server/cost-cap.int.test.ts` still passes.
-- [ ] Deleted accounts (`delete-account.ts`) disappear from the lists, and their spend stays in the totals through `daily_spend`.
+- [x] Every page that reads learner content writes `admin_access_log`.
+- [x] A config change takes effect on the next request. The existing `tests/server/cost-cap.int.test.ts` still passes.
+- [x] Deleted accounts (`delete-account.ts`) disappear from the lists, and their spend stays in the totals through `daily_spend`.
+
+## Result (2026-10-15)
+Done with 0 LLM calls (nothing in this phase calls a model).
+- **Reads logged** (`console`): `list_learners`, `read_learner`, `read_transcript`, `list_custom_topics [outcome]`, `read_custom_topic`, before anything is returned. Config and audit reads hold no learner data and are not logged. Links to logged pages use `prefetch={false}`, so a log row always means a real visit.
+- **Config:** `parseConfigInput` and `changeConfig` in `src/db/repo/config.ts` are shared by `il config set` and the console. A change is logged in the same transaction, as `config set <key>: <old> → <new>` (the existing free-text `action` convention, so no migration), under a per-key advisory lock. The CLI now logs its changes too (channel `cli`).
+- **Trace:** the shared description lives in `src/server/session-trace.ts`, not `src/server/admin/trace.ts`: the guard test requires every file in `src/server/admin` to check the admin, and the CLI has no admin user. `il trace` output is unchanged.
+- **Lists:** 50 rows, server-side, `?page=`. Repeated query keys use their first value. Admin drafts are left out of learner lists and spend. The audit filter is by admin and by how the action starts (`starts_with`, so `%` is literal).
+- Tests: `tests/server/admin-learners.int.test.ts`, `tests/e2e/admin-learners.spec.ts`, plus a log assertion in `tests/cli/config-and-trace.int.test.ts`. Review: [report](../reports/code-reviewer-261015-1721-phase-8-admin-learners-config-audit.md).
+
+Deferred: `llm_call` has no index on `session_id` or `attempt_id`, so the learner list and session cost scan the table. Fine at pilot scale. It needs a migration, which phase 10 or a later plan can add when the table grows.
 
 ## Risk Assessment
 - Privacy: transcripts are learner data. Mitigation: admin only, every read logged, no bulk export. The data notice already names admin access. Check its wording.
