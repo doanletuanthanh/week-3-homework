@@ -35,6 +35,10 @@
 //   [stub:unsafe]            the generator names a real company, and the safety check objects to it
 //   [stub:fail-gen]          the generator gets HTTP 500
 //   [stub:slow-gen]          the generator waits before answering, so a test can watch the wait
+// It answers the calls of a lean eval and of the fixed-string check, told apart by the first
+// sentence of their prompt: the QA planner adds nothing to the floor and finds no public leak, the
+// reflect call stops, the reply judge reads nothing told or raised in any reply, and the string
+// check finds no claim about real users. The floor's probes are ordinary turns (Call 1 and Call 2).
 // GET /requests returns every request body received so far, so tests can read what the app sent.
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -201,6 +205,18 @@ function customReply(role, prompt) {
   return { violations: prompt.includes("Vinamilk") ? [{ field: "surface_facts[0]", kind: "real_org_or_brand", reason: "stub" }] : [] };
 }
 
+/** The reply of a lean-eval or string-check call, as JSON, or null for any other call. */
+function evalReply(prompt) {
+  if (prompt.includes("Bạn kiểm một chuỗi cố định")) return { real_user_claim: false, reason: "stub" };
+  if (prompt.includes("Bạn đọc từng câu trả lời riêng lẻ")) {
+    const ids = [...new Set([...prompt.matchAll(/^\[(R\d+)\] người hỏi:/gm)].map((match) => match[1]))];
+    return { replies: ids.map((reply) => ({ reply, told: [], topics: [] })) };
+  }
+  if (!prompt.includes("Bạn là người kiểm thử chất lượng (QA)")) return null;
+  if (prompt.includes("- public_leaks:")) return { public_leaks: [], risks: [], deliveries: [], paraphrases: [], attacks: [] };
+  return { decision: "done", probes: [], findings: [] };
+}
+
 const tokenUsage = {
   chat: { prompt_tokens: usage.input, completion_tokens: usage.output, total_tokens: usage.input + usage.output },
   responses: {
@@ -321,6 +337,14 @@ createServer(async (request, reply) => {
     }
     if (custom === "generator" && prompt.includes("[stub:slow-gen]")) await sleep(4000);
     const text = JSON.stringify(customReply(custom, prompt));
+    reply.writeHead(200, { "content-type": "application/json" });
+    reply.end(JSON.stringify(request.url.endsWith("/responses") ? response(body.model, text) : chatCompletion(body.model, text)));
+    return;
+  }
+
+  const evaluated = evalReply(prompt);
+  if (evaluated) {
+    const text = JSON.stringify(evaluated);
     reply.writeHead(200, { "content-type": "application/json" });
     reply.end(JSON.stringify(request.url.endsWith("/responses") ? response(body.model, text) : chatCompletion(body.model, text)));
     return;

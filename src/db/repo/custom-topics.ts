@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { DAY_ZONE, GENERATION_MAX_RUNS, GENERATION_STALE_MS } from "@/config/limits";
 import type { Scenario } from "@/scenario/schema";
@@ -16,6 +16,7 @@ import {
   type ModerationConstraint,
   type REFUSAL_CODES,
 } from "../schema";
+import { insertNextVersion } from "./scenarios";
 import { insertOpening, type SessionRow } from "./sessions";
 
 export type AttemptRow = typeof generationAttempts.$inferSelect;
@@ -74,14 +75,14 @@ export async function findRunningAttempt(db: Executor, userId: string): Promise<
   return row ?? null;
 }
 
-/** What the learner used of today's limits: attempts that count (FR-56) and topics moderation refused. */
+/** What the learner used of today's limits: attempts that count (FR-56) and topics moderation refused. An admin's drafts do not count. */
 export async function countAttemptsToday(db: Executor, userId: string): Promise<{ attempts: number; refusals: number }> {
   const [row] = await db.execute<{ attempts: number; refusals: number }>(sql`
     SELECT
       count(*) FILTER (WHERE outcome IN ('running', 'passed', 'failed'))::int AS attempts,
       count(*) FILTER (WHERE outcome = 'refused')::int AS refusals
     FROM generation_attempt
-    WHERE user_id = ${userId} AND created_at >= ${TODAY_START}
+    WHERE user_id = ${userId} AND persona_id IS NULL AND created_at >= ${TODAY_START}
   `);
   return { attempts: row.attempts, refusals: row.refusals };
 }
@@ -107,16 +108,19 @@ export async function generationCommittedToday(db: Executor): Promise<number> {
   return row.usd;
 }
 
-/** The same for one account, from its own attempts. What a deleted account spent today is added by the caller. */
+/**
+ * The same for one account, from its own attempts. What a deleted account spent today is added by
+ * the caller. An admin's drafts are left out: they count against the whole budget only.
+ */
 export async function accountCommittedToday(db: Executor, userId: string): Promise<number> {
   const [row] = await db.execute<{ usd: number }>(sql`
     SELECT (
       COALESCE((
         SELECT sum(c.cost_usd) FROM llm_call c
         JOIN generation_attempt a ON a.id = c.attempt_id
-        WHERE a.user_id = ${userId} AND a.outcome <> 'running' AND c.scope = 'generation' AND c.created_at >= ${TODAY_START}
+        WHERE a.user_id = ${userId} AND a.persona_id IS NULL AND a.outcome <> 'running' AND c.scope = 'generation' AND c.created_at >= ${TODAY_START}
       ), 0)
-      + COALESCE((SELECT sum(cost_reserved_usd) FROM generation_attempt WHERE user_id = ${userId} AND outcome = 'running'), 0)
+      + COALESCE((SELECT sum(cost_reserved_usd) FROM generation_attempt WHERE user_id = ${userId} AND persona_id IS NULL AND outcome = 'running'), 0)
     )::float8 AS usd
   `);
   return row.usd;
@@ -301,8 +305,9 @@ export type AttemptResult =
  * running. A pass stores the scenario for its owner alone, gives the session its opening turn and
  * moves it to `interviewing`, and uses up the free scenario. A fail moves the session to
  * `failed_eval` and counts towards the lifetime limit; a system error counts for nothing. Either
- * way the budget the attempt held is released and what it spent is written down. False when
- * nothing was written.
+ * way the budget the attempt held is released and what it spent is written down. An admin's
+ * draft ends without a session (`closeAdminDraft`), and `inTransaction` is not called for it.
+ * False when nothing was written.
  */
 export async function finishAttempt(
   db: Database,
@@ -316,7 +321,12 @@ export async function finishAttempt(
     if (!owner) return false;
     await tx.select({ id: users.id }).from(users).where(eq(users.id, owner.userId)).for("update");
     const [attempt] = await tx.select().from(generationAttempts).where(eq(generationAttempts.id, write.attemptId)).for("update");
-    if (!attempt || attempt.outcome !== "running" || attempt.runToken !== write.token || attempt.sessionId === null || attempt.topicId === null) return false;
+    if (!attempt || attempt.outcome !== "running" || attempt.runToken !== write.token || attempt.topicId === null) return false;
+    if (attempt.personaId !== null) {
+      await closeAdminDraft(tx, { ...attempt, topicId: attempt.topicId, personaId: attempt.personaId }, write);
+      return true;
+    }
+    if (attempt.sessionId === null) return false;
 
     let scenarioId: string | null = null;
     let personaId: string | null = null;
@@ -348,21 +358,7 @@ export async function finishAttempt(
         .where(eq(users.id, attempt.userId));
     }
 
-    const [after] = await tx
-      .update(generationAttempts)
-      .set({
-        outcome: result.outcome,
-        failureCode: result.outcome === "failed" ? result.code : result.outcome === "system_error" ? "system_error" : null,
-        scenarioId,
-        runToken: null,
-        // The scenario is stored as a scenario row now, or was turned down: the copy is not kept.
-        draft: null,
-        finishedAt: sql`now()`,
-        costActualUsd: write.costActualUsd,
-        report: write.report,
-      })
-      .where(eq(generationAttempts.id, attempt.id))
-      .returning();
+    const after = await closeAttemptRow(tx, attempt.id, scenarioId, write);
     const [session] = await tx
       .update(sessions)
       .set(
@@ -378,6 +374,96 @@ export async function finishAttempt(
   });
 }
 
+type FinishWrite = { result: AttemptResult; report: AttemptReport; costActualUsd: number };
+
+/** Writes how an attempt ended and releases what it held. */
+async function closeAttemptRow(tx: Executor, attemptId: string, scenarioId: string | null, write: FinishWrite): Promise<AttemptRow> {
+  const { result } = write;
+  const [after] = await tx
+    .update(generationAttempts)
+    .set({
+      outcome: result.outcome,
+      failureCode: result.outcome === "failed" ? result.code : result.outcome === "system_error" ? "system_error" : null,
+      scenarioId,
+      runToken: null,
+      // The scenario is stored as a scenario row now, or was turned down: the copy is not kept.
+      draft: null,
+      finishedAt: sql`now()`,
+      costActualUsd: write.costActualUsd,
+      report: write.report,
+    })
+    .where(eq(generationAttempts.id, attemptId))
+    .returning();
+  return after;
+}
+
+/**
+ * Ends an admin's draft: a pass becomes the next `draft` version of its curated persona, for the
+ * admin to review and evaluate; nothing is published. No learner limit or session is touched.
+ */
+async function closeAdminDraft(tx: Executor, attempt: AttemptRow & { topicId: string; personaId: string }, write: FinishWrite): Promise<void> {
+  let scenarioId: string | null = null;
+  if (write.result.outcome === "passed") {
+    // The id was free when the draft started, but an import may have taken it since: the draft
+    // must never become a version of someone else's persona, so it ends as a system error instead.
+    const [taken] = await tx.select({ id: scenarios.id }).from(scenarios).where(eq(scenarios.personaId, attempt.personaId)).limit(1);
+    if (taken) {
+      await closeAttemptRow(tx, attempt.id, null, { result: { outcome: "system_error" }, report: { ...write.report, error: "persona_taken" }, costActualUsd: write.costActualUsd });
+      return;
+    }
+    const row = await insertNextVersion(tx, { ...write.result.scenario, persona_id: attempt.personaId, topic_id: attempt.topicId });
+    scenarioId = row.id;
+  }
+  await closeAttemptRow(tx, attempt.id, scenarioId, write);
+}
+
+/** True when a running admin draft already claims this persona id. */
+export async function draftClaimsPersona(db: Executor, personaId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: generationAttempts.id })
+    .from(generationAttempts)
+    .where(and(eq(generationAttempts.personaId, personaId), eq(generationAttempts.outcome, "running")))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * Starts an admin's draft of a new persona for a curated topic, holding `reserveUsd` of the daily
+ * generation budget like a learner's attempt. The caller holds the budget lock, has swept stale
+ * attempts and checked the budget; the caller then starts the runner.
+ */
+export async function createAdminDraftAttempt(
+  tx: Executor,
+  input: { userId: string; topicId: string; personaId: string; topicText: string; focus: Focus; reserveUsd: number; deadlineAt: Date },
+): Promise<AttemptRow> {
+  const [attempt] = await tx
+    .insert(generationAttempts)
+    .values({
+      userId: input.userId,
+      topicId: input.topicId,
+      personaId: input.personaId,
+      topicText: input.topicText,
+      focus: input.focus,
+      moderationDecision: "allow",
+      outcome: "running",
+      step: "generating",
+      heartbeatAt: sql`now()`,
+      deadlineAt: input.deadlineAt,
+      costReservedUsd: input.reserveUsd,
+    })
+    .returning();
+  return attempt;
+}
+
+/** An admin's draft by id; null for any other attempt. */
+export async function getAdminDraftAttempt(db: Executor, attemptId: string): Promise<AttemptRow | null> {
+  const [row] = await db
+    .select()
+    .from(generationAttempts)
+    .where(and(eq(generationAttempts.id, attemptId), isNotNull(generationAttempts.personaId)));
+  return row ?? null;
+}
+
 /** "Kịch bản này có vấn đề": marks the learner's own custom session. False when it is not one. */
 export async function reportProblem(db: Executor, userId: string, sessionId: string): Promise<boolean> {
   const rows = await db.execute<{ id: string }>(sql`
@@ -390,13 +476,14 @@ export async function reportProblem(db: Executor, userId: string, sessionId: str
   return rows.length > 0;
 }
 
-/** The newest requests with what became of them. Not filtered by learner: the operator's view. */
+/** The newest learner requests with what became of them. Not filtered by learner: the operator's view. Admin drafts are left out. */
 export async function listAttempts(db: Executor, limit: number) {
   return db
     .select({ attempt: generationAttempts, email: users.email, problemReportedAt: sessions.problemReportedAt, sessionStatus: sessions.status })
     .from(generationAttempts)
     .innerJoin(users, eq(users.id, generationAttempts.userId))
     .leftJoin(sessions, eq(sessions.id, generationAttempts.sessionId))
+    .where(isNull(generationAttempts.personaId))
     .orderBy(desc(generationAttempts.createdAt))
     .limit(limit);
 }

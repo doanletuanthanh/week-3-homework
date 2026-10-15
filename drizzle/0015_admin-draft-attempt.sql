@@ -1,0 +1,1 @@
+ALTER TABLE "generation_attempt" ADD COLUMN "persona_id" text;

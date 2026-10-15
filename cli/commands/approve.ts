@@ -1,6 +1,5 @@
 import type { Database } from "@/db/client";
-import { approveVersion, latestLeanRun } from "@/db/repo/eval";
-import { getScenarioByPersona } from "@/db/repo/sessions";
+import { approveNewestVersion } from "@/server/scenario-review";
 import { needsDb, reportCliErrors } from "../args";
 import { CliError, type CliIo, type Command } from "../scenario-file";
 
@@ -19,15 +18,12 @@ export function runApprove(args: string[], io: CliIo, db: Database | null, opera
     if (!personaId || note === "") throw new CliError(USAGE);
     const email = operator();
 
-    const found = await getScenarioByPersona(db, personaId);
-    if (!found) throw new CliError(`Không tìm thấy persona "${personaId}".`);
-    const { scenario } = found;
-    const run = await latestLeanRun(db, scenario.id);
-    if (!run || run.status !== "done") {
-      throw new CliError(`Phiên bản ${scenario.version} của ${personaId} chưa có lần eval lean nào hoàn tất: chạy il eval ${personaId} --profile lean trước.`);
+    const result = await approveNewestVersion(db, personaId, email, note);
+    if (result.outcome === "not_found") throw new CliError(`Không tìm thấy persona "${personaId}".`);
+    if (result.outcome === "no_run") {
+      throw new CliError(`Phiên bản ${result.version} của ${personaId} chưa có lần eval lean nào hoàn tất: chạy il eval ${personaId} --profile lean trước.`);
     }
-    await approveVersion(db, { scenarioId: scenario.id, version: scenario.version, evalRunId: run.id, adminEmail: email, note });
-    io.out(`Đã duyệt ${personaId} phiên bản ${scenario.version} trên lần eval ${run.id} (${email}).`);
+    io.out(`Đã duyệt ${personaId} phiên bản ${result.version} trên lần eval ${result.runId} (${email}).`);
     io.out(`Kiểm cổng publish: il publish ${personaId}`);
     return 0;
   });

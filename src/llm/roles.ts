@@ -24,8 +24,9 @@ export const APP_ROLES = [
 ] as const;
 
 /**
- * Roles only the operator CLI calls (evaluation and the fixed-string check). Their variables are
- * optional, so a deployment that never runs them does not have to set them. EVAL_INTERVIEWER
+ * Roles of evaluation and the fixed-string check, called by the operator CLI and, for the lean
+ * eval and the string check, by the admin console. Their variables are optional, so a deployment
+ * where nobody runs them does not have to set them. EVAL_INTERVIEWER
  * plays the learner, EVAL_LEAK_JUDGE reads a finished episode against the whole scenario,
  * STRING_CHECK looks for claims about real users in fixed strings. QA_PLANNER is the persona QA
  * agent: it reads the whole scenario, plans the probes and reflects on what they showed.

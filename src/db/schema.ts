@@ -372,6 +372,11 @@ export const generationAttempts = pgTable(
     sessionId: uuid("session_id").references(() => sessions.id, { onDelete: "cascade" }),
     /** Set when the attempt passed: the scenario the session then plays. */
     scenarioId: uuid("scenario_id").references(() => scenarios.id, { onDelete: "set null" }),
+    /**
+     * Set only on an admin's draft: the curated persona a pass becomes, as a draft version. Such an
+     * attempt has no session and counts against no learner limit, only the daily generation budget.
+     */
+    personaId: text("persona_id"),
     topicText: text("topic_text").notNull(),
     focus: text("focus", { enum: FOCUSES }).notNull(),
     /** The learner's own words about what to practise. Read by the moderation call and by nothing else. */

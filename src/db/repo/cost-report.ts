@@ -157,7 +157,7 @@ export type UsageCounts = {
    * or replayed. A session's `updated_at` would also count writes the system makes (sweeps, unpublish).
    */
   activeLearners: number;
-  /** Custom-topic attempts submitted in the window. */
+  /** Custom-topic attempts learners submitted in the window (admin drafts are not counted). */
   customAttempts: number;
 };
 
@@ -168,7 +168,7 @@ export async function usageCounts(db: Executor, window: ReportWindow): Promise<U
       (SELECT count(*) FROM "session" WHERE NOT is_demo AND started_at >= ${windowStart(window)})::int AS "sessionsStarted",
       (SELECT count(DISTINCT s.user_id) FROM llm_call c JOIN "session" s ON s.id = c.session_id
         WHERE c.scope = 'session' AND NOT s.is_demo AND c.created_at >= ${windowStart(window)})::int AS "activeLearners",
-      (SELECT count(*) FROM generation_attempt WHERE created_at >= ${windowStart(window)})::int AS "customAttempts"
+      (SELECT count(*) FROM generation_attempt WHERE persona_id IS NULL AND created_at >= ${windowStart(window)})::int AS "customAttempts"
   `);
   return row;
 }

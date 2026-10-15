@@ -80,6 +80,13 @@ export const db = {
     await getDb().delete(stringApprovals);
     await getDb().update(scenarios).set({ status: "draft", interimGate: false });
   },
+  /** Removes a persona an admin drafted, with its runs and its draft attempt, so later tests do not see it in the library. */
+  removePersona: async (personaId: string) => {
+    const rows = await getDb().select({ id: scenarios.id }).from(scenarios).where(eq(scenarios.personaId, personaId));
+    for (const row of rows) await getDb().delete(evalRuns).where(eq(evalRuns.scenarioId, row.id));
+    await getDb().delete(generationAttempts).where(eq(generationAttempts.personaId, personaId));
+    await getDb().delete(scenarios).where(eq(scenarios.personaId, personaId));
+  },
   /** The learner's requests for a custom topic, newest first. */
   attemptsOf: (userId: string) => getDb().select().from(generationAttempts).where(eq(generationAttempts.userId, userId)).orderBy(sql`${generationAttempts.createdAt} DESC`),
   scenarioById: async (id: string) => (await getDb().select().from(scenarios).where(eq(scenarios.id, id)))[0],

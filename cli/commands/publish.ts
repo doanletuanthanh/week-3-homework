@@ -1,38 +1,9 @@
 import type { Database } from "@/db/client";
-import { latestApproval, latestLeanRun, listFlags, publishScenario, unpublishPersona } from "@/db/repo/eval";
-import { listOtherPersonaTags } from "@/db/repo/scenarios";
+import { unpublishPersona } from "@/db/repo/eval";
 import { getScenarioByPersona } from "@/db/repo/sessions";
-import { evaluateGate, type GateResult } from "@/eval/publish-gate";
-import { validateScenario } from "@/scenario/validate";
+import { publishNewest } from "@/server/scenario-review";
 import { needsDb, parseArgs, reportCliErrors } from "../args";
 import { CliError, type CliIo, type Command } from "../scenario-file";
-import { PRODUCT_TARGET, loadStringStates, loadStringTarget } from "./strings";
-
-/** Everything the publish gate reads about the newest version of a persona, and its answer. */
-export async function checkPublishGate(db: Database, personaId: string) {
-  const found = await getScenarioByPersona(db, personaId);
-  if (!found) throw new CliError(`Không tìm thấy persona "${personaId}".`);
-  const { scenario } = found;
-
-  const otherPersonas = await listOtherPersonaTags(db, scenario.topicId, scenario.personaId);
-  const validation = validateScenario(scenario.content, { otherPersonas });
-  const run = await latestLeanRun(db, scenario.id);
-  const flags = run ? await listFlags(db, run.id) : [];
-  const approval = await latestApproval(db, scenario.id);
-  const strings = [
-    ...(await loadStringStates(db, await loadStringTarget(db, personaId))),
-    ...(await loadStringStates(db, await loadStringTarget(db, PRODUCT_TARGET))).map((entry) => ({ ...entry, key: `${PRODUCT_TARGET}:${entry.key}` })),
-  ];
-
-  const gate: GateResult = evaluateGate({
-    violations: validation.violations.map((violation) => `${violation.path || "(gốc)"} [${violation.code}] ${violation.message}`),
-    run: run ? { id: run.id, profile: run.profile, status: run.status, report: run.reportJson } : null,
-    flags: flags.map(({ flag, rulings }) => ({ id: flag.id, rulings })),
-    strings,
-    approval,
-  });
-  return { scenario, run, gate };
-}
 
 /**
  * `publish <persona>`: publishes the newest version only when `validate` is clean, its newest
@@ -47,18 +18,18 @@ export function runPublish(args: string[], io: CliIo, db: Database | null, opera
     if (!personaId || args.length !== 1) throw new CliError("Cách dùng: il publish <persona>");
     const email = operator();
 
-    const { scenario, gate } = await checkPublishGate(db, personaId);
-    const name = `${scenario.personaId} phiên bản ${scenario.version}`;
-    if (scenario.status === "published") {
+    const result = await publishNewest(db, personaId);
+    if (result.outcome === "not_found") throw new CliError(`Không tìm thấy persona "${personaId}".`);
+    const { name } = result;
+    if (result.outcome === "already_published") {
       io.out(`${name} đã được publish.`);
       return 0;
     }
-    if (!gate.ok) {
-      io.err(`KHÔNG publish ${name}: ${gate.reasons.length} lý do`);
-      for (const reason of gate.reasons) io.err(`  - ${reason}`);
+    if (result.outcome === "refused") {
+      io.err(`KHÔNG publish ${name}: ${result.reasons.length} lý do`);
+      for (const reason of result.reasons) io.err(`  - ${reason}`);
       return 1;
     }
-    await publishScenario(db, scenario.id);
     io.out(`Đã publish ${name} (${email}).`);
     return 0;
   });

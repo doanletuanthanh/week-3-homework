@@ -11,3 +11,23 @@ export const SCOPE_LABEL: Record<LlmScope, string> = {
   eval: "Eval",
   moderation: "Kiểm duyệt",
 };
+
+export const SCENARIO_STATUS_LABEL: Record<string, string> = {
+  draft: "Bản nháp",
+  evaluating: "Đang eval",
+  eval_failed: "Eval lỗi",
+  ready_for_review: "Chờ duyệt",
+  published: "Đã publish",
+  unpublished: "Đã gỡ",
+  archived: "Lưu trữ",
+  taken_down: "Đã gỡ bỏ",
+};
+
+export const RUN_STATUS_LABEL: Record<string, string> = {
+  queued: "Đang chờ",
+  running: "Đang chạy",
+  failed: "Dừng lỗi",
+  done: "Xong",
+};
+
+export const FLAG_STATUS_LABEL = { open: "Chưa phân xử", dismissed: "Không phải rò rỉ", confirmed: "Rò rỉ" } as const;

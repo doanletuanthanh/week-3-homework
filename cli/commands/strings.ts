@@ -1,32 +1,16 @@
 import type { Database } from "@/db/client";
-import { decideString, listStringRows, saveStringCheck } from "@/db/repo/eval";
-import { getScenarioByPersona } from "@/db/repo/sessions";
-import { checkString, personaStrings, stringStates, textHash, type FixedString, type StringState } from "@/eval/string-check";
+import { decideString } from "@/db/repo/eval";
+import { textHash, type StringState } from "@/eval/string-check";
 import type { CallModelDeps } from "@/llm/call-model";
-import type { Scenario } from "@/scenario/schema";
-import { productStrings } from "@/strings/product-strings";
+import { PRODUCT_TARGET, approveStrings, checkStrings, loadStringStates, loadStringTarget as loadTarget } from "@/server/scenario-review";
 import { needsDb, parseArgs, reportCliErrors } from "../args";
 import { CliError, type CliIo, type Command } from "../scenario-file";
 
-/** What `product` names on the command line: the strings every persona shares. */
-export const PRODUCT_TARGET = "product";
-
-export type StringTarget = { scope: "persona" | "product"; personaId: string; scenario: Scenario | null; strings: FixedString[] };
-
-/** The fixed strings of `product` or of the newest version of a persona. */
-export async function loadStringTarget(db: Database, name: string): Promise<StringTarget> {
-  if (name === PRODUCT_TARGET) {
-    const strings = productStrings().map((entry) => ({ ...entry, origin: "lời sản phẩm nói với người học" }));
-    return { scope: "product", personaId: "", scenario: null, strings };
-  }
-  const found = await getScenarioByPersona(db, name);
-  if (!found) throw new CliError(`Không tìm thấy persona "${name}". Dùng "${PRODUCT_TARGET}" cho chuỗi cấp sản phẩm.`);
-  const scenario = found.scenario.content;
-  return { scope: "persona", personaId: found.scenario.personaId, scenario, strings: personaStrings(scenario) };
-}
-
-export async function loadStringStates(db: Database, target: StringTarget): Promise<StringState[]> {
-  return stringStates(target.strings, await listStringRows(db, target));
+/** The strings of `product` or of a persona, or the CLI's message for an unknown name. */
+async function loadStringTarget(db: Database, name: string) {
+  const target = await loadTarget(db, name);
+  if (!target) throw new CliError(`Không tìm thấy persona "${name}". Dùng "${PRODUCT_TARGET}" cho chuỗi cấp sản phẩm.`);
+  return target;
 }
 
 const CHECK_USAGE = "Cách dùng: il check-strings <persona|product> [--all]";
@@ -47,20 +31,13 @@ export function runCheckStrings(
     if (positional.length !== 1) throw new CliError(CHECK_USAGE);
     const target = await loadStringTarget(db, positional[0]);
 
-    const before = await loadStringStates(db, target);
-    const todo = switches.has("all") ? before : before.filter((entry) => !entry.checked);
-    for (const entry of todo) {
-      const result = await checkString(entry, target.scenario, { scope: { scope: "eval" }, meta: { string_key: entry.key }, llmDeps });
-      await saveStringCheck(db, target, { key: entry.key, text: entry.text, textHash: textHash(entry.text), result });
-    }
-
-    const after = await loadStringStates(db, target);
+    const { checked, states: after } = await checkStrings(db, target, { all: switches.has("all"), llmDeps });
     for (const entry of after) {
       io.out(`[${entry.checkOk ? "OK" : "LỖI"}] ${entry.key}: ${entry.text}`);
       for (const problem of entry.problems) io.out(`      ${problem}`);
     }
     const failing = after.filter((entry) => !entry.checkOk).length;
-    io.out(`${after.length} chuỗi, ${todo.length} vừa kiểm, ${failing} không qua.`);
+    io.out(`${after.length} chuỗi, ${checked} vừa kiểm, ${failing} không qua.`);
     return failing === 0 ? 0 : 1;
   });
 }
@@ -112,19 +89,16 @@ export function runApproveStrings(args: string[], io: CliIo, db: Database | null
     if (action === "approve") {
       // Either `--all` or a list of keys, never both and never neither.
       if (switches.has("all") === (rest.length > 0)) throw new CliError(APPROVE_USAGE);
-      const chosen = switches.has("all") ? states.filter((entry) => entry.checkOk && !entry.approved) : rest.map(byKey);
-      const blocked = chosen.filter((entry) => !entry.checkOk);
-      if (blocked.length > 0) {
+      const result = await approveStrings(db, target, switches.has("all") ? "all" : rest, email);
+      if (!result.ok) {
         throw new CliError(
-          `Chưa duyệt được vì chưa qua kiểm FR-36: ${blocked.map((entry) => entry.key).join(", ")}. Chạy il check-strings ${name} trước.`,
+          "unknown" in result
+            ? `Không có chuỗi "${result.unknown}". Xem danh sách: il approve-strings ${name}`
+            : `Chưa duyệt được vì chưa qua kiểm FR-36: ${result.unchecked.join(", ")}. Chạy il check-strings ${name} trước.`,
         );
       }
-      for (const entry of chosen) {
-        await decideString(db, target, { key: entry.key, textHash: textHash(entry.text), decision: "approved", approverEmail: email, note: null });
-      }
-      io.out(`Đã duyệt ${chosen.length} chuỗi (${email}).`);
-      const waiting = states.filter((entry) => !entry.checkOk).length;
-      if (waiting > 0) io.out(`Còn ${waiting} chuỗi chưa qua kiểm FR-36 nên chưa duyệt được.`);
+      io.out(`Đã duyệt ${result.approved} chuỗi (${email}).`);
+      if (result.waiting > 0) io.out(`Còn ${result.waiting} chuỗi chưa qua kiểm FR-36 nên chưa duyệt được.`);
       return 0;
     }
 

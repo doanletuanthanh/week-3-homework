@@ -1007,6 +1007,18 @@ a.srow:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 .adm-meter{height:8px;border-radius:4px;background:var(--surface-container-high);overflow:hidden}
 .adm-meter-fill{height:100%;border-radius:4px}
 .adm-meter-hot{background:var(--error)}
+/* scenario review */
+.adm-h3{margin:0;font:600 14px/20px var(--sans);color:var(--on-surface)}
+.adm-stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+.adm-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font:400 13px/20px var(--sans)}
+.adm-mono{font-family:var(--mono);font-size:12px}
+.adm-scroll{overflow-x:auto;max-width:100%}
+.adm-scroll .adm-table{min-width:640px}
+.adm-fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.adm-fieldset > .field{flex:1 1 220px}
+.adm-actions{display:flex;flex-direction:column;gap:12px}
+.adm-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.adm-details summary{cursor:pointer;font:600 13px/20px var(--sans)}
 @media (max-width:1023px){.adm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.adm-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:767px){
   .adm{padding:24px 16px 64px;gap:16px}

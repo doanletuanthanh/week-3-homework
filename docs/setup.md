@@ -87,7 +87,7 @@ Open http://localhost:3000, press "Vào thư viện", open a topic, press "Bắt
 ## 3. Deploy to Vercel
 
 1. Import the repository into Vercel (framework preset Next.js, no build settings to change).
-2. Add every variable of `.env.local` to the project's environment variables. `DATABASE_URL` must be the transaction pooler string. `OPERATOR_EMAIL` and the `LLM_EVAL_*` / `LLM_STRING_CHECK` roles are only read by the CLI and may be left out.
+2. Add every variable of `.env.local` to the project's environment variables. `DATABASE_URL` must be the transaction pooler string. `OPERATOR_EMAIL` and `LLM_EVAL_INTERVIEWER` are only read by the CLI and may be left out. The admin console (`/admin/scenarios`) runs the lean eval and the fixed-string check from the web: set `LLM_QA_PLANNER`, `LLM_EVAL_LEAK_JUDGE` and `LLM_STRING_CHECK` if admins use it, or those actions fail.
 3. Keep Fluid Compute on: reveal and scenario generation run after the response for up to 300 s.
 4. Deploy. Add the deployed address to Supabase's Site URL and Redirect URLs (step 2.1.3).
 5. Run the checks in `docs/launch-checklist.md` under "On the deployed app".

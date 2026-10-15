@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Scenario, TopicFile } from "@/scenario/schema";
 import type { Database, Executor } from "../client";
 import { scenarios, topics } from "../schema";
@@ -38,34 +38,77 @@ export async function listOtherPersonaTags(
  */
 export async function insertScenarioVersion(db: Database, topic: TopicFile, scenario: Scenario) {
   return db.transaction(async (tx) => {
-    // Serialises imports of one persona, so two of them cannot pick the same version.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('scenario_import'), hashtext(${scenario.persona_id}))`);
     await upsertTopic(tx, topic);
-    const [newest] = await tx
-      .select({ version: scenarios.version, topicId: scenarios.topicId })
-      .from(scenarios)
-      .where(eq(scenarios.personaId, scenario.persona_id))
-      .orderBy(desc(scenarios.version))
-      .limit(1);
-    if (newest && newest.topicId !== scenario.topic_id) {
-      throw new ScenarioImportError(
-        `Persona "${scenario.persona_id}" đã thuộc chủ đề "${newest.topicId}"; không chuyển sang "${scenario.topic_id}" được.`,
-      );
-    }
-    const version = (newest?.version ?? 0) + 1;
-    const [row] = await tx
-      .insert(scenarios)
-      .values({
-        personaId: scenario.persona_id,
-        topicId: scenario.topic_id,
-        version,
-        displayName: scenario.persona.display_name,
-        avatarKey: scenario.persona.avatar_key ?? null,
-        tagline: scenario.persona.tagline,
-        language: scenario.language,
-        content: { ...scenario, version },
-      })
-      .returning();
-    return row;
+    return insertNextVersion(tx, scenario);
   });
+}
+
+/**
+ * Stores a scenario as the next draft version of its persona, in the caller's transaction. Its
+ * topic must exist. Throws `ScenarioImportError` when the persona belongs to another topic.
+ */
+export async function insertNextVersion(tx: Executor, scenario: Scenario) {
+  // Serialises imports of one persona, so two of them cannot pick the same version.
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('scenario_import'), hashtext(${scenario.persona_id}))`);
+  const [newest] = await tx
+    .select({ version: scenarios.version, topicId: scenarios.topicId })
+    .from(scenarios)
+    .where(eq(scenarios.personaId, scenario.persona_id))
+    .orderBy(desc(scenarios.version))
+    .limit(1);
+  if (newest && newest.topicId !== scenario.topic_id) {
+    throw new ScenarioImportError(
+      `Persona "${scenario.persona_id}" đã thuộc chủ đề "${newest.topicId}"; không chuyển sang "${scenario.topic_id}" được.`,
+    );
+  }
+  const version = (newest?.version ?? 0) + 1;
+  const [row] = await tx
+    .insert(scenarios)
+    .values({
+      personaId: scenario.persona_id,
+      topicId: scenario.topic_id,
+      version,
+      displayName: scenario.persona.display_name,
+      avatarKey: scenario.persona.avatar_key ?? null,
+      tagline: scenario.persona.tagline,
+      language: scenario.language,
+      content: { ...scenario, version },
+    })
+    .returning();
+  return row;
+}
+
+/** The newest version of every curated persona (custom ones belong to their learner), by topic and persona. */
+export async function listCuratedPersonas(db: Executor) {
+  return db
+    .selectDistinctOn([scenarios.personaId], { scenario: scenarios, topicTitle: topics.title })
+    .from(scenarios)
+    .innerJoin(topics, eq(topics.id, scenarios.topicId))
+    .where(isNull(topics.ownerUserId))
+    .orderBy(scenarios.personaId, desc(scenarios.version));
+}
+
+/** Every version of a persona, newest first. */
+export async function listPersonaVersions(db: Executor, personaId: string) {
+  return db.select().from(scenarios).where(eq(scenarios.personaId, personaId)).orderBy(desc(scenarios.version));
+}
+
+/** Topics an admin can draft a persona for: the curated ones, in library order. */
+export async function listCuratedTopics(db: Executor) {
+  return db
+    .select({ id: topics.id, title: topics.title, summary: topics.summary })
+    .from(topics)
+    .where(isNull(topics.ownerUserId))
+    .orderBy(asc(topics.displayOrder), asc(topics.id));
+}
+
+/** True when the persona is a curated one: its topic has no owner. A learner's custom persona is not. */
+export async function isCuratedPersona(db: Executor, personaId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: scenarios.id })
+    .from(scenarios)
+    .innerJoin(topics, eq(topics.id, scenarios.topicId))
+    .where(and(eq(scenarios.personaId, personaId), isNull(topics.ownerUserId)))
+    .limit(1);
+  return rows.length > 0;
 }
