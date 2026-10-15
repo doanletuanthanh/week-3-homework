@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { Executor } from "../client";
+import type { Database, Executor } from "../client";
 import { config } from "../schema";
+import { logAdminAccess } from "./turns";
 
 /**
  * Every setting an operator can change without a deploy. A key with no row has its default.
@@ -92,5 +93,43 @@ export async function listConfig(db: Executor) {
       updatedAt: row?.updatedAt ?? null,
       summary: CONFIG[key].summary,
     };
+  });
+}
+
+export type ParsedConfigValue<K extends ConfigKey> = { ok: true; value: ConfigValue<K> } | { ok: false; reason: "not_json" | "invalid"; message: string };
+
+/**
+ * Reads a value as an operator types it (JSON: `true`, `5`, `0.5`) and checks it against the
+ * key's type. The CLI and the admin console both go through it, so they accept the same values.
+ */
+export function parseConfigInput<K extends ConfigKey>(key: K, raw: string): ParsedConfigValue<K> {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return { ok: false, reason: "not_json", message: `Giá trị "${raw}" không phải JSON (ví dụ: true, false, 5, 0.5).` };
+  }
+  const checked = CONFIG[key].schema.safeParse(value);
+  if (!checked.success) return { ok: false, reason: "invalid", message: `Giá trị ${raw} không hợp lệ cho "${key}": ${checked.error.issues[0].message}` };
+  return { ok: true, value: checked.data as ConfigValue<K> };
+}
+
+/**
+ * Changes a setting and records who changed it, from what, to what, in `admin_access_log`. The
+ * change and its log row are one transaction: neither exists without the other.
+ */
+export async function changeConfig<K extends ConfigKey>(
+  db: Database,
+  key: K,
+  value: ConfigValue<K>,
+  by: { email: string; channel: "console" | "cli" },
+): Promise<{ from: ConfigValue<K>; to: ConfigValue<K> }> {
+  return db.transaction(async (tx) => {
+    // Two changes of the same key at once would both read the same old value: one waits for the other.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`config:${key}`}))`);
+    const from = await getConfig(tx, key);
+    const to = await setConfig(tx, key, value, by.email);
+    await logAdminAccess(tx, { adminEmail: by.email, channel: by.channel, action: `config set ${key}: ${JSON.stringify(from)} → ${JSON.stringify(to)}` });
+    return { from, to };
   });
 }

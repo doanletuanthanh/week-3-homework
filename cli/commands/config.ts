@@ -1,5 +1,5 @@
 import type { Database } from "@/db/client";
-import { CONFIG, getConfig, isConfigKey, listConfig, setConfig } from "@/db/repo/config";
+import { CONFIG, changeConfig, getConfig, isConfigKey, listConfig, parseConfigInput } from "@/db/repo/config";
 import { CliError, type CliIo, type Command } from "../scenario-file";
 
 const USAGE = "Cách dùng: il config list | il config get <khóa> | il config set <khóa> <giá trị>";
@@ -41,16 +41,10 @@ export async function runConfig(args: string[], io: CliIo, db: Database | null, 
   }
   try {
     const email = operator();
-    let value: unknown;
-    try {
-      value = JSON.parse(rawValue);
-    } catch {
-      throw new CliError(`Giá trị "${rawValue}" không phải JSON (ví dụ: true, false, 5, 0.5).`);
-    }
-    const checked = CONFIG[key].schema.safeParse(value);
-    if (!checked.success) throw new CliError(`Giá trị ${rawValue} không hợp lệ cho "${key}": ${checked.error.issues[0].message}`);
-    await setConfig(db, key, checked.data, email);
-    io.out(`${key} = ${JSON.stringify(checked.data)}`);
+    const parsed = parseConfigInput(key, rawValue);
+    if (!parsed.ok) throw new CliError(parsed.message);
+    const { to } = await changeConfig(db, key, parsed.value, { email, channel: "cli" });
+    io.out(`${key} = ${JSON.stringify(to)}`);
     return 0;
   } catch (error) {
     if (!(error instanceof CliError)) throw error;

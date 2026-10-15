@@ -70,6 +70,11 @@ describe("il config", () => {
       { key: "session_daily_cap_usd", value: 12.5, updatedBy: "admin@example.com" },
       { key: "require_published", value: true, updatedBy: "admin@example.com" },
     ]);
+    // Every change is logged with what it replaced, as the console logs it.
+    expect((await getDb().select().from(adminAccessLog)).map((row) => [row.channel, row.action])).toEqual([
+      ["cli", "config set session_daily_cap_usd: 5 → 12.5"],
+      ["cli", "config set require_published: false → true"],
+    ]);
 
     const list = capture();
     await runConfig(["list"], list.io, getDb(), admin);

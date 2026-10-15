@@ -31,3 +31,32 @@ export const RUN_STATUS_LABEL: Record<string, string> = {
 };
 
 export const FLAG_STATUS_LABEL = { open: "Chưa phân xử", dismissed: "Không phải rò rỉ", confirmed: "Rò rỉ" } as const;
+
+/** A moment in UTC+7, the zone the caps and the team use. */
+export const formatTime = (date: Date | null) =>
+  date === null ? "—" : date.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" });
+
+/** How long something ran, from its start to its end; "—" while it has not ended. */
+export function formatDuration(start: Date, end: Date | null): string {
+  if (end === null) return "—";
+  const seconds = Math.max(0, Math.round((end.getTime() - start.getTime()) / 1000));
+  return seconds < 60 ? `${seconds} giây` : `${Math.floor(seconds / 60)} phút ${seconds % 60} giây`;
+}
+
+export const SESSION_STATUS_LABEL: Record<string, string> = {
+  generating: "Đang tạo kịch bản",
+  interviewing: "Đang phỏng vấn",
+  revealed: "Đã xem kết quả",
+  replaying: "Đang chơi lại",
+  done: "Xong",
+  failed_eval: "Kịch bản không đạt",
+  withdrawn: "Đã dừng",
+};
+
+export const ATTEMPT_OUTCOME_LABEL: Record<string, string> = {
+  refused: "Từ chối",
+  running: "Đang chạy",
+  passed: "Qua",
+  failed: "Trượt",
+  system_error: "Lỗi hệ thống",
+};

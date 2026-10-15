@@ -214,3 +214,41 @@ export async function countLearnerTurns(db: Executor, sessionId: string): Promis
     .where(and(eq(turns.sessionId, sessionId), eq(branches.kind, "main"), sql`${turns.index} > 0`));
   return row.total;
 }
+
+/** One session as the operator lists it. */
+export type LearnerSessionRow = {
+  id: string;
+  status: SessionRow["status"];
+  isDemo: boolean;
+  startedAt: Date;
+  endedAt: Date | null;
+  /** Null while a custom scenario is being prepared, or when it never passed. Such a session has no transcript. */
+  personaId: string | null;
+  displayName: string | null;
+  topicTitle: string | null;
+  /** Model calls of the session, replays included. */
+  costUsd: number;
+};
+
+/** A learner's sessions with their cost, newest first: the operator's view of one account. */
+export async function listLearnerSessions(db: Executor, userId: string, page: { offset: number; limit: number }): Promise<LearnerSessionRow[]> {
+  return db
+    .select({
+      id: sessions.id,
+      status: sessions.status,
+      isDemo: sessions.isDemo,
+      startedAt: sessions.startedAt,
+      endedAt: sessions.endedAt,
+      personaId: scenarios.personaId,
+      displayName: scenarios.displayName,
+      topicTitle: topics.title,
+      costUsd: sql<number>`(SELECT COALESCE(sum(cost_usd), 0) FROM llm_call WHERE session_id = ${sessions.id})::float8`,
+    })
+    .from(sessions)
+    .leftJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
+    .leftJoin(topics, eq(topics.id, scenarios.topicId))
+    .where(eq(sessions.userId, userId))
+    .orderBy(desc(sessions.startedAt), desc(sessions.id))
+    .limit(page.limit)
+    .offset(page.offset);
+}

@@ -7,6 +7,10 @@ import { usePathname } from "next/navigation";
 export const ADMIN_NAV = [
   { href: "/admin", label: "Tổng quan" },
   { href: "/admin/scenarios", label: "Kịch bản" },
+  { href: "/admin/learners", label: "Người học" },
+  { href: "/admin/custom-topics", label: "Chủ đề tự tạo" },
+  { href: "/admin/config", label: "Cấu hình" },
+  { href: "/admin/audit", label: "Nhật ký" },
 ] as const;
 
 /** The admin area's own nav, marking the page the admin is on. */

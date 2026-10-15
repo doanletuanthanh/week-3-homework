@@ -89,6 +89,8 @@ pnpm il config get <key>
 pnpm il config set <key> <value>
 ```
 
+Admins can also edit these at `/admin/config`. The CLI and the console accept the same values. Every change, from either one, writes an `admin_access_log` row (`config set <key>: <old> → <new>`), and `/admin/audit` shows it. Learners, session transcripts and custom-topic requests are at `/admin/learners` and `/admin/custom-topics`, and every read there is logged.
+
 | Key | Default | Meaning |
 |---|---|---|
 | `require_published` | `false` | Only published persona versions can be played (FR-35). Turned on, the library, the topic page, the home page's library section and the next-persona suggestion show published personas only: with none published the library lists no topic and keeps the way to a topic of one's own |

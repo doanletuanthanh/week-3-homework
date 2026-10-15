@@ -1,10 +1,8 @@
 import type { Database } from "@/db/client";
 import { loadSessionTrace, logAdminAccess } from "@/db/repo/turns";
+import { describeTrace } from "@/server/session-trace";
 import { isUuid } from "@/server/uuid";
 import { CliError, type CliIo, type Command } from "../scenario-file";
-
-const OUTCOME_TEXT = { satisfied: "thỏa", not_satisfied: "không thỏa", prerequisite_locked: "tiên quyết còn khóa" } as const;
-const none = (values: string[]) => (values.length > 0 ? values.join(", ") : "(không)");
 
 /**
  * `trace <session>` (FR-44): prints, turn by turn, what the engine saw and decided: the learner
@@ -30,47 +28,17 @@ export async function runTrace(args: string[], io: CliIo, db: Database | null, o
     // Logged before anything is shown: the access happened even if printing fails.
     await logAdminAccess(db, { adminEmail: email, channel: "cli", sessionId, userId: trace.session.userId, action: "trace" });
 
-    const { session, scenario, turns } = trace;
-    const state = session.endedAt ? `${session.status}, đã kết thúc` : session.status;
-    io.out(`Buổi ${session.id} · ${scenario.personaId} phiên bản ${scenario.version} · ${state} · ${turns.length - 1} lượt`);
-
-    for (const [position, { turn, snapshot }] of turns.entries()) {
+    const { title, turns } = describeTrace(trace);
+    io.out(title);
+    for (const turn of turns) {
       io.out("");
-      if (turn.index === 0) {
-        io.out(`Lượt 0 (lời mở đầu, không gọi LLM)`);
-        io.out(`  Persona: ${turn.personaText}`);
-        io.out(`  Openness: ${snapshot.openness}`);
-        continue;
+      io.out(turn.title);
+      for (const line of turn.lines) {
+        if (line.items) {
+          io.out(`  ${line.label}:`);
+          for (const item of line.items) io.out(`    - ${item}`);
+        } else io.out(line.label ? `  ${line.label}: ${line.text}` : `  ${line.text}`);
       }
-      const decision = turn.decisionJson;
-      const previous = turns[position - 1].turn;
-      io.out(`Lượt ${turn.index}`);
-      io.out(`  Người học: ${turn.learnerText}`);
-      io.out(`  Call 1: ${turn.analysisJson ? JSON.stringify(turn.analysisJson) : "(không lưu)"}`);
-      io.out(
-        previous.verdictJson
-          ? `  Verdict cho lượt ${previous.index}: hook đã thả = ${previous.verdictJson.hook_dropped}; đã kể = ${none(previous.verdictJson.disclosed_item_ids)}; vi phạm = ${none(previous.verdictJson.violations)}`
-          : `  Verdict cho lượt ${previous.index}: (không áp dụng)`,
-      );
-      if (!decision) {
-        io.out("  (Lượt này được ghi trước khi có engine: không có phân tích.)");
-      } else {
-        io.out(decision.corrections.length === 0 ? "  Sửa của code: (không)" : "  Sửa của code:");
-        for (const fix of decision.corrections) {
-          io.out(`    - ${fix.field}: ${JSON.stringify(fix.from)} → ${JSON.stringify(fix.to)} (${fix.reason})`);
-        }
-        const { analysis } = decision;
-        io.out(
-          `  Sau khi kiểm: nhãn = ${analysis.label}; loại = ${analysis.question_type}; grounded_turn_id = ${analysis.grounded_turn_id}; introduced_span = ${JSON.stringify(analysis.introduced_span)}; hook = ${analysis.hook_item_id}; tag = ${analysis.tag_item_id}`,
-        );
-        io.out("  Luật mở khóa:");
-        for (const rule of decision.rules) io.out(`    - ${rule.itemId} [${rule.path}]: ${OUTCOME_TEXT[rule.outcome]}`);
-        io.out(`  Item mở: ${decision.unlockedItemId ?? "(không)"}`);
-        const hookVerdict = turn.verdictJson ? (turn.verdictJson.hook_dropped ? "đã thả" : "chưa thả") : "chưa có verdict";
-        io.out(`  Hook được chọn: ${turn.hookSelected ? `${turn.hookSelected} (${hookVerdict})` : "(không)"}`);
-        io.out(`  Openness: ${decision.opennessBefore} → ${decision.opennessAfter}`);
-      }
-      io.out(`  Persona: ${turn.personaText}${turn.flagged ? "  [GẮN CỜ: vi phạm do-not-assert]" : ""}`);
     }
     return 0;
   } catch (error) {

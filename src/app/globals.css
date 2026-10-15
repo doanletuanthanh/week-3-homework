@@ -1019,6 +1019,11 @@ a.srow:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 .adm-actions{display:flex;flex-direction:column;gap:12px}
 .adm-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .adm-details summary{cursor:pointer;font:600 13px/20px var(--sans)}
+.adm-trace{margin:0;display:flex;flex-direction:column;gap:10px;font:400 13px/20px var(--sans)}
+.adm-trace > div{display:grid;grid-template-columns:160px minmax(0,1fr);gap:4px 16px}
+.adm-trace dt{font-weight:600;color:var(--on-surface-variant)}
+.adm-trace dd{margin:0;grid-column:2;overflow-wrap:anywhere;white-space:pre-wrap}
+@media (max-width:767px){.adm-trace > div{grid-template-columns:minmax(0,1fr)}.adm-trace dd{grid-column:1}}
 @media (max-width:1023px){.adm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.adm-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:767px){
   .adm{padding:24px 16px 64px;gap:16px}

@@ -171,3 +171,31 @@ export async function loadSessionTrace(db: Executor, sessionId: string) {
 export async function logAdminAccess(db: Executor, entry: typeof adminAccessLog.$inferInsert): Promise<void> {
   await db.insert(adminAccessLog).values(entry);
 }
+
+export type AccessLogRow = typeof adminAccessLog.$inferSelect;
+export type AccessLogFilter = { adminEmail?: string; actionPrefix?: string };
+
+const accessLogWhere = ({ adminEmail, actionPrefix }: AccessLogFilter) =>
+  and(adminEmail ? eq(adminAccessLog.adminEmail, adminEmail) : undefined, actionPrefix ? sql`starts_with(${adminAccessLog.action}, ${actionPrefix})` : undefined);
+
+/** The access log, newest first. Actions are free text, so they are filtered by how they start. */
+export async function listAccessLog(db: Executor, filter: AccessLogFilter & { offset: number; limit: number }): Promise<AccessLogRow[]> {
+  return db
+    .select()
+    .from(adminAccessLog)
+    .where(accessLogWhere(filter))
+    .orderBy(desc(adminAccessLog.at), desc(adminAccessLog.id))
+    .limit(filter.limit)
+    .offset(filter.offset);
+}
+
+export async function countAccessLog(db: Executor, filter: AccessLogFilter): Promise<number> {
+  const [row] = await db.select({ total: sql<number>`count(*)::int` }).from(adminAccessLog).where(accessLogWhere(filter));
+  return row.total;
+}
+
+/** Every admin who has a row in the log, for the filter. */
+export async function accessLogAdmins(db: Executor): Promise<string[]> {
+  const rows = await db.selectDistinct({ email: adminAccessLog.adminEmail }).from(adminAccessLog).orderBy(asc(adminAccessLog.adminEmail));
+  return rows.map((row) => row.email);
+}

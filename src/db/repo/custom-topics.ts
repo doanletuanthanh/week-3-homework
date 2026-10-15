@@ -534,3 +534,51 @@ export async function deleteCustomContent(tx: Executor, userId: string): Promise
   await tx.execute(sql`DELETE FROM scenario WHERE topic_id IN (SELECT id FROM topic WHERE owner_user_id = ${userId})`);
   await tx.delete(topics).where(eq(topics.ownerUserId, userId));
 }
+
+/** A learner's custom-topic request as the operator lists it. The topic text is not in it. */
+export type AttemptListRow = Pick<
+  AttemptRow,
+  "id" | "userId" | "createdAt" | "finishedAt" | "outcome" | "failureCode" | "reasonCode" | "focus" | "costActualUsd" | "runAttempt"
+> & { email: string };
+
+const learnerAttempt = (outcome?: AttemptRow["outcome"]) =>
+  and(isNull(generationAttempts.personaId), outcome ? eq(generationAttempts.outcome, outcome) : undefined);
+
+/** Learner requests, newest first, optionally of one outcome. Admin drafts are left out. */
+export async function listAttemptRows(db: Executor, filter: { outcome?: AttemptRow["outcome"]; offset: number; limit: number }): Promise<AttemptListRow[]> {
+  return db
+    .select({
+      id: generationAttempts.id,
+      userId: generationAttempts.userId,
+      email: users.email,
+      createdAt: generationAttempts.createdAt,
+      finishedAt: generationAttempts.finishedAt,
+      outcome: generationAttempts.outcome,
+      failureCode: generationAttempts.failureCode,
+      reasonCode: generationAttempts.reasonCode,
+      focus: generationAttempts.focus,
+      costActualUsd: generationAttempts.costActualUsd,
+      runAttempt: generationAttempts.runAttempt,
+    })
+    .from(generationAttempts)
+    .innerJoin(users, eq(users.id, generationAttempts.userId))
+    .where(learnerAttempt(filter.outcome))
+    .orderBy(desc(generationAttempts.createdAt), desc(generationAttempts.id))
+    .limit(filter.limit)
+    .offset(filter.offset);
+}
+
+export async function countAttemptRows(db: Executor, outcome?: AttemptRow["outcome"]): Promise<number> {
+  const [row] = await db.select({ total: sql<number>`count(*)::int` }).from(generationAttempts).where(learnerAttempt(outcome));
+  return row.total;
+}
+
+/** One learner request with its topic text and its learner's email; null for an unknown id or an admin draft. */
+export async function getLearnerAttempt(db: Executor, attemptId: string) {
+  const [row] = await db
+    .select({ attempt: generationAttempts, email: users.email })
+    .from(generationAttempts)
+    .innerJoin(users, eq(users.id, generationAttempts.userId))
+    .where(and(eq(generationAttempts.id, attemptId), learnerAttempt()));
+  return row ?? null;
+}
