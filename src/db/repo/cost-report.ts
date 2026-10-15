@@ -148,3 +148,27 @@ export async function tokensByTurn(db: Executor, window: ReportWindow): Promise<
     ORDER BY turn_index, role
   `);
 }
+
+export type UsageCounts = {
+  /** Sessions learners started in the window. Demo accounts are left out. */
+  sessionsStarted: number;
+  /**
+   * Learners (not demo accounts) whose sessions made a model call in the window: they interviewed
+   * or replayed. A session's `updated_at` would also count writes the system makes (sweeps, unpublish).
+   */
+  activeLearners: number;
+  /** Custom-topic attempts submitted in the window. */
+  customAttempts: number;
+};
+
+/** How much the product was used in the window, for the admin overview. */
+export async function usageCounts(db: Executor, window: ReportWindow): Promise<UsageCounts> {
+  const [row] = await db.execute<UsageCounts>(sql`
+    SELECT
+      (SELECT count(*) FROM "session" WHERE NOT is_demo AND started_at >= ${windowStart(window)})::int AS "sessionsStarted",
+      (SELECT count(DISTINCT s.user_id) FROM llm_call c JOIN "session" s ON s.id = c.session_id
+        WHERE c.scope = 'session' AND NOT s.is_demo AND c.created_at >= ${windowStart(window)})::int AS "activeLearners",
+      (SELECT count(*) FROM generation_attempt WHERE created_at >= ${windowStart(window)})::int AS "customAttempts"
+  `);
+  return row;
+}

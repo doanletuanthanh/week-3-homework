@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { getEnv, type Env } from "@/config/env";
 import { getDb, type Executor } from "@/db/client";
@@ -74,6 +74,24 @@ export async function requireUser(next: string): Promise<AppUser> {
 export async function requireAckedUser(next: string): Promise<AppUser> {
   const user = await requireUser(next);
   if (!user.noticeAcked) redirect(noticePath(next));
+  return user;
+}
+
+/**
+ * The admin area answers anyone who is not an admin, a signed-out visitor included, as if it did
+ * not exist: 404, never a redirect or a 403. For a service that is handed the user.
+ */
+export function assertAdmin(user: AppUser | null): asserts user is AppUser {
+  if (!user?.isAdmin) notFound();
+}
+
+/**
+ * For every admin page. A layout renders in parallel with its page, so a check in the layout
+ * alone does not keep the page's data from being read: each page calls this itself.
+ */
+export async function requireAdmin(): Promise<AppUser> {
+  const user = await getUser();
+  assertAdmin(user);
   return user;
 }
 

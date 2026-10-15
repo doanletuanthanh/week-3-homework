@@ -3,7 +3,7 @@ import { signOut } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { failIfAsked } from "@/server/test-faults";
 import { HeaderLink, HeaderMenu } from "./header-menu";
-import { GridIcon, HistoryIcon, MenuIcon, SignOutIcon, UserIcon } from "./icons";
+import { GridIcon, HistoryIcon, MenuIcon, ShieldIcon, SignOutIcon, UserIcon } from "./icons";
 
 function Logo() {
   return (
@@ -31,7 +31,7 @@ function Logo() {
 
 /**
  * Site header (PRD §6.0). Everyone: "Thư viện". Signed out: "Đăng nhập". Signed in: "Buổi của tôi"
- * and the account menu with "Đăng xuất"; below 768px a learner's links fold into one menu behind
+ * and the account menu with "Đăng xuất"; an admin also gets "Quản trị"; below 768px a learner's links fold into one menu behind
  * a button, and a visitor's one link stays beside "Đăng nhập".
  */
 export async function SiteHeader() {
@@ -50,6 +50,7 @@ export async function SiteHeader() {
         <nav className="nav hdr-wide" aria-label="Chính">
           <HeaderLink to="library" />
           {user && <HeaderLink to="mySessions" />}
+          {user?.isAdmin && <HeaderLink to="admin" />}
         </nav>
         <div className="hdr-r">
           {user ? (
@@ -86,6 +87,11 @@ export async function SiteHeader() {
                   <HeaderLink to="mySessions">
                     <HistoryIcon size={16} />
                   </HeaderLink>
+                  {user.isAdmin && (
+                    <HeaderLink to="admin">
+                      <ShieldIcon size={16} />
+                    </HeaderLink>
+                  )}
                   <div className="hr" />
                   <form action={signOut}>
                     <button type="submit" className="menu-out">

@@ -8,18 +8,19 @@ import { LIBRARY, MY_SESSIONS_NAME } from "@/strings/product-strings";
 const DESTINATIONS = {
   library: { href: "/library", label: LIBRARY.name },
   mySessions: { href: "/my-sessions", label: MY_SESSIONS_NAME },
+  admin: { href: "/admin", label: "Quản trị" },
 } as const;
 
 /**
  * A destination of the header, marked as the current page while the visitor is on it. The
  * library is also marked, without being called the current page, on a topic's page: that page
- * is inside it.
+ * is inside it. The same holds for the admin area's other pages.
  */
 export function HeaderLink({ to, children }: { to: keyof typeof DESTINATIONS; children?: ReactNode }) {
   const pathname = usePathname();
   const { href, label } = DESTINATIONS[to];
   const current = pathname === href;
-  const inside = to === "library" && pathname.startsWith("/topics/");
+  const inside = (to === "library" && pathname.startsWith("/topics/")) || (to === "admin" && pathname.startsWith("/admin/"));
   return (
     <Link href={href} className={current || inside ? "on" : undefined} aria-current={current ? "page" : undefined}>
       {children}
