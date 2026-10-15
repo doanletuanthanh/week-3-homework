@@ -8,6 +8,8 @@ import { LIBRARY, MY_SESSIONS_NAME } from "@/strings/product-strings";
 const DESTINATIONS = {
   library: { href: "/library", label: LIBRARY.name },
   mySessions: { href: "/my-sessions", label: MY_SESSIONS_NAME },
+  progress: { href: "/progress", label: "Tiến bộ" },
+  guideCheck: { href: "/guide-check", label: "Kiểm tra bộ câu hỏi" },
   admin: { href: "/admin", label: "Quản trị" },
 } as const;
 

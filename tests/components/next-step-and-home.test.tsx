@@ -37,6 +37,7 @@ describe("NextStep: a persona to practise next (FR-31)", () => {
     expect(links(markup)).toEqual([
       ["Luyện tiếp với anh Dũng", "/prep/anh-dung"],
       ["Về thư viện", "/library"],
+      ["Kiểm tra bộ câu hỏi", "/guide-check"],
     ]);
     // The topic is the one just practised: it is not repeated.
     expect(markup).not.toContain("Chi tiêu hằng ngày");
@@ -75,7 +76,10 @@ describe("NextStep: nobody left to offer", () => {
     const markup = renderToStaticMarkup(<NextStep waitlisted={false} next={{ kind: "all_practised" }} />);
 
     expect(markup).toContain(ALL_PRACTISED);
-    expect(links(markup)).toEqual([["Vào thư viện", "/library"]]);
+    expect(links(markup)).toEqual([
+      ["Vào thư viện", "/library"],
+      ["Kiểm tra bộ câu hỏi", "/guide-check"],
+    ]);
     expect(markup).toContain("Báo tôi khi có");
     expect(markup).not.toContain("Luyện tiếp với");
   });
@@ -85,7 +89,10 @@ describe("NextStep: nobody left to offer", () => {
 
     expect(markup).not.toContain(ALL_PRACTISED);
     expect(markup).not.toContain("đã luyện");
-    expect(links(markup)).toEqual([["Vào thư viện", "/library"]]);
+    expect(links(markup)).toEqual([
+      ["Vào thư viện", "/library"],
+      ["Kiểm tra bộ câu hỏi", "/guide-check"],
+    ]);
     expect(markup).toContain("Báo tôi khi có");
   });
 

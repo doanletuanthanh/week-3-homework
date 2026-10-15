@@ -38,7 +38,7 @@ const SESSION_ROUTES: Record<string, (id: string) => Call[]> = {
  * Routes that take no session id: they act on the signed-in learner alone. The status of a
  * custom-topic attempt is keyed by the attempt; custom-topic.spec.ts asks it as another learner.
  */
-const OWN_ROUTES = ["sessions", "waitlist", "account", "custom-topics", "custom-topics/[attemptId]"];
+const OWN_ROUTES = ["sessions", "waitlist", "account", "custom-topics", "custom-topics/[attemptId]", "guide-check"];
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

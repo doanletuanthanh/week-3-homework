@@ -53,7 +53,7 @@ pnpm il judgement-eval evalsets/turn-verdict.jsonl
 pnpm il judgement-eval <file.jsonl> --kind <kind> --scenario <scenario file>
 ```
 
-Runs a hand-labelled set through the production prompt and prints the rates NFR-7 names. Kinds: `label-classifier`, `turn-verdict`, `canvas-judge`, `leading-novelty`, `moderation`, `output-safety`, `reply-judge` (lean eval reply judge), `qa-plan` (lean eval planner; each line names its own scenario file and mutation operator, so `--scenario` is not used); the kind is taken from the file name when `--kind` is left out.
+Runs a hand-labelled set through the production prompt and prints the rates NFR-7 names. Kinds: `label-classifier`, `turn-verdict`, `canvas-judge`, `leading-novelty`, `moderation`, `output-safety`, `reply-judge` (lean eval reply judge), `qa-plan` (lean eval planner; each line names its own scenario file and mutation operator, so `--scenario` is not used), `guide-check` (the learner guide checker; each line is one guide with the label of each question in order; gate: leading recall ≥ 90%; no scenario is used); the kind is taken from the file name when `--kind` is left out.
 
 Format: one JSON object per line, with an `id`, the input fields of that kind, `expected`, and a free `note`. The files in `evalsets/` are the reference for each kind's fields. A set proves a gate only from 100 lines up; the committed sets are starters of 8 to 18 lines.
 
@@ -94,11 +94,12 @@ Admins can also edit these at `/admin/config`. The CLI and the console accept th
 | Key | Default | Meaning |
 |---|---|---|
 | `require_published` | `false` | Only published persona versions can be played (FR-35). Turned on, the library, the topic page, the home page's library section and the next-persona suggestion show published personas only: with none published the library lists no topic and keeps the way to a topic of one's own |
-| `session_daily_cap_usd` | `5` | LLM spend of sessions per day (UTC+7). At the cap, new sessions are refused |
+| `session_daily_cap_usd` | `5` | LLM spend of sessions per day (UTC+7). At the cap, new sessions and guide checks are refused |
 | `session_demo_reserve_usd` | `1` | The part of the cap kept for demo accounts |
 | `custom_path_enabled` | `true` | The switch of "Tạo chủ đề của bạn" (FR-56) |
 | `generation_daily_budget_usd` | `10` | LLM budget of scenario generation per day, apart from the session cap. One account may use 20 % |
 | `generation_reserve_usd` | `1` | Held for each generation attempt; the attempt stops when it has spent this |
+| `guide_checks_per_day` | `5` | Guide checks (`/guide-check`) per account per day (UTC+7). Each check is one ANALYSIS call charged to the session scope with no session id, so the per-session cost report leaves it out but the daily cap counts it. A check whose call failed still counts. Demo accounts are not limited. `0` turns checks off |
 
 A change takes effect on the next request. The defaults are placeholders for a small pilot, not measured values.
 

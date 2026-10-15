@@ -3,7 +3,7 @@ import { signOut } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { failIfAsked } from "@/server/test-faults";
 import { HeaderLink, HeaderMenu } from "./header-menu";
-import { GridIcon, HistoryIcon, MenuIcon, ShieldIcon, SignOutIcon, UserIcon } from "./icons";
+import { GridIcon, HistoryIcon, MenuIcon, NoteIcon, PulseIcon, ShieldIcon, SignOutIcon, UserIcon } from "./icons";
 
 function Logo() {
   return (
@@ -50,6 +50,7 @@ export async function SiteHeader() {
         <nav className="nav hdr-wide" aria-label="Chính">
           <HeaderLink to="library" />
           {user && <HeaderLink to="mySessions" />}
+          {user && <HeaderLink to="progress" />}
           {user?.isAdmin && <HeaderLink to="admin" />}
         </nav>
         <div className="hdr-r">
@@ -71,6 +72,10 @@ export async function SiteHeader() {
                 }
               >
                 <div className="menu">
+                  <HeaderLink to="guideCheck">
+                    <NoteIcon size={16} />
+                  </HeaderLink>
+                  <div className="hr" />
                   <form action={signOut}>
                     <button type="submit">
                       <SignOutIcon size={16} />
@@ -86,6 +91,12 @@ export async function SiteHeader() {
                   </HeaderLink>
                   <HeaderLink to="mySessions">
                     <HistoryIcon size={16} />
+                  </HeaderLink>
+                  <HeaderLink to="progress">
+                    <PulseIcon size={16} />
+                  </HeaderLink>
+                  <HeaderLink to="guideCheck">
+                    <NoteIcon size={16} />
                   </HeaderLink>
                   {user.isAdmin && (
                     <HeaderLink to="admin">

@@ -21,6 +21,7 @@ import {
   type SetKind,
   type SetScore,
 } from "@/eval/judgement-eval";
+import { guideCaseSchema, runGuideSet } from "@/eval/guide-check-set";
 import { qaPlanCaseSchema, replyJudgeCaseSchema, runQaPlanSet, runReplyJudgeSet } from "@/eval/qa/judgement-sets";
 import type { CallModelDeps } from "@/llm/call-model";
 import type { Scenario } from "@/scenario/schema";
@@ -67,6 +68,7 @@ export function runJudgementEval(args: string[], io: CliIo, llmDeps?: Partial<Ca
         moderation: () => runModerationSet(parseTestSet(raw, moderationCaseSchema), options),
         "output-safety": () => runSafetySet(scenario, parseTestSet(raw, safetyCaseSchema), options),
         "reply-judge": () => runReplyJudgeSet(scenario, parseTestSet(raw, replyJudgeCaseSchema), options),
+        "guide-check": () => runGuideSet(parseTestSet(raw, guideCaseSchema), options),
         "qa-plan": async () => {
           // Each case names its own scenario file; --scenario is not used.
           const cases = parseTestSet(raw, qaPlanCaseSchema);
@@ -80,7 +82,7 @@ export function runJudgementEval(args: string[], io: CliIo, llmDeps?: Partial<Ca
         },
       };
       const score = await runs[kind]();
-      io.out(`Bộ thử ${kind}: ${score.size} ca, ${kind === "qa-plan" ? "mỗi ca một kịch bản riêng" : `kịch bản ${scenario.persona_id}`}`);
+      io.out(`Bộ thử ${kind}: ${score.size} ca, ${kind === "qa-plan" ? "mỗi ca một kịch bản riêng" : kind === "guide-check" ? "không dùng kịch bản" : `kịch bản ${scenario.persona_id}`}`);
       for (const line of formatScore(score)) io.out(line);
       return judgementExitCode(score);
     } catch (error) {

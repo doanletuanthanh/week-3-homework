@@ -46,6 +46,11 @@ export type AppEvent =
   | { name: "takeaway_downloaded"; props: Record<string, never> }
   /** Written when the learner joins a waitlist, not when they press again. */
   | { name: "waitlist_joined"; props: { context: WaitlistContext } }
+  /**
+   * One guide check, written when it is let through so the day's limit can count it, and filled in
+   * once the call returned. Counts only: neither the guide nor the idea is stored anywhere.
+   */
+  | { name: "guide_checked"; props: { idea: boolean; refused: boolean; failed: boolean; questions: number; flagged: number } }
   /** Written without a user: the account it reports no longer exists. `sessions` is how many it had. */
   | { name: "account_deleted"; props: { sessions: number } };
 

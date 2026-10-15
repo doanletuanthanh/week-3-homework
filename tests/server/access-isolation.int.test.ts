@@ -129,6 +129,7 @@ describe("every learner route is in the table above", () => {
     "custom-topics": [],
     waitlist: [],
     account: [],
+    "guide-check": [],
   };
 
   function routeFiles(dir: string): string[] {

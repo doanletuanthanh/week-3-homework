@@ -75,6 +75,13 @@ export function NextStep({ waitlisted, next }: { waitlisted: boolean; next: Next
   return (
     <section className="next-step" aria-label="Bước tiếp theo">
       <Suggestion next={next} />
+      <div className="card next-card next-guide">
+        <h3 className="headline-sm">Áp dụng cho ý tưởng app của bạn</h3>
+        <p className="body-sm c-variant">Kiểm tra những câu bạn định hỏi người dùng thật: câu nào dẫn dắt, câu nào nên hỏi lại.</p>
+        <Link href="/guide-check" className="btn btn-surface btn-card">
+          Kiểm tra bộ câu hỏi
+        </Link>
+      </div>
       <div className="card next-card">
         {joined ? (
           <p className="body-md joined" role="status">

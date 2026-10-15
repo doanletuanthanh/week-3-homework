@@ -1,5 +1,6 @@
-import { and, asc, count, desc, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import type { RevealJson } from "@/engine/reveal-types";
+import type { Label, QuestionType } from "@/engine/types";
 import { tokenize } from "@/engine/tokens";
 import { initialState } from "@/engine/types";
 import type { Database, Executor } from "../client";
@@ -251,4 +252,31 @@ export async function listLearnerSessions(db: Executor, userId: string, page: { 
     .orderBy(desc(sessions.startedAt), desc(sessions.id))
     .limit(page.limit)
     .offset(page.offset);
+}
+
+/**
+ * A learner's newest sessions that have a result (a reveal and a guess), newest first, with the
+ * checked label of each main-branch question in turn order. What the progress page is computed
+ * from: stored data only.
+ */
+export async function listProgressSources(db: Executor, userId: string, limit: number) {
+  const rows = await db
+    .select({
+      sessionId: sessions.id,
+      personaName: scenarios.displayName,
+      revealedAt: sessions.revealedAt,
+      guess: sessions.guess,
+      reveal: sessions.revealJson,
+      questions: sql<({ label: Label; question_type: QuestionType } | null)[]>`(
+        SELECT COALESCE(jsonb_agg(${turns.decisionJson} -> 'analysis' ORDER BY ${turns.index}), '[]'::jsonb)
+        FROM ${turns} JOIN ${branches} ON ${branches.id} = ${turns.branchId}
+        WHERE ${turns.sessionId} = ${sessions.id} AND ${branches.kind} = 'main' AND ${turns.index} > 0
+      )`,
+    })
+    .from(sessions)
+    .innerJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
+    .where(and(eq(sessions.userId, userId), isNotNull(sessions.revealJson), isNotNull(sessions.guess), isNotNull(sessions.revealedAt)))
+    .orderBy(desc(sessions.revealedAt), desc(sessions.id))
+    .limit(limit);
+  return rows.map((row) => ({ ...row, revealedAt: row.revealedAt!, guess: row.guess!, reveal: row.reveal! }));
 }

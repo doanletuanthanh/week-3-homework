@@ -81,7 +81,7 @@ test.describe("header: 'Thư viện' (PRD §6.0)", () => {
   test("a learner on a wide screen: 'Thư viện' then 'Buổi của tôi', each marked on its own page", async ({ page, context }) => {
     await signInAndAccept(page, context, "header-library-wide", "/");
 
-    await expect(banner(page).getByRole("navigation", { name: "Chính" }).getByRole("link")).toHaveText(["Thư viện", "Buổi của tôi"]);
+    await expect(banner(page).getByRole("navigation", { name: "Chính" }).getByRole("link")).toHaveText(["Thư viện", "Buổi của tôi", "Tiến bộ"]);
     await libraryLink(page).click();
     await expect(page).toHaveURL("/library");
     await expect(libraryLink(page)).toHaveAttribute("aria-current", "page");
@@ -101,7 +101,7 @@ test.describe("header: 'Thư viện' (PRD §6.0)", () => {
 
     await expect(libraryLink(page)).toBeHidden();
     await menu.click();
-    await expect(banner(page).locator(".hdr-narrow .menu a")).toHaveText(["Thư viện", "Buổi của tôi"]);
+    await expect(banner(page).locator(".hdr-narrow .menu a")).toHaveText(["Thư viện", "Buổi của tôi", "Tiến bộ", "Kiểm tra bộ câu hỏi"]);
     await expect(libraryLink(page)).toBeVisible();
 
     await libraryLink(page).click();

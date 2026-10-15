@@ -61,6 +61,9 @@ export const QUOTA_HASH_SECRET_MIN_LENGTH = 32;
 /** Length of a custom topic, in characters (FR-52). */
 export const CUSTOM_TOPIC_CHARS = { min: 10, max: 300 } as const;
 
+/** An interview guide sent to the guide check: at most this many characters and non-empty lines. */
+export const GUIDE_CHECK_LIMITS = { chars: 3000, lines: 20, ideaChars: 200 } as const;
+
 /** Longest answer to "Bạn muốn luyện điều gì trong buổi này?", in characters. */
 export const MAX_FOCUS_CHARS = 300;
 

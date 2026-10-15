@@ -39,6 +39,8 @@
 // sentence of their prompt: the QA planner adds nothing to the floor and finds no public leak, the
 // reflect call stops, the reply judge reads nothing told or raised in any reply, and the string
 // check finds no claim about real users. The floor's probes are ordinary turns (Call 1 and Call 2).
+// It answers the guide check too: each non-empty line of the guide is one question, labelled
+// leading when it contains "đúng không" and open otherwise.
 // GET /requests returns every request body received so far, so tests can read what the app sent.
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -207,6 +209,17 @@ function customReply(role, prompt) {
 
 /** The reply of a lean-eval or string-check call, as JSON, or null for any other call. */
 function evalReply(prompt) {
+  if (prompt.includes("Bạn kiểm tra bộ câu hỏi")) {
+    // The guide check: one question per non-empty line; a line asking for agreement ("đúng không") is leading.
+    // The rules name the tag too: the data block is the last one, opened on its own line.
+    const guide = prompt.slice(prompt.lastIndexOf("<bo_cau_hoi>\n") + "<bo_cau_hoi>\n".length, prompt.lastIndexOf("</bo_cau_hoi>"));
+    const lines = guide.split("\n").map((line) => line.trim()).filter(Boolean);
+    return {
+      questions: lines.map((text) =>
+        text.includes("đúng không") ? { text, label: "leading", hint: "Bỏ ý bạn tự thêm; hỏi về lần gần nhất." } : { text, label: "open", hint: "" },
+      ),
+    };
+  }
   if (prompt.includes("Bạn kiểm một chuỗi cố định")) return { real_user_claim: false, reason: "stub" };
   if (prompt.includes("Bạn đọc từng câu trả lời riêng lẻ")) {
     const ids = [...new Set([...prompt.matchAll(/^\[(R\d+)\] người hỏi:/gm)].map((match) => match[1]))];

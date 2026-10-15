@@ -49,6 +49,11 @@ export const CONFIG = {
     default: 5,
     summary: "Ngân sách LLM cho eval trong một ngày (UTC+7), tách khỏi cap của buổi. Không bắt đầu lần eval lean mới nếu phần đã tiêu cộng trần của lần đó vượt mức này.",
   },
+  guide_checks_per_day: {
+    schema: z.number().int().nonnegative(),
+    default: 5,
+    summary: "Số lần kiểm tra bộ câu hỏi một tài khoản được dùng trong một ngày (UTC+7). Mỗi lần là một lần gọi model, tính vào cap của buổi. 0 là tắt.",
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG;

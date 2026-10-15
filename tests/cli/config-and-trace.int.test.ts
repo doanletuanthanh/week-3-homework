@@ -53,6 +53,7 @@ describe("il config", () => {
       "generation_reserve_usd = 1  (mặc định)",
       "eval_lean_budget_usd = 0.1  (mặc định)",
       "eval_daily_budget_usd = 5  (mặc định)",
+      "guide_checks_per_day = 5  (mặc định)",
     ]);
   });
 

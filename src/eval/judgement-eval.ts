@@ -114,7 +114,7 @@ export const safetyCaseSchema = z.strictObject({
 });
 export type SafetyCase = z.infer<typeof safetyCaseSchema>;
 
-export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan"] as const;
+export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan", "guide-check"] as const;
 export type SetKind = (typeof SET_KINDS)[number];
 
 /** NFR-7: a set proves a gate only from this size up. */
@@ -167,6 +167,8 @@ export type SetScore = {
   mismatches: string[];
   /** Cases the set needs to prove its gate; `MIN_SET_SIZE` when not given. */
   minSize?: number;
+  /** Figures printed for the reader that gate nothing. */
+  notes?: string[];
 };
 
 /** NFR-7, label classifier: good questions wrongly called `leading`, and overall agreement. */
@@ -505,6 +507,7 @@ export function formatScore(score: SetScore): string[] {
       const measured = entry.value === null ? "không có ca nào đo" : `${percent(entry.value)} (${entry.count})`;
       return `[${entry.met ? "ĐẠT" : "CHƯA ĐẠT"}] ${entry.label}: ${measured}, cổng ${entry.atLeast ? "≥" : "≤"} ${percent(entry.limit)}`;
     }),
+    ...(score.notes ?? []),
     ...(score.mismatches.length > 0 ? ["Các ca lệch:", ...score.mismatches.map((line) => `  ${line}`)] : []),
     ...(score.size < (score.minSize ?? MIN_SET_SIZE)
       ? [`Bộ thử có ${score.size} ca, cần ≥ ${score.minSize ?? MIN_SET_SIZE} ca gán tay: kết quả này chưa chứng minh được cổng NFR-7.`]

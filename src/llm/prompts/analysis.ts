@@ -1,6 +1,7 @@
 import { HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
 import type { AnalysisContext, TranscriptLine, VerdictMaterial } from "@/engine/contexts";
 import { tokenize } from "@/engine/tokens";
+import { LABELS, type Label } from "@/engine/types";
 import { DATA_BLOCK_RULE, dataBlock } from "./data-block";
 
 /** One line per speaker and turn. Tokens are re-joined by single spaces, so no text can start a line of its own. */
@@ -50,13 +51,15 @@ export function renderVerdictMaterial(material: VerdictMaterial): string {
 }
 
 // The examples are about commuting on purpose: they must not resemble any scenario.
-/** What each label means: shared by Call 1 and by the replay judge when it labels a question. */
-export const LABEL_DEFINITIONS = [
-  "- confirm_grounded: câu hỏi xác nhận hoặc hỏi sâu thêm về điều chính nhân vật đã nói ở một lượt trước, không thêm ý mới. Ví dụ: nhân vật nói \"có dạo anh định đi xe buýt nhưng rồi thôi\", người hỏi: \"Dạo anh định đi xe buýt đó, chuyện thế nào ạ?\".",
-  "- boundary_probe: câu hỏi dò ranh giới của điều nhân vật đã nói (bao lâu, những lúc nào, ngoại lệ, tách nghĩa một cụm nhân vật vừa dùng). Ví dụ: nhân vật nói \"đi vậy cũng hơi oải\", người hỏi: \"'Oải' là sao ạ anh?\".",
-  "- open: câu hỏi mở hoặc trung tính, không dựa vào lời nào của nhân vật và không cài sẵn câu trả lời. Ví dụ: \"Buổi sáng anh thường đi làm thế nào ạ?\".",
-  "- leading: người hỏi tự thêm một nguyên nhân, một phán xét, một giải pháp hay một nội dung mà nhân vật chưa nói, rồi mời nhân vật đồng ý. Ví dụ: \"Anh có muốn một ứng dụng báo giờ xe buýt không?\" (người hỏi tự thêm \"ứng dụng báo giờ xe buýt\"); \"Chắc tại anh ngại dậy sớm nên mới thôi đúng không?\".",
-].join("\n");
+/** What each label means: shared by Call 1, by the replay judge when it labels a question, and by the guide check. */
+export const LABEL_DEFINITION: Record<Label, string> = {
+  confirm_grounded: "- confirm_grounded: câu hỏi xác nhận hoặc hỏi sâu thêm về điều chính nhân vật đã nói ở một lượt trước, không thêm ý mới. Ví dụ: nhân vật nói \"có dạo anh định đi xe buýt nhưng rồi thôi\", người hỏi: \"Dạo anh định đi xe buýt đó, chuyện thế nào ạ?\".",
+  boundary_probe: "- boundary_probe: câu hỏi dò ranh giới của điều nhân vật đã nói (bao lâu, những lúc nào, ngoại lệ, tách nghĩa một cụm nhân vật vừa dùng). Ví dụ: nhân vật nói \"đi vậy cũng hơi oải\", người hỏi: \"'Oải' là sao ạ anh?\".",
+  open: "- open: câu hỏi mở hoặc trung tính, không dựa vào lời nào của nhân vật và không cài sẵn câu trả lời. Ví dụ: \"Buổi sáng anh thường đi làm thế nào ạ?\".",
+  leading: "- leading: người hỏi tự thêm một nguyên nhân, một phán xét, một giải pháp hay một nội dung mà nhân vật chưa nói, rồi mời nhân vật đồng ý. Ví dụ: \"Anh có muốn một ứng dụng báo giờ xe buýt không?\" (người hỏi tự thêm \"ứng dụng báo giờ xe buýt\"); \"Chắc tại anh ngại dậy sớm nên mới thôi đúng không?\".",
+};
+
+export const LABEL_DEFINITIONS = LABELS.map((label) => LABEL_DEFINITION[label]).join("\n");
 
 const LABEL_RULES = [
   "Gán nhãn cho câu hỏi mới của người hỏi (trường label), chọn đúng một:",
