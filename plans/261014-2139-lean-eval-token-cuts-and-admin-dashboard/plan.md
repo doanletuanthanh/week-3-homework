@@ -64,7 +64,7 @@ The hard cap `eval_lean_budget_usd = 0.10` aborts the run through the `recordCal
 | 1 | [Cost baseline and reporting](./phase-01-start.md) | Done (verified on prod via rolled-back tx) | — | 1d |
 | 2 | [Model tiering by measured judgement sets](./phase-02-token-and-prompt-cuts.md) | Done: `.env.example` tiered; the user still has to set the deployment env | 1 | 1d |
 | 3 | [Persona QA agent (lean eval)](./phase-03-lean-eval-engine.md) | Done: sync ≈ 0.09 and batch ≈ 0.04 USD per persona; an unchanged re-eval costs 0; judge sets and stability moved to phase 4 | 1, 2 | 4d |
-| 4 | [Lean eval calibration](./phase-04-lean-eval-calibration.md) | Pending | 2, 3 | 1.5d |
+| 4 | [Lean eval calibration](./phase-04-lean-eval-calibration.md) | Partial: mutant recall 100%; clean personas fail `no_leaks` 50–100%, gate rule open ([report](../reports/calibration-261015-lean-eval.md)) | 2, 3 | 1.5d |
 | 5 | [Publish gate v2 and eval job](./phase-05-publish-gate-v2-and-eval-job.md) | Pending | 4 | 2d |
 | 6 | [Admin shell and cost dashboard](./phase-06-admin-shell-and-cost-dashboard.md) | Pending | 1 | 2d |
 | 7 | [Admin scenario review](./phase-07-admin-scenario-review.md) | Pending | 5, 6 | 2.5d |
