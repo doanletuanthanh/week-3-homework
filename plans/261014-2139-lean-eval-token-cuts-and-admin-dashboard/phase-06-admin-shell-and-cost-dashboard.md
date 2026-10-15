@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Admin shell and cost dashboard"
-status: pending
+status: done
 priority: P2
 effort: "2d"
 dependencies: [1]
@@ -11,6 +11,14 @@ dependencies: [1]
 
 ## Overview
 A `/admin` area in the existing Next.js app, open only to `ADMIN_EMAILS`. Its first page shows LLM spend and usage, read from the phase 1 cost queries.
+
+## Implementation plan (2026-10-15, after scout)
+Read-only: no LLM call, so 0 Gemini spend (the key has ≈ 30,000 VND left).
+- Next 16 (docs read): a layout renders in parallel with its page, so the layout's check does not guard the page's data. Every admin page calls `requireAdmin()` itself, and the data service takes the user and checks `isAdmin` again (the `access-isolation` pattern). `notFound()` gives a 404 status only before streaming starts, so admin pages use no `Suspense`.
+- The nav is a data table (`ADMIN_NAV`) with Overview only. Phases 7–8 add a row when their page exists, so no link leads to a 404.
+- New repo query `usageCounts` (sessions started, active learners, custom attempts) in `cost-report.ts`. Cache-hit and failed-call shares and the top roles come from `spendByRole`. Caps: `session_daily_cap_usd`, `generation_daily_budget_usd`, `eval_daily_budget_usd`. Moderation has no cap of its own.
+- Charts: one stacked bar per day by scope (30 days), and a meter per scope of today's spend against its cap. Inline SVG and CSS only.
+- A unit test walks `src/app/admin/**/page.tsx` and fails if a page does not call `requireAdmin`.
 
 ## Requirements
 - Functional: `/admin` shows today's and the last 30 days' spend by scope (session, generation, eval, moderation), against the caps from `config`. It also shows the top roles by cost, cost per session (p50/p95), cache-hit share, failed-call share, and counts of sessions, active learners and custom attempts.
@@ -35,9 +43,19 @@ A `/admin` area in the existing Next.js app, open only to `ADMIN_EMAILS`. Its fi
 4. E2E: an admin sees the numbers seeded in the test DB. A learner gets 404 on `/admin` and on every sub-route.
 
 ## Success Criteria
-- [ ] A non-admin gets 404 on every `/admin/*` route (integration and e2e).
-- [ ] The overview numbers match `pnpm il cost-report` for the same DB.
-- [ ] The page renders correctly at phone width (responsive spec).
+- [x] A non-admin gets 404 on every `/admin/*` route (integration and e2e). Guests, learners and demo accounts get the same 404 as a URL that does not exist: status, title and body (`tests/e2e/admin.spec.ts`). A unit test makes every admin page, route and server-function module call `requireAdmin()`, and every `src/server/admin` service call `assertAdmin`.
+- [x] The overview numbers match `pnpm il cost-report` for the same DB (`tests/server/admin-access.int.test.ts`, and the e2e reads today's total through the same query).
+- [x] The page renders correctly at phone width (e2e at 375 px, no horizontal scroll; screenshots checked).
+
+## Result (2026-10-15)
+Done with 0 LLM calls. Changes made after code review:
+- "Active learners" counts learners whose sessions made a model call. A session's `updated_at` also changes on system writes (sweeps, unpublish).
+- Demo accounts are left out of both usage counts.
+- The 30-day total is summed from the query rows, so it still matches the cost report around midnight.
+- The chart's figures are in a visually hidden table for screen readers.
+- The meters clamp `aria-valuenow` and treat a cap of 0 that has spend as over the cap.
+
+Side effect, intended: a new root `src/app/not-found.tsx` (Vietnamese) now serves every unmatched URL, and the admin area has no `metadata` title. Without this, a `notFound()` thrown under `/admin` had a different `<title>` from an unknown URL, which showed that the route exists.
 
 ## Risk Assessment
 - Aggregates over `llm_call` slow down as the table grows. Mitigation: the existing `(scope, created_at)` index. Add a `(created_at)` index only if a measured query takes > 300 ms.
