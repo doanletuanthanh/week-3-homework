@@ -4,7 +4,6 @@ import type { Database } from "@/db/client";
 import {
   createEvalRun,
   finishEvalRun,
-  finishQaRun,
   getEvalRun,
   listEpisodes,
   lockEvalRun,
@@ -14,7 +13,6 @@ import {
 } from "@/db/repo/eval";
 import { getScenarioByPersona } from "@/db/repo/sessions";
 import { getConfig } from "@/db/repo/config";
-import { dbToolCache } from "@/db/repo/eval-tool-cache";
 import { scenarios } from "@/db/schema";
 import { IsolationError } from "@/eval/isolation";
 import { formatQaReport } from "@/eval/qa/format";
@@ -22,10 +20,11 @@ import { buildReport, formatReport } from "@/eval/report";
 import { RateLimitError } from "@/eval/run-episode";
 import { episodeSpecs, estimateRun, runEpisodes } from "@/eval/run-eval";
 import type { EpisodeResult } from "@/eval/types";
-import { Budget, BudgetExceededError, runQaAgent } from "@/graphs/qa-agent-graph";
+import { BudgetExceededError } from "@/graphs/qa-agent-graph";
 import { LlmCallError, type CallModelDeps } from "@/llm/call-model";
 import { batchLlmDeps, type BatchCollectorOptions, type GeminiBatchCollector } from "@/llm/gemini-batch";
 import type { Role, RoleSpec } from "@/llm/roles";
+import { runEvalJob, startLeanEval, type StartLeanEvalResult } from "@/server/eval-job";
 import { isUuid } from "@/server/uuid";
 import { intOption, needsDb, parseArgs, reportCliErrors } from "../args";
 import { CliError, type CliIo, type Command } from "../scenario-file";
@@ -100,6 +99,8 @@ export function runEval(args: string[], io: CliIo, db: Database | null, deps: Ev
       });
     }
     if (profile !== "quick" && profile !== "full") throw new CliError("--profile phải là lean, quick hoặc full.");
+    const leanOnly = (["fast", "no-cache"] as const).filter((name) => switches.has(name));
+    if (leanOnly.length > 0) throw new CliError(`--${leanOnly[0]} chỉ dùng với --profile lean.`);
     if (profile === "full" && values.turns !== undefined) {
       throw new CliError(`Eval đầy đủ luôn chạy ${MAX_TURNS} lượt mỗi episode: không dùng --turns với --profile full.`);
     }
@@ -175,9 +176,11 @@ export function runEval(args: string[], io: CliIo, db: Database | null, deps: Ev
 
 /**
  * `eval <persona> --profile lean`: the persona QA agent, under the budget cap in config. It asks
- * nothing before spending: the cap bounds the run. By default every Gemini call goes through
- * Batch Mode at half price and the run takes minutes to hours; `--fast` calls the models directly.
- * Probes that already ran on the same content and models come from the cache unless `--no-cache`.
+ * nothing before spending: the cap bounds the run, and the daily eval budget bounds the day. By
+ * default every Gemini call goes through Batch Mode at half price and the run takes minutes to
+ * hours; `--fast` calls the models directly. Probes that already ran on the same content and
+ * models come from the cache unless `--no-cache`. The run is the same job the admin page starts:
+ * a lean run of the version that lost its runner is finished here instead of starting another.
  */
 async function runLean(
   db: Database,
@@ -198,42 +201,44 @@ async function runLean(
     }
     llmDeps = batchLlmDeps(collector, deps.llmDeps);
   }
+  const started = await startLeanEval(db, scenarioRow.id, null);
+  if (!started.ok) throw new CliError(LEAN_REFUSAL[started.reason](scenarioRow.personaId));
   const capUsd = await getConfig(db, "eval_lean_budget_usd");
-  const run = await createEvalRun(db, { scenarioId: scenarioRow.id, version: scenarioRow.version, profile: "lean", turns: 0, costEstimateUsd: capUsd });
-  if (!(await lockEvalRun(db, run.id))) throw new CliError(`Lần chạy ${run.id} đang được một lệnh eval khác chạy.`);
   io.out(
-    `Eval lean cho ${scenarioRow.personaId} phiên bản ${scenarioRow.version}, trần ${capUsd.toFixed(2)} USD, ${mode.batch ? "batch (rẻ một nửa, có thể mất vài phút tới vài giờ)" : "gọi trực tiếp (--fast)"}${mode.refreshCache ? ", chạy lại mọi phép thử và ghi đè cache" : ""}. Lần chạy ${run.id}`,
+    `Eval lean cho ${scenarioRow.personaId} phiên bản ${scenarioRow.version}, trần ${capUsd.toFixed(2)} USD, ${mode.batch ? "batch (rẻ một nửa, có thể mất vài phút tới vài giờ)" : "gọi trực tiếp (--fast)"}${mode.refreshCache ? ", chạy lại mọi phép thử và ghi đè cache" : ""}. Lần chạy ${started.runId}${started.resumed ? " (chạy tiếp lần trước bị dừng giữa chừng)" : ""}`,
   );
-  try {
-    const report = await runQaAgent(scenarioRow.content, {
-      runId: run.id,
-      version: scenarioRow.version,
-      budget: new Budget(capUsd),
-      llmDeps,
-      concurrency: mode.concurrency,
-      toolCache: dbToolCache(db),
-      refreshCache: mode.refreshCache,
-      rateLimitDelaysMs: deps.rateLimitDelaysMs,
-    });
-    await finishQaRun(db, run.id, report);
-    for (const line of formatQaReport(report)) io.out(line);
-    if (report.leaks.length > 0) io.out(`${report.leaks.length} cờ rò rỉ chờ phân xử: il adjudicate list ${scenarioRow.personaId}`);
+  const result = await runEvalJob(db, started.runId, {
+    llmDeps,
+    concurrency: mode.concurrency,
+    refreshCache: mode.refreshCache,
+    rateLimitDelaysMs: deps.rateLimitDelaysMs,
+    runLimitMs: null,
+  });
+  if (result.outcome === "done") {
+    for (const line of formatQaReport(result.report)) io.out(line);
+    if (result.report.leaks.length > 0) io.out(`${result.report.leaks.length} cờ rò rỉ chờ phân xử: il adjudicate list ${scenarioRow.personaId}`);
     return 0;
-  } catch (error) {
-    await markEvalRunFailed(db, run.id, error instanceof IsolationError ? "isolation" : error instanceof BudgetExceededError ? "budget" : "model");
-    if (error instanceof IsolationError) {
-      io.err(`Eval dừng: cô lập context bị vỡ. ${error.message}`);
-      return 1;
-    }
-    if (error instanceof BudgetExceededError) {
-      io.err(`Eval lean dừng vì ngân sách: ${error.message}. Tăng eval_lean_budget_usd (il config set) nếu persona cần nhiều phép thử hơn.`);
-      return 1;
-    }
-    if (!(error instanceof RateLimitError) && !(error instanceof LlmCallError)) throw error;
-    io.err(`Eval lean dừng: ${error.message}`);
+  }
+  if (result.outcome !== "failed") throw new CliError(`Lần chạy ${started.runId} đang được một lệnh eval khác chạy.`);
+  const { error } = result;
+  if (error instanceof IsolationError) {
+    io.err(`Eval dừng: cô lập context bị vỡ. ${error.message}`);
     return 1;
   }
+  if (error instanceof BudgetExceededError) {
+    io.err(`Eval lean dừng vì ngân sách: ${error.message}. Tăng eval_lean_budget_usd (il config set) nếu persona cần nhiều phép thử hơn.`);
+    return 1;
+  }
+  if (!(error instanceof RateLimitError) && !(error instanceof LlmCallError)) throw error;
+  io.err(`Eval lean dừng: ${error.message}`);
+  return 1;
 }
+
+const LEAN_REFUSAL: Record<Exclude<StartLeanEvalResult, { ok: true }>["reason"], (personaId: string) => string> = {
+  not_found: (personaId) => `Không tìm thấy persona "${personaId}".`,
+  running: (personaId) => `${personaId} đang có một lần eval lean chạy: chờ nó xong.`,
+  over_budget: () => "Ngân sách eval hôm nay không đủ cho thêm một lần eval lean. Chờ sang ngày, hoặc tăng eval_daily_budget_usd (il config set).",
+};
 
 export function evalCommand(db: Database | null, deps: () => EvalCommandDeps): Command {
   return {

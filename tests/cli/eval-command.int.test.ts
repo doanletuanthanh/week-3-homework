@@ -1,12 +1,17 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/client";
+import { claimEvalRun } from "@/db/repo/eval-jobs";
 import { recordLlmCall } from "@/db/repo/llm-calls";
 import { evalEpisodes, evalRuns, leakFlags, llmCalls, scenarios } from "@/db/schema";
+import { findAttack } from "@/eval/attacks";
 import { evaluateGate } from "@/eval/publish-gate";
+import { FLOOR_ATTACKS } from "@/eval/qa/floor";
+import { ATTACK_TURNS } from "@/eval/qa/tools";
 import type { EvalReport } from "@/eval/types";
 import { runEval, type EvalCommandDeps } from "../../cli/commands/eval";
-import { NO_VERDICT, a, rawAnalysis } from "../helpers/engine-fixtures";
+import { startLeanEval } from "@/server/eval-job";
+import { NO_VERDICT, a, chiThu, rawAnalysis } from "../helpers/engine-fixtures";
 import { NO_FINDINGS, repeat, roleModels } from "../helpers/eval-models";
 import { resetDatabase } from "../helpers/test-db";
 
@@ -83,12 +88,13 @@ describe("il eval --profile quick", () => {
 
     const gate = evaluateGate({
       violations: [],
-      run: { profile: run.profile, status: run.status, episodeKeys: ["good-1", "bad-1"], report: run.reportJson as EvalReport },
+      run: { id: run.id, profile: run.profile, status: run.status, report: run.reportJson as EvalReport },
       flags: [],
       strings: [],
+      approval: { adminEmail: "thanh@example.com", at: new Date(), evalRunId: run.id },
     });
 
-    expect(gate).toEqual({ ok: false, reasons: ['Lần eval "quick" không dùng được cho cổng publish: cần một lần eval đầy đủ (full).'] });
+    expect(gate).toEqual({ ok: false, reasons: ['Lần eval "quick" không dùng được cho cổng publish: cần một lần eval lean.'] });
   });
 
   it("writes one llm_call row per model attempt, scoped to eval and attributed to the run", async () => {
@@ -244,15 +250,52 @@ describe("il eval --resume", () => {
   });
 });
 
+describe("il eval --profile lean", () => {
+  /** Replies for a lean run in which no item opens and nothing leaks. */
+  function lean() {
+    const attackReplies = FLOOR_ATTACKS.reduce((sum, id) => sum + Math.min(ATTACK_TURNS, findAttack(id).opening.length), 0);
+    return roleModels({
+      QA_PLANNER: [{ structured: { public_leaks: [], risks: [], deliveries: [], paraphrases: [], attacks: [] } }, { structured: { decision: "done", probes: [], findings: [] } }],
+      ANALYSIS: repeat(2 * chiThu.items.length + attackReplies, { structured: rawAnalysis({ question_type: "other" }) }),
+      PERSONA: repeat(attackReplies, { text: "Chị cũng không biết nói sao nữa em." }),
+      EVAL_LEAK_JUDGE: [{ structured: { replies: Array.from({ length: attackReplies }, (_, index) => ({ reply: `R${index + 1}`, told: [], topics: [] })) } }],
+    });
+  }
+
+  it("runs the QA agent as a job, stores the report and prints it", async () => {
+    const { io, out, err } = capture();
+
+    expect(await runEval(["chi-thu", "--profile", "lean", "--fast", "--concurrency", "1"], io, getDb(), deps(lean()).value)).toBe(0);
+
+    expect(err).toEqual([]);
+    const [run] = await runs();
+    expect(out[0]).toBe(`Eval lean cho chi-thu phiên bản 1, trần 0.10 USD, gọi trực tiếp (--fast). Lần chạy ${run.id}`);
+    expect(run).toMatchObject({ profile: "lean", status: "done", runAttempt: 1, runToken: null, requestedBy: null });
+  });
+
+  it("refuses while another lean run of the version holds its runner", async () => {
+    const [scenario] = await getDb().select().from(scenarios);
+    const started = await startLeanEval(getDb(), scenario.id, "thanh@example.com");
+    await claimEvalRun(getDb(), started.ok ? started.runId : "");
+    const { io, err } = capture();
+
+    expect(await runEval(["chi-thu", "--profile", "lean", "--fast"], io, getDb(), deps(lean()).value)).toBe(1);
+
+    expect(err).toEqual(["chi-thu đang có một lần eval lean chạy: chờ nó xong."]);
+    expect(await runs()).toHaveLength(1);
+  });
+});
+
 describe("il eval refusals", () => {
   it.each([
     [[], /Cách dùng/],
     [["no-such-persona"], /Không tìm thấy persona "no-such-persona"/],
-    [["chi-thu", "--profile", "reduced"], /--profile phải là quick hoặc full/],
+    [["chi-thu", "--profile", "reduced"], /--profile phải là lean, quick hoặc full/],
     [["chi-thu", "--turns", "0"], /--turns phải là số nguyên từ 1 đến 30/],
     [["chi-thu", "--turns", "31"], /--turns phải là số nguyên từ 1 đến 30/],
     [["chi-thu", "--concurrency", "x"], /--concurrency phải là số nguyên/],
-    [["chi-thu", "--fast"], /Không có tùy chọn --fast/],
+    [["chi-thu", "--fast"], /--fast chỉ dùng với --profile lean/],
+    [["chi-thu", "--no-cache"], /--no-cache chỉ dùng với --profile lean/],
     [["chi-thu", "--profile"], /--profile cần một giá trị/],
   ])("refuses %j without calling a model", async (args, message) => {
     const models = script(0, 0);

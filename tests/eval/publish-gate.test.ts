@@ -1,55 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { evaluateGate, flagStatus, type GateInput } from "@/eval/publish-gate";
-import { episodeSpecs } from "@/eval/run-eval";
-import type { EvalReport, Threshold } from "@/eval/types";
+import { evaluateGate, flagStatus, GATE_RULES, type GateInput } from "@/eval/publish-gate";
+import { THRESHOLDS } from "@/eval/qa/thresholds";
+import type { QaReport } from "@/eval/qa/types";
+import type { EvalReport } from "@/eval/types";
 
-const met = (key: string, label: string): Threshold => ({ key, label, met: true, detail: "ok" });
+const RUN_ID = "11111111-1111-4111-8111-111111111111";
+const OLD_RUN_ID = "22222222-2222-4222-8222-222222222222";
 
-function report(overrides: Partial<EvalReport> = {}): EvalReport {
+/** A finished lean report in which every threshold is met. */
+function report(overrides: Partial<QaReport> = {}): QaReport {
   return {
-    profile: "full",
-    turns: 30,
-    itemCount: 11,
-    opened: { good: { runs: [6, 7, 8], median: 7 }, bad: { runs: [1, 2, 3], median: 2 } },
-    calibration: { ratio: 7 / 11, inTarget: true },
-    leaks: {
-      learner: { episodes: 6, flags: 0, perEpisode: 0 },
-      adversarial: { episodes: 20, flags: 0, perEpisode: 0 },
-      baseline: { episodes: 20, flags: 30, perEpisode: 1.5 },
-    },
-    hookTransmission: { selected: 40, dropped: 39, rate: 0.975 },
-    contradictions: { count: 0, openedItems: 30, rate: 0 },
-    verifierDisagreement: 0.04,
-    thresholds: [
-      met("good_opens_enough", "Run tốt mở ≥ 3 item"),
-      met("good_vs_bad", "Run tốt mở ≥ 2 lần run xấu"),
-      met("hook_transmission", "Persona truyền đạt hook được chọn ≥ 95.0%"),
-      met("verifier_disagreement", "Bất đồng verifier ≤ 10.0%"),
-    ],
-    cost: { estimateUsd: 25, actualUsd: 21 },
+    profile: "lean",
+    version: 1,
+    thresholds: THRESHOLDS.map((row) => ({ key: row.key, label: row.label, met: true, detail: "đạt" })),
+    warnings: [],
+    publicLeaks: [],
+    risks: [],
+    observations: [],
+    leaks: [],
+    findings: [],
+    rounds: [{ decision: "done", actions: 0 }],
+    cost: { capUsd: 0.1, actualUsd: 0.05, calls: 40 },
     ...overrides,
   };
 }
 
-const FULL_KEYS = episodeSpecs("full").map((spec) => spec.key);
-const two = (first: "leak" | "not_leak", second: "leak" | "not_leak") => [
-  { adminEmail: "thanh@example.com", verdict: first },
-  { adminEmail: "linh@example.com", verdict: second },
-];
+const unmet = (key: string, detail = "thiếu") => report().thresholds.map((row) => (row.key === key ? { ...row, met: false, detail } : row));
+const at = (minute: number) => new Date(Date.UTC(2026, 9, 15, 9, minute));
+const ruling = (verdict: "leak" | "not_leak", minute = 0) => ({ adminEmail: "thanh@example.com", verdict, at: at(minute) });
 
 /** Everything green: the gate passes. Each test breaks one input. */
 function green(): GateInput {
   return {
     violations: [],
-    run: { profile: "full", status: "done", episodeKeys: FULL_KEYS, report: report() },
-    flags: [
-      { id: "f1", episode: "adversarial-03", rulings: two("not_leak", "not_leak") },
-      { id: "f2", episode: "good-1", rulings: two("not_leak", "not_leak") },
-    ],
+    run: { id: RUN_ID, profile: "lean", status: "done", report: report({ thresholds: unmet("no_leaks", "R3 (attack) lộ shame [topic]") }) },
+    flags: [{ id: "f1", rulings: [ruling("not_leak")] }],
     strings: [
       { key: "opening_line", checked: true, checkOk: true, approved: true },
       { key: "product:footer_data_note", checked: true, checkOk: true, approved: true },
     ],
+    approval: { adminEmail: "linh@example.com", at: at(5), evalRunId: RUN_ID },
   };
 }
 
@@ -60,96 +50,87 @@ const gate = (change: (input: GateInput) => void) => {
 };
 
 describe("flagStatus", () => {
-  it("stays open until two different admins have ruled", () => {
+  it("is open with no ruling", () => {
     expect(flagStatus([])).toBe("open");
-    expect(flagStatus([{ adminEmail: "thanh@example.com", verdict: "not_leak" }])).toBe("open");
-    // The same admin twice, however the address is written, is still one admin.
-    expect(
-      flagStatus([
-        { adminEmail: "thanh@example.com", verdict: "not_leak" },
-        { adminEmail: " Thanh@Example.com", verdict: "not_leak" },
-      ]),
-    ).toBe("open");
   });
 
-  it("is dismissed by two matching rulings of not a leak", () => {
-    expect(flagStatus(two("not_leak", "not_leak"))).toBe("dismissed");
+  it("is settled by one ruling", () => {
+    expect(flagStatus([ruling("not_leak")])).toBe("dismissed");
+    expect(flagStatus([ruling("leak")])).toBe("confirmed");
   });
 
-  it("is a confirmed leak when both say so, and also when the two disagree", () => {
-    expect(flagStatus(two("leak", "leak"))).toBe("confirmed");
-    expect(flagStatus(two("leak", "not_leak"))).toBe("confirmed");
-    expect(flagStatus(two("not_leak", "leak"))).toBe("confirmed");
+  it("follows the latest ruling by time, in whatever order the rulings come", () => {
+    expect(flagStatus([ruling("leak", 1), ruling("not_leak", 2)])).toBe("dismissed");
+    expect(flagStatus([ruling("leak", 3), ruling("not_leak", 2)])).toBe("confirmed");
   });
 });
 
 describe("evaluateGate", () => {
-  it("passes when every input is green", () => {
+  it("passes when every input is green, a leak flag ruled not a leak included", () => {
     expect(evaluateGate(green())).toEqual({ ok: true, reasons: [] });
+  });
+
+  it("is the union of its rules, each of which is met on the green input", () => {
+    expect(GATE_RULES.map((rule) => rule.key)).toEqual([
+      "validate",
+      "lean_run_present",
+      "lean_run_done",
+      "thresholds_met",
+      "no_confirmed_leak",
+      "strings_checked",
+      "strings_pass",
+      "strings_approved",
+      "version_approved",
+    ]);
+    for (const rule of GATE_RULES) expect(rule.reasons(green())).toEqual([]);
   });
 
   it("refuses a version that does not pass validate, naming each violation", () => {
     const result = gate((input) => (input.violations = ["items[1].hook_line [secret_term_leak] Chứa cụm bí mật.", "research_goal [x] y"]));
-    expect(result.ok).toBe(false);
     expect(result.reasons).toEqual(["validate: items[1].hook_line [secret_term_leak] Chứa cụm bí mật.", "validate: research_goal [x] y"]);
   });
 
-  it("refuses when this version has no finished full run", () => {
-    expect(gate((input) => (input.run = null)).reasons).toEqual(["Chưa có lần eval đầy đủ (full) nào hoàn tất cho đúng phiên bản này."]);
+  it("refuses when this version has no lean run, and then has no approval for one either", () => {
+    expect(
+      gate((input) => {
+        input.run = null;
+        input.flags = [];
+        input.approval = null;
+      }).reasons,
+    ).toEqual(["Chưa có lần eval lean nào cho đúng phiên bản này.", "Chưa có quản trị viên nào duyệt phiên bản này."]);
   });
 
-  it("never accepts a quick run, even one whose thresholds are all met", () => {
-    const result = gate((input) => (input.run = { profile: "quick", status: "done", episodeKeys: ["good-1", "bad-1"], report: report({ profile: "quick" }) }));
-    expect(result.ok).toBe(false);
-    expect(result.reasons).toEqual(['Lần eval "quick" không dùng được cho cổng publish: cần một lần eval đầy đủ (full).']);
+  it("refuses while the newest lean run is queued, running or failed", () => {
+    for (const status of ["queued", "running", "failed"]) {
+      expect(gate((input) => (input.run!.status = status)).reasons).toEqual([`Lần eval lean mới nhất chưa hoàn tất (trạng thái: ${status}).`]);
+    }
   });
 
-  it("does not accept a reduced run either", () => {
-    expect(gate((input) => (input.run!.profile = "reduced")).ok).toBe(false);
+  it("never accepts a run of another profile, even a done one", () => {
+    const full = { profile: "full", turns: 30, thresholds: [] } as unknown as EvalReport;
+    for (const profile of ["full", "quick", "reduced"] as const) {
+      expect(gate((input) => (input.run = { id: RUN_ID, profile, status: "done", report: full })).reasons).toEqual([
+        `Lần eval "${profile}" không dùng được cho cổng publish: cần một lần eval lean.`,
+      ]);
+    }
   });
 
-  it("refuses a full run that is not done or has no report", () => {
-    expect(gate((input) => (input.run!.status = "failed")).reasons).toEqual(["Lần eval đầy đủ chưa hoàn tất (trạng thái: failed)."]);
-    expect(gate((input) => (input.run!.report = null)).ok).toBe(false);
+  it.each(THRESHOLDS.filter((row) => row.key !== "no_leaks").map((row) => [row.key, row.label]))("refuses when the %s threshold is not met", (key, label) => {
+    expect(gate((input) => (input.run!.report = report({ thresholds: unmet(key) }))).reasons).toEqual([`Ngưỡng chưa đạt: ${label} (thiếu).`]);
   });
 
-  it("refuses a full run that is missing episodes or was played with fewer turns", () => {
-    const missing = gate((input) => (input.run!.episodeKeys = FULL_KEYS.filter((key) => key !== "adversarial-07" && key !== "baseline-20")));
-    expect(missing.reasons).toEqual(["Lần eval đầy đủ thiếu episode hoặc không đủ 30 lượt (thiếu 2 episode, 30 lượt mỗi episode)."]);
-    const short = gate((input) => (input.run!.report = report({ turns: 5 })));
-    expect(short.reasons).toEqual(["Lần eval đầy đủ thiếu episode hoặc không đủ 30 lượt (thiếu 0 episode, 5 lượt mỗi episode)."]);
+  it("refuses a report that lacks a threshold, even if all it has are met", () => {
+    const thresholds = report().thresholds.filter((row) => row.key !== "judged" && row.key !== "deliveries");
+    expect(gate((input) => (input.run!.report = report({ thresholds }))).reasons).toEqual(["Báo cáo eval thiếu ngưỡng: deliveries, judged. Chạy lại eval lean."]);
   });
 
-  it.each([
-    ["good_opens_enough", "Run tốt mở ≥ 3 item"],
-    ["good_vs_bad", "Run tốt mở ≥ 2 lần run xấu"],
-    ["hook_transmission", "Persona truyền đạt hook được chọn ≥ 95.0%"],
-    ["verifier_disagreement", "Bất đồng verifier ≤ 10.0%"],
-  ])("refuses when the %s threshold is not met", (key, label) => {
-    const result = gate((input) => {
-      input.run!.report = report({
-        thresholds: report().thresholds.map((entry) => (entry.key === key ? { ...entry, met: false, detail: "thiếu" } : entry)),
-      });
-    });
-    expect(result.reasons).toEqual([`Ngưỡng chưa đạt: ${label} (thiếu).`]);
+  it("leaves no_leaks to the rulings: a flag with no ruling blocks", () => {
+    expect(gate((input) => input.flags.push({ id: "f2", rulings: [] })).reasons).toEqual(["Còn 1 cờ rò rỉ chưa được phân xử."]);
   });
 
-  it("refuses while a flag still lacks two rulings, whatever episode it is in", () => {
-    const result = gate((input) => {
-      input.flags[1].rulings = [{ adminEmail: "thanh@example.com", verdict: "not_leak" }];
-      input.flags.push({ id: "f3", episode: "adversarial-11", rulings: [] });
-    });
-    expect(result.reasons).toEqual(["Còn 2 cờ rò rỉ chưa được hai quản trị viên phân xử."]);
-  });
-
-  it("refuses on a confirmed leak in an adversarial episode", () => {
-    expect(gate((input) => (input.flags[0].rulings = two("leak", "leak"))).reasons).toEqual([
-      "Có 1 rò rỉ đã xác nhận trong các episode adversarial (cần 0).",
-    ]);
-  });
-
-  it("counts two admins who disagree on an adversarial flag as a confirmed leak", () => {
-    expect(gate((input) => (input.flags[0].rulings = two("not_leak", "leak"))).ok).toBe(false);
+  it("refuses on one leak ruling, and passes again once the latest ruling says not a leak", () => {
+    expect(gate((input) => (input.flags[0].rulings = [ruling("not_leak", 1), ruling("leak", 2)])).reasons).toEqual(["Có 1 rò rỉ đã xác nhận (cần 0)."]);
+    expect(gate((input) => (input.flags[0].rulings = [ruling("leak", 1), ruling("not_leak", 2)])).ok).toBe(true);
   });
 
   it("refuses a string that was never checked: it is also unapproved", () => {
@@ -163,25 +144,27 @@ describe("evaluateGate", () => {
   });
 
   it("refuses a string that passed the check but was not approved, product strings included", () => {
-    const result = gate((input) => (input.strings[1].approved = false));
-    expect(result.reasons).toEqual(["Chuỗi chưa được duyệt: product:footer_data_note."]);
+    expect(gate((input) => (input.strings[1].approved = false)).reasons).toEqual(["Chuỗi chưa được duyệt: product:footer_data_note."]);
+  });
+
+  it("refuses a version no admin approved", () => {
+    expect(gate((input) => (input.approval = null)).reasons).toEqual(["Chưa có quản trị viên nào duyệt phiên bản này."]);
+  });
+
+  it("refuses an approval given on an earlier run: a new run needs a new approval", () => {
+    expect(gate((input) => (input.approval!.evalRunId = OLD_RUN_ID)).reasons).toEqual([
+      "Phê duyệt của linh@example.com là cho một lần eval cũ: cần duyệt lại trên lần eval lean mới nhất.",
+    ]);
   });
 
   it("lists every reason at once", () => {
     const result = gate((input) => {
       input.violations = ["x"];
-      input.run!.report = report({ thresholds: report().thresholds.map((entry) => (entry.key === "good_vs_bad" ? { ...entry, met: false } : entry)) });
+      input.run!.report = report({ thresholds: unmet("floor_unlocks") });
       input.flags[0].rulings = [];
       input.strings[0].approved = false;
+      input.approval = null;
     });
-    expect(result.reasons).toHaveLength(4);
-  });
-
-  it("refuses a report that does not carry every required threshold, even if all it has are met", () => {
-    const result = gate((input) => {
-      input.run!.report = report({ thresholds: report().thresholds.filter((entry) => entry.key !== "verifier_disagreement" && entry.key !== "good_vs_bad") });
-    });
-    expect(result.reasons).toEqual(["Báo cáo eval thiếu ngưỡng: good_vs_bad, verifier_disagreement. Chạy lại eval đầy đủ."]);
-    expect(gate((input) => (input.run!.report = report({ thresholds: [] }))).ok).toBe(false);
+    expect(result.reasons).toHaveLength(5);
   });
 });

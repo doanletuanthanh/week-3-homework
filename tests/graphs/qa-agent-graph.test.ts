@@ -244,6 +244,33 @@ describe("budget", () => {
     expect(models.records).toEqual([]);
   });
 
+  it("does not count floor probes already in the cache against the cap: a takeover fits what is left", async () => {
+    const store = new Map<string, unknown>();
+    const toolCache = { get: async (key: string) => (store.get(key) ?? null) as never, set: async (key: string, value: unknown) => void store.set(key, value) };
+    const script = (analysisSteps: ScriptedStep[], personaSteps: number) =>
+      roleModels({
+        QA_PLANNER: [plan(), done],
+        ANALYSIS: analysisSteps,
+        PERSONA: repeat(personaSteps, { text: "Chị cũng không biết nói sao nữa em." }),
+        EVAL_LEAK_JUDGE: [judged(ATTACK_REPLIES)],
+      });
+    await runQaAgent(chiThu, {
+      runId: RUN_ID, version: 1, budget: new Budget(0.1), concurrency: 1, toolCache,
+      llmDeps: script([...chiThu.items.map((item) => analysis(opens(item))), ...repeat(ATTACK_REPLIES, neutral)], ATTACK_REPLIES).llmDeps,
+    });
+    // Only the probes stay, as after a runner that died before it reported.
+    for (const key of [...store.keys()]) if (key.startsWith("run:")) store.delete(key);
+
+    const small = 0.03;
+    await expect(runQaAgent(chiThu, { runId: RUN_ID, version: 1, budget: new Budget(small), llmDeps: roleModels({}).llmDeps, concurrency: 1 })).rejects.toBeInstanceOf(
+      BudgetExceededError,
+    );
+    const second = script([], 0);
+    const report = await runQaAgent(chiThu, { runId: RUN_ID, version: 1, budget: new Budget(small), llmDeps: second.llmDeps, concurrency: 1, toolCache });
+    expect(report.thresholds.filter((threshold) => !threshold.met)).toEqual([]);
+    expect(second.calls("ANALYSIS")).toHaveLength(0);
+  });
+
   it("reports the cap, not a model failure, when the hard stop cuts a call off", async () => {
     // The plan call alone costs 0.2 USD: past the 0.1 cap, so the next call is cut off.
     const models = roleModels({

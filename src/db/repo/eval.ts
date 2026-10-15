@@ -10,6 +10,7 @@ import {
   scenarios,
   sessions,
   stringApprovals,
+  versionApprovals,
   type ADJUDICATION_VERDICTS,
   type StringCheckResult,
 } from "../schema";
@@ -18,6 +19,7 @@ export type EvalRunRow = typeof evalRuns.$inferSelect;
 export type LeakFlagRow = typeof leakFlags.$inferSelect;
 export type AdjudicationRow = typeof adjudications.$inferSelect;
 export type StringApprovalRow = typeof stringApprovals.$inferSelect;
+export type VersionApprovalRow = typeof versionApprovals.$inferSelect;
 
 export async function createEvalRun(
   db: Executor,
@@ -93,16 +95,18 @@ export async function finishEvalRun(db: Database, runId: string, report: EvalRep
 }
 
 /**
- * Closes a lean run: the QA agent's report, its actual cost, and one `leak_flag` row per leak, in
- * one transaction. A leak is filed under its reply id; it has no turn of a session, so `turn` is 0.
- * A run that is already closed is left as it is (false).
+ * Closes a lean run: the QA agent's report, its actual cost over every runner, and one `leak_flag`
+ * row per leak, in one transaction. A leak is filed under its reply id; it has no turn of a
+ * session, so `turn` is 0. Only the runner holding `token` closes the run; a run that is already
+ * closed, or no longer this runner's, is left as it is (false).
  */
-export async function finishQaRun(db: Database, runId: string, report: QaReport): Promise<boolean> {
+export async function finishQaRun(db: Database, write: { runId: string; token: string; report: QaReport; costActualUsd: number }): Promise<boolean> {
+  const { runId, report } = write;
   return db.transaction(async (tx) => {
     const closed = await tx
       .update(evalRuns)
-      .set({ status: "done", failureReason: null, reportJson: report, costActualUsd: report.cost.actualUsd, finishedAt: new Date() })
-      .where(and(eq(evalRuns.id, runId), ne(evalRuns.status, "done")))
+      .set({ status: "done", failureReason: null, reportJson: report, costActualUsd: write.costActualUsd, finishedAt: new Date(), runToken: null })
+      .where(and(eq(evalRuns.id, runId), eq(evalRuns.status, "running"), eq(evalRuns.runToken, write.token)))
       .returning({ id: evalRuns.id });
     if (closed.length === 0) return false;
     const flags = report.leaks.map((leak) => ({
@@ -121,30 +125,17 @@ export async function finishQaRun(db: Database, runId: string, report: QaReport)
 }
 
 /**
- * The newest finished run of one scenario whose leak flags admins rule on: a full run or a lean
- * one, whichever finished last.
+ * The newest lean run of one scenario version, whatever its status: the run the publish gate
+ * reads. Full, quick and reduced runs stay stored for history; the gate ignores them.
  */
-export async function latestFlaggedRun(db: Executor, scenarioId: string): Promise<EvalRunRow | null> {
+export async function latestLeanRun(db: Executor, scenarioId: string): Promise<EvalRunRow | null> {
   const [run] = await db
     .select()
     .from(evalRuns)
-    .where(and(eq(evalRuns.scenarioId, scenarioId), inArray(evalRuns.profile, ["full", "lean"]), eq(evalRuns.status, "done")))
-    .orderBy(desc(evalRuns.finishedAt))
+    .where(and(eq(evalRuns.scenarioId, scenarioId), eq(evalRuns.profile, "lean")))
+    .orderBy(desc(evalRuns.createdAt))
     .limit(1);
   return run ?? null;
-}
-
-/** The newest finished full run of one scenario version, with the keys of its stored episodes. */
-export async function latestFullRun(db: Executor, scenarioId: string) {
-  const [run] = await db
-    .select()
-    .from(evalRuns)
-    .where(and(eq(evalRuns.scenarioId, scenarioId), eq(evalRuns.profile, "full"), eq(evalRuns.status, "done")))
-    .orderBy(desc(evalRuns.finishedAt))
-    .limit(1);
-  if (!run) return null;
-  const keys = await db.select({ key: evalEpisodes.key }).from(evalEpisodes).where(eq(evalEpisodes.runId, run.id));
-  return { run, episodeKeys: keys.map((row) => row.key) };
 }
 
 export type FlagWithRulings = { flag: LeakFlagRow; rulings: AdjudicationRow[] };
@@ -182,18 +173,27 @@ export async function getFlag(db: Executor, flagId: string) {
   return { ...row, rulings };
 }
 
-/** Records an admin's ruling on a flag, replacing the one that admin gave before. */
+/** Records an admin's ruling on a flag. Earlier rulings stay as history; the latest one counts. */
 export async function saveAdjudication(
   db: Executor,
   ruling: { flagId: string; adminEmail: string; verdict: (typeof ADJUDICATION_VERDICTS)[number]; reason: string },
 ): Promise<void> {
-  await db
-    .insert(adjudications)
-    .values(ruling)
-    .onConflictDoUpdate({
-      target: [adjudications.flagId, adjudications.adminEmail],
-      set: { verdict: ruling.verdict, reason: ruling.reason, at: new Date() },
-    });
+  await db.insert(adjudications).values(ruling);
+}
+
+/** Records an admin's approval of a version, given on one lean run of it. */
+export async function approveVersion(
+  db: Executor,
+  approval: { scenarioId: string; version: number; evalRunId: string; adminEmail: string; note: string },
+): Promise<VersionApprovalRow> {
+  const [row] = await db.insert(versionApprovals).values(approval).returning();
+  return row;
+}
+
+/** The newest approval of a version; whether it still counts depends on the run it was given on. */
+export async function latestApproval(db: Executor, scenarioId: string): Promise<VersionApprovalRow | null> {
+  const [row] = await db.select().from(versionApprovals).where(eq(versionApprovals.scenarioId, scenarioId)).orderBy(desc(versionApprovals.at)).limit(1);
+  return row ?? null;
 }
 
 type StringTarget = { scope: "persona" | "product"; personaId: string };
@@ -246,9 +246,9 @@ export async function decideString(
   return written.length > 0;
 }
 
-/** Marks a version published through the interim CLI gate (FR-35). */
+/** Marks a version published through the publish gate, which is no longer an interim one. */
 export async function publishScenario(db: Executor, scenarioId: string): Promise<void> {
-  await db.update(scenarios).set({ status: "published", interimGate: true }).where(eq(scenarios.id, scenarioId));
+  await db.update(scenarios).set({ status: "published", interimGate: false }).where(eq(scenarios.id, scenarioId));
 }
 
 /**

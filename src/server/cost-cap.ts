@@ -2,28 +2,32 @@ import { sql } from "drizzle-orm";
 import { DAY_ZONE } from "@/config/limits";
 import type { Executor } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
+import type { LlmScope } from "@/db/schema";
 
 /**
- * LLM spend of interview sessions since 00:00 UTC+7: every `llm_call` of scope `session` today
- * (failed attempts and retries included), plus the `daily_spend` ledger, which keeps the spend of
- * rows that no longer exist. Generation and eval spend have their own budget and never count here.
+ * LLM spend of one scope since 00:00 UTC+7: every `llm_call` of that scope today (failed attempts
+ * and retries included), plus the `daily_spend` ledger, which keeps the spend of rows that no
+ * longer exist. Each scope has its own budget; spend of one never counts against another.
  */
-export async function sessionSpendToday(db: Executor): Promise<number> {
+export async function spendToday(db: Executor, scope: LlmScope): Promise<number> {
   const [row] = await db.execute<{ usd: number }>(sql`
     SELECT (
       COALESCE((
         SELECT sum(cost_usd) FROM llm_call
-        WHERE scope = 'session'
+        WHERE scope = ${scope}
           AND created_at >= date_trunc('day', now() AT TIME ZONE ${DAY_ZONE}) AT TIME ZONE ${DAY_ZONE}
       ), 0)
       + COALESCE((
         SELECT sum(usd) FROM daily_spend
-        WHERE scope = 'session' AND day = (now() AT TIME ZONE ${DAY_ZONE})::date
+        WHERE scope = ${scope} AND day = (now() AT TIME ZONE ${DAY_ZONE})::date
       ), 0)
     )::float8 AS usd
   `);
   return row.usd;
 }
+
+/** LLM spend of interview sessions today. Generation and eval spend never count here. */
+export const sessionSpendToday = (db: Executor): Promise<number> => spendToday(db, "session");
 
 /**
  * FR-37: the cap blocks new sessions only; a session that exists runs to its end. Learners stop

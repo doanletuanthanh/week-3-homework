@@ -1,15 +1,14 @@
 import type { Database } from "@/db/client";
-import { latestFullRun, listFlags, publishScenario, unpublishPersona } from "@/db/repo/eval";
+import { latestApproval, latestLeanRun, listFlags, publishScenario, unpublishPersona } from "@/db/repo/eval";
 import { listOtherPersonaTags } from "@/db/repo/scenarios";
 import { getScenarioByPersona } from "@/db/repo/sessions";
 import { evaluateGate, type GateResult } from "@/eval/publish-gate";
-import { isEpisodeReport } from "@/eval/types";
 import { validateScenario } from "@/scenario/validate";
 import { needsDb, parseArgs, reportCliErrors } from "../args";
 import { CliError, type CliIo, type Command } from "../scenario-file";
 import { PRODUCT_TARGET, loadStringStates, loadStringTarget } from "./strings";
 
-/** Everything the interim gate reads about the newest version of a persona, and its answer. */
+/** Everything the publish gate reads about the newest version of a persona, and its answer. */
 export async function checkPublishGate(db: Database, personaId: string) {
   const found = await getScenarioByPersona(db, personaId);
   if (!found) throw new CliError(`Không tìm thấy persona "${personaId}".`);
@@ -17,8 +16,9 @@ export async function checkPublishGate(db: Database, personaId: string) {
 
   const otherPersonas = await listOtherPersonaTags(db, scenario.topicId, scenario.personaId);
   const validation = validateScenario(scenario.content, { otherPersonas });
-  const latest = await latestFullRun(db, scenario.id);
-  const flags = latest ? await listFlags(db, latest.run.id) : [];
+  const run = await latestLeanRun(db, scenario.id);
+  const flags = run ? await listFlags(db, run.id) : [];
+  const approval = await latestApproval(db, scenario.id);
   const strings = [
     ...(await loadStringStates(db, await loadStringTarget(db, personaId))),
     ...(await loadStringStates(db, await loadStringTarget(db, PRODUCT_TARGET))).map((entry) => ({ ...entry, key: `${PRODUCT_TARGET}:${entry.key}` })),
@@ -26,20 +26,19 @@ export async function checkPublishGate(db: Database, personaId: string) {
 
   const gate: GateResult = evaluateGate({
     violations: validation.violations.map((violation) => `${violation.path || "(gốc)"} [${violation.code}] ${violation.message}`),
-    run: latest
-      ? { profile: latest.run.profile, status: latest.run.status, episodeKeys: latest.episodeKeys, report: isEpisodeReport(latest.run.reportJson) ? latest.run.reportJson : null }
-      : null,
-    flags: flags.map(({ flag, rulings }) => ({ id: flag.id, episode: flag.episode, rulings })),
+    run: run ? { id: run.id, profile: run.profile, status: run.status, report: run.reportJson } : null,
+    flags: flags.map(({ flag, rulings }) => ({ id: flag.id, rulings })),
     strings,
+    approval,
   });
-  return { scenario, gate };
+  return { scenario, run, gate };
 }
 
 /**
- * `publish <persona>` (FR-35, interim gate): publishes the newest version only when `validate` is
- * clean, a full evaluation of that exact version met every threshold, every leak flag was closed
- * by two admins with no confirmed leak in the adversarial episodes, and every fixed string passed
- * FR-36 and was approved. Otherwise it changes nothing and lists each reason.
+ * `publish <persona>`: publishes the newest version only when `validate` is clean, its newest
+ * lean run is done with every threshold met, each leak flag of that run was ruled not a leak,
+ * every fixed string passed FR-36 and was approved, and an admin approved the version on that
+ * run. Otherwise it changes nothing and lists each reason.
  */
 export function runPublish(args: string[], io: CliIo, db: Database | null, operator: () => string): Promise<number> {
   return reportCliErrors(io, async () => {
@@ -60,7 +59,7 @@ export function runPublish(args: string[], io: CliIo, db: Database | null, opera
       return 1;
     }
     await publishScenario(db, scenario.id);
-    io.out(`Đã publish ${name} qua cổng tạm (${email}). Phiên bản mang cờ interim_gate cho tới khi qua lại cổng đầy đủ.`);
+    io.out(`Đã publish ${name} (${email}).`);
     return 0;
   });
 }
@@ -68,7 +67,7 @@ export function runPublish(args: string[], io: CliIo, db: Database | null, opera
 export function publishCommand(db: Database | null, operator: () => string): Command {
   return {
     usage: "publish <persona>",
-    summary: "Publish phiên bản mới nhất nếu qua cổng tạm (FR-35); nếu không, nêu từng lý do.",
+    summary: "Publish phiên bản mới nhất nếu qua cổng publish (eval lean); nếu không, nêu từng lý do.",
     run: (args, io) => runPublish(args, io, db, operator),
   };
 }

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { getDb } from "@/db/client";
 import { runAdjudicate } from "../../cli/commands/adjudicate";
 import { runPublish, runUnpublish } from "../../cli/commands/publish";
-import { approveEverything, seedFullRun } from "../helpers/publish-fixtures";
+import { approveEverything, approveNewest, seedLeanRun } from "../helpers/publish-fixtures";
 import { signInAsNewLearner, uniqueEmail } from "./helpers/auth";
 import { ask, composer, sendButton } from "./helpers/chat";
 import { db } from "./helpers/db";
@@ -10,7 +10,6 @@ import { postTurn } from "./helpers/turn-api";
 
 const BEING_UPDATED = "Nhân vật này đang được cập nhật.";
 const thanh = () => "admin-e2e@example.com";
-const linh = () => "second-admin-e2e@example.com";
 
 /** Runs an operator command the way `pnpm il` does, against the database the app under test uses. */
 async function il(command: (args: string[], io: { out: (line: string) => void; err: (line: string) => void }) => Promise<number>, args: string[]) {
@@ -42,25 +41,25 @@ test.describe("publish and unpublish, as a learner sees them", () => {
     // Nothing has been evaluated or approved: the gate refuses and the learner still cannot start.
     const refused = await publish();
     expect(refused.code).toBe(1);
-    expect(refused.err[0]).toBe("KHÔNG publish chi-thu phiên bản 1: 3 lý do");
+    expect(refused.err[0]).toBe("KHÔNG publish chi-thu phiên bản 1: 4 lý do");
     await page.reload();
     await expect(page.locator("main [role=alert]")).toHaveText(BEING_UPDATED);
     await expect(startButton(page)).toHaveCount(0);
 
-    // A full run with one flag, both admins dismiss it, every string checked and approved.
-    await seedFullRun([{ episode: "adversarial-05", turn: 3 }]);
+    // A lean run with one flag, every string checked and approved, the version approved; one admin dismisses the flag.
+    await seedLeanRun(["shame"]);
     await approveEverything(thanh);
+    await approveNewest(thanh());
     const stillOpen = await publish();
-    expect(stillOpen.err).toEqual(["KHÔNG publish chi-thu phiên bản 1: 1 lý do", "  - Còn 1 cờ rò rỉ chưa được hai quản trị viên phân xử."]);
+    expect(stillOpen.err).toEqual(["KHÔNG publish chi-thu phiên bản 1: 1 lý do", "  - Còn 1 cờ rò rỉ chưa được phân xử."]);
     const list = await il((args, io) => runAdjudicate(args, io, getDb(), thanh), ["list", "chi-thu"]);
     const flagId = list.out.find((line) => line.startsWith("Cờ "))!.slice("Cờ ".length);
     expect((await il((args, io) => runAdjudicate(args, io, getDb(), thanh), [flagId, "not-leak", "Chỉ nhắc sự thật bề mặt."])).code).toBe(0);
-    expect((await il((args, io) => runAdjudicate(args, io, getDb(), linh), [flagId, "not-leak", "Đồng ý."])).code).toBe(0);
 
     const passed = await publish();
     expect(passed.err).toEqual([]);
     expect(passed.code).toBe(0);
-    expect(await db.scenarioOf("chi-thu")).toMatchObject({ status: "published", interimGate: true });
+    expect(await db.scenarioOf("chi-thu")).toMatchObject({ status: "published", interimGate: false });
 
     // The learner can now start and talk to the persona.
     await page.reload();
@@ -103,8 +102,9 @@ test.describe("publish and unpublish, as a learner sees them", () => {
   });
 
   test("unpublish without --stop-sessions blocks new learners and lets a running session go on", async ({ page, context, browser }) => {
-    await seedFullRun();
+    await seedLeanRun();
     await approveEverything(thanh);
+    await approveNewest(thanh());
     expect((await publish()).code).toBe(0);
 
     await signInAsNewLearner(context, uniqueEmail("keeps-going"));

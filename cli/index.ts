@@ -3,6 +3,7 @@ import { createInterface } from "node:readline/promises";
 import type { Database } from "@/db/client";
 import type { CallModelDeps } from "@/llm/call-model";
 import { adjudicateCommand } from "./commands/adjudicate";
+import { approveCommand } from "./commands/approve";
 import { configCommand } from "./commands/config";
 import { costReportCommand } from "./commands/cost-report";
 import { customCommand } from "./commands/custom";
@@ -79,6 +80,7 @@ async function main(): Promise<number> {
     })),
     "eval-calibrate": evalCalibrateCommand(connected, () => ({ llmDeps: llmDeps(), batchCollector, confirm })),
     adjudicate: adjudicateCommand(connected, operatorEmail),
+    approve: approveCommand(connected, operatorEmail),
     "check-strings": checkStringsCommand(connected, llmDeps),
     "approve-strings": approveStringsCommand(connected, operatorEmail),
     publish: publishCommand(connected, operatorEmail),

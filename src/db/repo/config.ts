@@ -43,6 +43,11 @@ export const CONFIG = {
     default: 0.1,
     summary: "Trần chi phí của một lần eval lean (agent QA) cho một persona. Agent bỏ các phép thử thêm khi sắp chạm trần; tới trần thì mọi lần gọi đang chạy bị dừng.",
   },
+  eval_daily_budget_usd: {
+    schema: z.number().nonnegative(),
+    default: 5,
+    summary: "Ngân sách LLM cho eval trong một ngày (UTC+7), tách khỏi cap của buổi. Không bắt đầu lần eval lean mới nếu phần đã tiêu cộng trần của lần đó vượt mức này.",
+  },
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG;

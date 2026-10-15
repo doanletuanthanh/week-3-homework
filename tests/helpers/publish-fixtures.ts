@@ -1,6 +1,9 @@
 import { getDb } from "@/db/client";
-import { createEvalRun, finishEvalRun, saveEpisode } from "@/db/repo/eval";
+import { approveVersion, createEvalRun, finishEvalRun, finishQaRun, latestLeanRun, saveEpisode } from "@/db/repo/eval";
+import { claimEvalRun, queueLeanRun } from "@/db/repo/eval-jobs";
 import { getScenarioByPersona } from "@/db/repo/sessions";
+import { THRESHOLDS } from "@/eval/qa/thresholds";
+import type { QaReport } from "@/eval/qa/types";
 import { buildReport } from "@/eval/report";
 import { episodeSpecs } from "@/eval/run-eval";
 import type { EpisodeResult } from "@/eval/types";
@@ -68,4 +71,40 @@ export async function approveEverything(operator: () => string) {
   await runCheckStrings(["product"], silent, getDb(), roleModels({ STRING_CHECK: repeat(productStrings().length, CLEAN_STRING) }).llmDeps);
   await runApproveStrings(["chi-thu", "approve", "--all"], silent, getDb(), operator);
   await runApproveStrings(["product", "approve", "--all"], silent, getDb(), operator);
+}
+
+/**
+ * A finished lean run of the newest version, written the way the job writes it: one leak, and so
+ * one flag, per item in `leaks`, each on its own probe reply. Every threshold but `no_leaks` is met
+ * unless `unmet` names more.
+ */
+export async function seedLeanRun(leaks: string[] = [], options: { unmet?: string[] } = {}) {
+  const db = getDb();
+  const scenario = await newestVersion();
+  const run = (await queueLeanRun(db, { scenarioId: scenario.id, version: scenario.version, capUsd: 0.1, requestedBy: null }))!;
+  const { token } = (await claimEvalRun(db, run.id))!;
+  const failing = new Set([...(options.unmet ?? []), ...(leaks.length > 0 ? ["no_leaks"] : [])]);
+  const replies = leaks.map((_, index) => ({ id: `R${index + 1}`, action: "attack", question: "Câu hỏi?", personaText: "Câu trả lời.", openItemIds: [], allowedHookItemIds: [] }));
+  const report: QaReport = {
+    profile: "lean",
+    version: scenario.version,
+    thresholds: THRESHOLDS.map((row) => ({ key: row.key, label: row.label, met: !failing.has(row.key), detail: failing.has(row.key) ? "thiếu" : "đạt" })),
+    warnings: [],
+    publicLeaks: [],
+    risks: [],
+    observations: replies.length > 0 ? [{ replies } as unknown as QaReport["observations"][number]] : [],
+    leaks: leaks.map((itemId, index) => ({ replyId: `R${index + 1}`, action: "attack", itemId, kind: "topic" as const, excerpt: "Câu trả lời." })),
+    findings: [],
+    rounds: [{ decision: "done", actions: 0 }],
+    cost: { capUsd: 0.1, actualUsd: 0.05, calls: 40 },
+  };
+  await finishQaRun(db, { runId: run.id, token, report, costActualUsd: 0.05 });
+  return run;
+}
+
+/** An admin's approval of the newest version on its newest lean run, as `il approve` writes it. */
+export async function approveNewest(adminEmail = "thanh@example.com") {
+  const scenario = await newestVersion();
+  const run = (await latestLeanRun(getDb(), scenario.id))!;
+  return approveVersion(getDb(), { scenarioId: scenario.id, version: scenario.version, evalRunId: run.id, adminEmail, note: "Đã đọc báo cáo." });
 }

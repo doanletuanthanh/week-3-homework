@@ -91,6 +91,15 @@ export const GENERATION_HEARTBEAT_MS = 15_000;
 /** A running attempt whose heartbeat is older than this lost its runner: another run may take it over. */
 export const GENERATION_STALE_MS = 60_000;
 
+/** Runners one lean eval run may have. A run whose runner died is finished by the next one, which takes cached probes for free. */
+export const EVAL_JOB_MAX_RUNS = 3;
+
+/** A lean eval run whose heartbeat is older than this lost its runner: another may take it over. */
+export const EVAL_JOB_STALE_MS = 60_000;
+
+/** The lean eval runner refreshes its heartbeat this often while it lives. */
+export const EVAL_JOB_HEARTBEAT_MS = 15_000;
+
 /** The "Đang chuẩn bị" screen asks for the attempt's step this often. */
 export const GENERATION_POLL_MS = 2_000;
 

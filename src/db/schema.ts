@@ -93,7 +93,7 @@ export const scenarios = pgTable(
     version: integer("version").notNull(),
     status: text("status", { enum: SCENARIO_STATUSES }).notNull().default("draft"),
     origin: text("origin", { enum: ["authored", "generated"] }).notNull().default("authored"),
-    /** Published through the interim CLI gate; cleared once the full gate has passed. */
+    /** Published through the old interim CLI gate (FR-35). The lean publish gate never sets it. */
     interimGate: boolean("interim_gate").notNull().default(false),
     // Copies of fields inside `content`, so lists do not have to read the sealed JSON.
     displayName: text("display_name").notNull(),
@@ -480,7 +480,18 @@ export const adminAccessLog = pgTable("admin_access_log", {
 /** A note a practising BA or PM left after reading the transcripts of a run. */
 export type ReaderNote = { reader_type: string; initials: string; note: string };
 
-/** One evaluation of one scenario version. Only a `full` run that is `done` can satisfy the publish gate. */
+/**
+ * Why a `failed` run stopped. `isolation` is a defect in the engine: such a run is never resumed.
+ * `lost`: its runner died and it had no runs left.
+ */
+export const EVAL_FAILURE_REASONS = ["isolation", "model", "budget", "lost"] as const;
+export type EvalFailureReason = (typeof EVAL_FAILURE_REASONS)[number];
+
+/**
+ * One evaluation of one scenario version. Only the newest `lean` run of a version, `done`, can
+ * satisfy the publish gate. A lean run is a job: whoever claims it holds `run_token` and keeps
+ * `heartbeat_at` fresh; a run whose heartbeat went stale is taken over by the next runner.
+ */
 export const evalRuns = pgTable(
   "eval_run",
   {
@@ -497,12 +508,24 @@ export const evalRuns = pgTable(
     costEstimateUsd: numeric("cost_estimate_usd", { precision: 14, scale: 9, mode: "number" }).notNull(),
     costActualUsd: numeric("cost_actual_usd", { precision: 14, scale: 9, mode: "number" }).notNull().default(0),
     readerNotes: jsonb("reader_notes").$type<ReaderNote[]>().notNull().default([]),
-    /** Why a `failed` run stopped. `isolation` is a defect in the engine: such a run is never resumed. */
-    failureReason: text("failure_reason", { enum: ["isolation", "model", "budget"] }),
+    failureReason: text("failure_reason", { enum: EVAL_FAILURE_REASONS }),
+    /** The admin who asked for the run. */
+    requestedBy: text("requested_by"),
+    /** Set while a runner holds the run; null when nobody does. */
+    runToken: uuid("run_token"),
+    heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }),
+    /** How many runners have claimed the run. */
+    runAttempt: integer("run_attempt").notNull().default(0),
     createdAt,
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
-  (table) => [index("eval_run_scenario_idx").on(table.scenarioId)],
+  (table) => [
+    index("eval_run_scenario_idx").on(table.scenarioId),
+    // One lean run of a version at a time: a second one would pay for the same probes.
+    uniqueIndex("eval_run_live_lean_key")
+      .on(table.scenarioId)
+      .where(sql`${table.profile} = 'lean' AND ${table.status} IN ('queued', 'running')`),
+  ],
 );
 
 /**
@@ -544,10 +567,11 @@ export const leakFlags = pgTable(
 
 export const ADJUDICATION_VERDICTS = ["leak", "not_leak"] as const;
 
-/** One admin's ruling on a flag. An admin rules once per flag. */
+/** One admin's ruling on a flag. Every ruling is kept; the latest one settles the flag. */
 export const adjudications = pgTable(
   "adjudication",
   {
+    id: uuid("id").primaryKey().defaultRandom(),
     flagId: uuid("flag_id")
       .notNull()
       .references(() => leakFlags.id, { onDelete: "cascade" }),
@@ -556,7 +580,29 @@ export const adjudications = pgTable(
     reason: text("reason").notNull(),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.flagId, table.adminEmail] })],
+  (table) => [index("adjudication_flag_idx").on(table.flagId, table.at)],
+);
+
+/**
+ * An admin's approval of one scenario version, given on one lean run. It counts only while that
+ * run is the newest lean run of the version: a new run needs a new approval.
+ */
+export const versionApprovals = pgTable(
+  "version_approval",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scenarioId: uuid("scenario_id")
+      .notNull()
+      .references(() => scenarios.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    evalRunId: uuid("eval_run_id")
+      .notNull()
+      .references(() => evalRuns.id, { onDelete: "cascade" }),
+    adminEmail: text("admin_email").notNull(),
+    note: text("note").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("version_approval_scenario_idx").on(table.scenarioId, table.at)],
 );
 
 /** Outcome of the automatic check of one fixed string (FR-36). */

@@ -116,10 +116,13 @@ const metaOf = (options: QaRunOptions) => ({ eval_run_id: options.runId, profile
  */
 const TOOL_CACHE_VERSION = 1;
 
+/** Where the result of one run of a probe is kept, for the given salt. */
+const probeCacheKey = (salt: string, action: Action, attempt: 0 | 1) => createHash("sha256").update(JSON.stringify([salt, actionKey(action), attempt])).digest("hex");
+
 /** One probe run, from the cache when the same probe already ran on the same content and models. */
 async function runCached(action: Action, attempt: 0 | 1, context: ToolContext, options: QaRunOptions) {
   const key = actionKey(action);
-  const cacheKey = createHash("sha256").update(JSON.stringify([options.cacheSalt ?? "", key, attempt])).digest("hex");
+  const cacheKey = probeCacheKey(options.cacheSalt ?? "", action, attempt);
   const cached = options.toolCache && !options.refreshCache ? ((await options.toolCache.get(cacheKey)) as CachedToolResult | null) : null;
   if (cached) return { ...cached, replies: cached.replies.map((reply) => ({ ...reply, id: context.nextReplyId(), action: key })) };
   const result = await withRateLimitBackoff(() => runTool(action, context, key), { ...options });
@@ -409,11 +412,6 @@ export async function runQaAgent(scenario: Scenario, options: Omit<QaRunOptions,
       cost: { capUsd: budget.capUsd, actualUsd: 0, calls: 0 },
     };
   }
-  // The floor cannot be cut, so a cap that cannot hold it, the plan call and the judge call is refused before anything is spent.
-  const floorCalls = floorActions(scenario).reduce((sum, action) => sum + CALLS_OF[action.tool](action), 0);
-  if (!budget.canAfford({ probes: floorCalls, agent: 1 })) {
-    throw new BudgetExceededError(floorCalls * budget.price("probe") + 2 * budget.price("agent"), budget.capUsd);
-  }
   // A cached probe stands for a new one only on the same scenario content and the same probe models.
   const roleSpec = options.llmDeps?.roleSpec ?? roleSpecFromEnv;
   const cacheSalt = JSON.stringify([TOOL_CACHE_VERSION, scenario, roleSpec("ANALYSIS"), roleSpec("PERSONA"), probePromptFingerprint(scenario)]);
@@ -424,11 +422,25 @@ export async function runQaAgent(scenario: Scenario, options: Omit<QaRunOptions,
     .digest("hex")}`;
   const previous = options.toolCache && !options.refreshCache ? ((await options.toolCache.get(runKey)) as QaReport | null) : null;
   if (previous) return { ...previous, reusedFrom: previous.reusedFrom ?? "lần eval trước có cùng mọi đầu vào", cost: { ...previous.cost, actualUsd: 0, calls: 0 } };
+  // The floor cannot be cut, so a cap that cannot hold it, the plan call and the judge call is
+  // refused before anything is spent. A floor probe already in the cache costs nothing: a run
+  // that takes over from a dead one still fits what its cap has left.
+  const useCache = options.toolCache && !options.refreshCache ? options.toolCache : null;
+  const unpaid = [];
+  for (const action of floorActions(scenario)) {
+    if (!useCache || !(await useCache.get(probeCacheKey(cacheSalt, action, 0)))) unpaid.push(action);
+  }
+  const floorCalls = unpaid.reduce((sum, action) => sum + CALLS_OF[action.tool](action), 0);
+  if (!budget.canAfford({ probes: floorCalls, agent: 1 })) {
+    throw new BudgetExceededError(floorCalls * budget.price("probe") + 2 * budget.price("agent"), budget.capUsd);
+  }
   const hardStop = new AbortController();
   const recordCall = options.llmDeps?.recordCall ?? recordCallToDb;
+  // The caller may stop the run too (a job at its time limit, or one that lost its claim).
+  const outer = options.llmDeps?.signal;
   const llmDeps: Partial<CallModelDeps> = {
     ...options.llmDeps,
-    signal: hardStop.signal,
+    signal: outer ? AbortSignal.any([outer, hardStop.signal]) : hardStop.signal,
     recordCall: async (record) => {
       await recordCall(record);
       budget.record(record.costUsd, record.role);
