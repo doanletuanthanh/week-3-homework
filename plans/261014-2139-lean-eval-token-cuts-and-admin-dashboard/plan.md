@@ -69,7 +69,7 @@ The hard cap `eval_lean_budget_usd = 0.10` aborts the run through the `recordCal
 | 6 | [Admin shell and cost dashboard](./phase-06-admin-shell-and-cost-dashboard.md) | Done: `/admin` overview (spend vs caps, 30-day chart, top roles, session cost, usage); 404 identical to an unknown URL for non-admins; 0 LLM calls | 1 | 2d |
 | 7 | [Admin scenario review](./phase-07-admin-scenario-review.md) | Done: list, review, diff, probes, rulings, strings, approval, publish and unpublish, lean eval and persona drafts from the browser; curated personas only; 0 paid calls (stub) | 5, 6 | 2.5d |
 | 8 | [Admin learners, config, custom topics, audit](./phase-08-admin-learners-config-and-audit.md) | Done: learners, transcripts, custom-topic attempts, config editor and audit log; every learner-data read and config change logged; 0 LLM calls | 6 | 1.5d |
-| 9 | [Learner progress and interview-guide checker](./phase-09-learner-progress-and-guide-checker.md) | Pending | 2 | 2.5d |
+| 9 | [Learner progress and interview-guide checker](./phase-09-learner-progress-and-guide-checker.md) | Done: `/progress` (0 calls) and `/guide-check` (1 call, ~0.0014 USD); leading recall 100% (36/36) in one paid run (0.045 USD) | 2 | 2.5d |
 | 10 | [Cleanup, docs and checks](./phase-10-cleanup-docs-and-checks.md) | Pending | all | 1d |
 
 Phase 6 can run in parallel with phases 2–3 after phase 1 (`src/app/admin` against `src/llm` + `src/eval` + `src/graphs`). Phase 3 waits for phase 2, because the agent must evaluate the production prompts and efforts.
