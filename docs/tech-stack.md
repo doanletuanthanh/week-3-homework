@@ -1,6 +1,6 @@
 # InterviewLab tech stack
 
-Approved 2026-10-03. Product requirements: `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-09-24/prd.md` and `addendum.md`. Evidence for versions and limits: `plans/reports/researcher-261003-1707-*.md` (versions were read from npm on 2026-10-03; model IDs and prices are medium confidence and must be re-checked in the vendor consoles before they are hardcoded).
+Approved 2026-10-03. Product requirements were `_bmad-output/planning-artifacts/prds/prd-week-3-project-2026-09-24/prd.md` and `addendum.md`; since 2026-10-14 the PRD is retired as authority, and the decisions of `plans/261014-2139-lean-eval-token-cuts-and-admin-dashboard/plan.md` replace it where they differ (FR numbers in the code still name the requirement a rule came from). Evidence for versions and limits: `plans/reports/researcher-261003-1707-*.md` (versions were read from npm on 2026-10-03; model IDs and prices are medium confidence and must be re-checked in the vendor consoles before they are hardcoded).
 
 ## Stack
 
@@ -14,9 +14,10 @@ Approved 2026-10-03. Product requirements: `_bmad-output/planning-artifacts/prds
 | Auth | Supabase Auth, Google OAuth, `@supabase/ssr` | Verify with `getClaims()` in every handler; admin and demo accounts come from `ADMIN_EMAILS` and `DEMO_ACCOUNT_EMAILS` |
 | Agent engine | LangGraph JS 1.x, no checkpointer | State lives in `turn` / `snapshot`; one DB transaction per turn after the graph returns |
 | Models | Gemini only: 3.8 Flash for the persona, analysis, generators, moderation and safety; 3.5 Flash-Lite for the turn judge, end judge and verifier | One env var per call role. Each role runs the cheapest model that passed its judgement set three times in three; roles without a set stay on Flash (`plans/reports/model-tiering-261014-2250-judgement-sets.md`). Writer and checker are no longer different families: separate calls and prompts, and the sets, stand in for that |
-| Tracing | LangSmith | Full prompts and replies, plus metadata: session, turn, call role. Flush before the function ends. Off for full and reduced eval runs (free plan: 5k traces/month, 14-day retention) |
-| Background work | `after()` + job row + heartbeat, `maxDuration = 300` | Reveal and custom-scenario generation. Poll endpoint marks stale jobs failed; no cron |
-| Full evaluation | Local CLI sharing the engine code and database | Never runs in a web request |
+| Tracing | LangSmith | Full prompts and replies, plus metadata: session, turn, call role. Flush before the function ends. Off for CLI eval runs unless `--trace` is given (free plan: 5k traces/month, 14-day retention) |
+| Background work | `after()` + job row + heartbeat, `maxDuration = 300` | Reveal, custom-scenario generation and the lean eval. Poll endpoint marks stale jobs failed or hands them to a new runner; no cron |
+| Persona evaluation | Persona QA agent (LangGraph plan → execute → judge → reflect) as a resumable job | Started from `/admin/scenarios` or `pnpm il eval`; under 0.10 USD a persona (`eval_lean_budget_usd`) |
+| Admin console | `/admin`, server-rendered, admins from `ADMIN_EMAILS` | A non-admin gets the same 404 as an unknown URL; every read of learner data and every config change writes `admin_access_log` |
 | Tests | Vitest (unit, and integration against the local Supabase stack in Docker); Playwright on a production build with a model stub | No test needs a key. CI: `.github/workflows/ci.yml` |
 | Security headers | Fixed headers in `next.config.ts`; Content-Security-Policy with a nonce per request in `src/proxy.ts` | Scripts are nonce-only, so every page is rendered per request. The browser talks to the app's origin alone. `style-src` allows inline styles |
 
@@ -24,7 +25,9 @@ Approved 2026-10-03. Product requirements: `_bmad-output/planning-artifacts/prds
 
 - **A custom-scenario attempt has the PRD's 10 minutes as up to three runs of at most 270 s each** (Vercel Hobby cap per function), each going on from what the one before stored. The p95 ≤ 2 minute target is unchanged.
 - **The reduced evaluation of a generated scenario (FR-54) is dropped**: a custom scenario is only lightly checked (`validate` and an output safety check) and is not played before the learner gets it.
-- **No separate worker process.** Turns and reveal run in request/`after()`, full eval on the developer's machine. Priority of live turns over batch work (FR-37) is kept by an optional separate API key for generation and eval roles.
+- **No separate worker process.** Turns, reveal and the lean eval run in request/`after()`; the CLI runs the same eval job on the developer's machine. Priority of live turns over batch work (FR-37) is kept by an optional separate API key for generation and eval roles.
+- **The 46-episode full evaluation and its two-admin adjudication are replaced** by the persona QA agent (lean eval) and one admin ruling per leak flag, with a version approval tied to the run. The prompt-only baseline is gone.
+- **There is an admin console** (`/admin`), where the PRD had only the operator CLI in this slice.
 - **Unpublished personas are playable by every learner** until the `require_published` config row is turned on; the publish gate still runs and records its result.
 - **Anonymous quota counters survive account deletion**, keyed by a keyed hash of the Google account, with no learner content.
 - **LangSmith receives full prompts and replies in every environment.** The data notice names it; traces are not removed by account deletion and expire with LangSmith retention.

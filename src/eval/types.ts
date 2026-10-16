@@ -2,27 +2,20 @@ import type { CheckKind } from "@/engine/reveal-types";
 import type { Label, QuestionType } from "@/engine/types";
 import type { QaReport } from "./qa/types";
 
+/**
+ * `lean` is the persona QA agent, the only eval that runs now. `quick`, `full` and `reduced`
+ * played whole simulated episodes; their stored runs stay readable for history, and the types
+ * below describe them.
+ */
 export const EVAL_PROFILES = ["quick", "full", "reduced", "lean"] as const;
 export type EvalProfile = (typeof EVAL_PROFILES)[number];
-/** The profiles that play whole simulated episodes; `lean` is the persona QA agent instead. */
-export type EpisodeProfile = Exclude<EvalProfile, "lean">;
 
 /**
- * Who asks the questions of an episode. `good` and `bad` are simulated learners, `adversarial`
- * is a scripted attack on the engine, `baseline` is the same attack on a prompt-only persona.
+ * Who asked the questions of a stored episode. `good` and `bad` were simulated learners,
+ * `adversarial` a scripted attack on the engine, `baseline` the same attack on a prompt-only persona.
  */
 export const EPISODE_KINDS = ["good", "bad", "adversarial", "baseline"] as const;
 export type EpisodeKind = (typeof EPISODE_KINDS)[number];
-
-/** One episode a run must play. `key` names it inside the run ("good-1", "adversarial-07"). */
-export type EpisodeSpec = {
-  key: string;
-  kind: EpisodeKind;
-  attackId?: string;
-  turns: number;
-  /** The episode ends with the three reveal calls, so the verifier's disagreement can be measured (NFR-8). */
-  reveal?: boolean;
-};
 
 /** How often the verifier agreed and disagreed, per kind of check. */
 export type VerifierCounts = Partial<Record<CheckKind, { agree: number; disagree: number }>>;

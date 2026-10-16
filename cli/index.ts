@@ -49,7 +49,7 @@ async function main(): Promise<number> {
     db = getDb();
   }
   const { listOtherPersonaTags } = await import("@/db/repo/scenarios");
-  const { getEnv, roleSpecFromEnv } = await import("@/config/env");
+  const { getEnv } = await import("@/config/env");
   const { createChatModel } = await import("@/llm/create-model");
   const { recordLlmCall } = await import("@/db/repo/llm-calls");
   const { GeminiBatchCollector } = await import("@/llm/gemini-batch");
@@ -71,9 +71,7 @@ async function main(): Promise<number> {
     trace: traceCommand(connected, operatorEmail),
     custom: customCommand(connected, operatorEmail),
     eval: evalCommand(connected, () => ({
-      roleSpec: roleSpecFromEnv,
       llmDeps: llmDeps(),
-      confirm,
       setTracing,
       // Lean runs use Gemini Batch Mode with the batch key when there is one.
       batchCollector,

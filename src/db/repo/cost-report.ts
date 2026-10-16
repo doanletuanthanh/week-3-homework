@@ -109,7 +109,7 @@ export type EvalRunCost = {
 
 /**
  * Cost of evaluation runs, newest first. An eval call carries its run in `attempt_id`
- * (`src/eval/run-episode.ts`); calls of a run that was deleted are not listed.
+ * (`scope: { attemptId }` in `src/graphs/qa-agent-graph.ts`); calls of a run that was deleted are not listed.
  */
 export async function evalRunCosts(db: Executor, window: ReportWindow & { runId?: string }): Promise<EvalRunCost[]> {
   return db.execute<EvalRunCost>(sql`

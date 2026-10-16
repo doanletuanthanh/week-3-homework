@@ -11,7 +11,6 @@ const SPEC_OF: Record<Role, RoleSpec> = {
   END_JUDGE: { provider: "openai", model: "gemini-3.1-flash-lite", effort: "low" },
   FEEDBACK: { provider: "openai", model: "gemini-3.8-flash", effort: "medium" },
   VERIFIER: { provider: "openai", model: "gemini-3.5-flash", effort: "medium" },
-  EVAL_INTERVIEWER: { provider: "openai", model: "gpt-6-luna", effort: "low" },
   EVAL_LEAK_JUDGE: { provider: "openai", model: "gpt-6-sol", effort: "low" },
   STRING_CHECK: { provider: "openai", model: "gpt-6.1-sol", effort: "low" },
   MODERATION: { provider: "openai", model: "gpt-6-luna", effort: "medium" },
@@ -51,5 +50,3 @@ export function roleModels(script: Partial<Record<Role, ScriptedStep[]>>) {
 
 /** `count` identical steps, for roles whose reply does not matter to the test. */
 export const repeat = (count: number, step: ScriptedStep): ScriptedStep[] => Array.from({ length: count }, () => step);
-
-export const NO_FINDINGS = { structured: { flags: [], contradictions: [] } };

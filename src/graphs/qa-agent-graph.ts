@@ -11,7 +11,7 @@ import { itemAlias, itemIdOf, publicFields } from "@/eval/qa/scenario-view";
 import { evaluateThresholds, leaksOf, warningsOf, type JudgedObservation } from "@/eval/qa/thresholds";
 import { CALLS_OF, probePromptFingerprint, runTool, type ToolContext } from "@/eval/qa/tools";
 import { actionKey, type Action, type CachedToolResult, type Finding, type QaReport } from "@/eval/qa/types";
-import { withRateLimitBackoff } from "@/eval/run-episode";
+import { withRateLimitBackoff } from "@/eval/rate-limit";
 import { callModel, recordCallToDb, type CallModelDeps, type CallScope } from "@/llm/call-model";
 import { buildReplyJudgeMessages } from "@/llm/prompts/eval-reply-judge";
 import { buildQaPlanMessages, buildQaReflectMessages, QA_LIMITS, qaPlanSchema, qaReflectSchema } from "@/llm/prompts/qa-agent";

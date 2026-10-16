@@ -46,7 +46,6 @@ export function appEnv(publishableKey: string): Record<string, string> {
     LLM_MODERATION: "openai:gpt-6-luna:low",
     LLM_SCENARIO_GENERATOR: "openai:gpt-6-luna:low",
     LLM_SAFETY: "openai:gpt-6-luna:low",
-    LLM_EVAL_INTERVIEWER: "openai:gpt-6-luna:low",
     LLM_EVAL_LEAK_JUDGE: "openai:gpt-6-luna:low",
     LLM_STRING_CHECK: "openai:gpt-6-luna:low",
     LLM_QA_PLANNER: "openai:gpt-6-luna:low",

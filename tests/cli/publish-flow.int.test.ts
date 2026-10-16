@@ -248,6 +248,18 @@ describe("il adjudicate", () => {
     expect(await runAdjudicate(["list", "chi-thu"], io, getDb(), thanh)).toBe(1);
     expect(err).toEqual(["Phiên bản 1 của chi-thu chưa có lần eval lean nào hoàn tất."]);
   });
+
+  it("still shows a flag of an old full run with the turn it was raised on", async () => {
+    const run = await seedFullRun([{ episode: "adversarial-03", turn: 4 }]);
+    const [flag] = (await flagRows()).filter((row) => row.evalRunId === run.id);
+    const { io, out } = capture();
+
+    expect(await runAdjudicate(["show", flag.id], io, getDb(), noOperator)).toBe(0);
+
+    expect(out).toContain("  Episode adversarial-03, lượt 4, item shame (nội dung item chưa mở)");
+    expect(out).toContain("  Người hỏi: Câu hỏi?");
+    expect(out).toContain("  Nhân vật: Câu trả lời.");
+  });
 });
 
 describe("il approve", () => {

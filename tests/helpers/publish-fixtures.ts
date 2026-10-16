@@ -1,12 +1,11 @@
 import { getDb } from "@/db/client";
-import { approveVersion, createEvalRun, finishEvalRun, finishQaRun, latestLeanRun, saveEpisode } from "@/db/repo/eval";
+import { approveVersion, finishQaRun, latestLeanRun } from "@/db/repo/eval";
 import { claimEvalRun, queueLeanRun } from "@/db/repo/eval-jobs";
 import { getScenarioByPersona } from "@/db/repo/sessions";
+import { evalEpisodes, evalRuns, leakFlags } from "@/db/schema";
 import { THRESHOLDS } from "@/eval/qa/thresholds";
 import type { QaReport } from "@/eval/qa/types";
-import { buildReport } from "@/eval/report";
-import { episodeSpecs } from "@/eval/run-eval";
-import type { EpisodeResult } from "@/eval/types";
+import type { EvalReport } from "@/eval/types";
 import { productStrings } from "@/strings/product-strings";
 import { runApproveStrings, runCheckStrings } from "../../cli/commands/strings";
 import { repeat, roleModels } from "./eval-models";
@@ -36,32 +35,58 @@ export async function newestVersion(personaId = "chi-thu") {
 }
 
 /**
- * A finished full run of the newest version: every episode stored, the given leak flags, and a
- * report in which every threshold is met. Each engine episode ran the reveal, with the verifier
- * disagreeing with 1 unlock in 25; with `verifierMeasured: false` no episode ran it.
+ * A finished full run of the newest version, as such runs were stored before the lean eval
+ * replaced them, with the given leak flags. Nothing runs a full eval now; the gate and
+ * `adjudicate` only have to ignore one, so the report holds just what tells it apart.
  */
-export async function seedFullRun(flags: { episode: string; turn: number }[] = [], options = { verifierMeasured: true }) {
+export async function seedFullRun(flags: { episode: string; turn: number }[] = []) {
   const db = getDb();
   const scenario = await newestVersion();
-  const run = await createEvalRun(db, { scenarioId: scenario.id, version: scenario.version, profile: "full", turns: 30, costEstimateUsd: 25 });
-  const episodes: EpisodeResult[] = episodeSpecs("full").map((spec) => ({
-    key: spec.key,
-    kind: spec.kind,
-    attackId: spec.attackId,
-    turns: [
-      { index: 1, question: "Câu hỏi?", personaText: "Câu trả lời.", label: "open", questionType: "open", unlockedItemId: null, hookSelected: "paid-app", hookDropped: true },
-    ],
-    openedItemIds: spec.kind === "good" ? scenario.content.items.slice(0, 7).map((item) => item.id) : spec.kind === "bad" ? ["money-home"] : [],
-    flags: flags
-      .filter((flag) => flag.episode === spec.key)
-      .map((flag) => ({ turn: flag.turn, itemId: "shame", kind: "content" as const, excerpt: "Câu trả lời.", allowedHooks: ["Hook được phép."], reason: "Lý do của judge." })),
-    contradictions: [],
-    ...(options.verifierMeasured && spec.reveal ? { verifier: { unlock: { agree: 24, disagree: 1 } } } : {}),
-    costUsd: 0.5,
-  }));
-  for (const episode of episodes) await saveEpisode(db, run.id, episode);
-  const report = buildReport(scenario.content, { profile: "full", turns: 30, estimateUsd: 25 }, episodes);
-  await finishEvalRun(db, run.id, report, episodes);
+  const [run] = await db
+    .insert(evalRuns)
+    .values({
+      scenarioId: scenario.id,
+      version: scenario.version,
+      profile: "full",
+      status: "done",
+      turns: 30,
+      costEstimateUsd: 25,
+      costActualUsd: 23,
+      reportJson: { profile: "full", turns: 30 } as EvalReport,
+      finishedAt: new Date(),
+    })
+    .returning();
+  if (flags.length > 0) {
+    await db.insert(evalEpisodes).values(
+      [...new Set(flags.map((flag) => flag.episode))].map((key) => ({
+        runId: run.id,
+        key,
+        resultJson: {
+          key,
+          kind: "adversarial" as const,
+          turns: flags
+            .filter((flag) => flag.episode === key)
+            .map((flag) => ({ index: flag.turn, question: "Câu hỏi?", personaText: "Câu trả lời.", label: "open" as const, questionType: "open" as const, unlockedItemId: null, hookSelected: null, hookDropped: false })),
+          openedItemIds: [],
+          flags: [],
+          contradictions: [],
+          costUsd: 0.5,
+        },
+      })),
+    );
+    await db.insert(leakFlags).values(
+      flags.map((flag) => ({
+        evalRunId: run.id,
+        episode: flag.episode,
+        turn: flag.turn,
+        itemId: "shame",
+        kind: "content" as const,
+        excerpt: "Câu trả lời.",
+        allowedHooks: ["Hook được phép."],
+        judgeReason: "Lý do của judge.",
+      })),
+    );
+  }
   return run;
 }
 

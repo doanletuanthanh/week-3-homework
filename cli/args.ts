@@ -2,7 +2,7 @@ import { CliError } from "./scenario-file";
 
 /**
  * Splits command arguments into positional values and `--options`. `values` names the options
- * that take a value (`--profile full`); every other `--name` is a switch. An option the command
+ * that take a value (`--concurrency 4`); every other `--name` is a switch. An option the command
  * does not know is an error, so a typo never runs with defaults.
  */
 export function parseArgs<V extends string, S extends string>(

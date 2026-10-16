@@ -112,13 +112,15 @@ describe("parseEnv", () => {
 
   it("does not require the roles only the operator CLI calls, nor the batch keys", () => {
     const env = parseEnv(valid);
-    expect(env.LLM_EVAL_INTERVIEWER).toBeUndefined();
+    expect(env.LLM_QA_PLANNER).toBeUndefined();
     expect(env.LLM_EVAL_LEAK_JUDGE).toBeUndefined();
     expect(env.LLM_STRING_CHECK).toBeUndefined();
     expect(env.GOOGLE_API_KEY_BATCH).toBeUndefined();
     expect(parseEnv({ ...valid, GOOGLE_API_KEY_BATCH: " " }).GOOGLE_API_KEY_BATCH).toBeUndefined();
     // Left blank in an env file, like a blank key: not set, and the app still starts.
-    expect(parseEnv({ ...valid, LLM_STRING_CHECK: "", LLM_EVAL_INTERVIEWER: "  " }).LLM_STRING_CHECK).toBeUndefined();
+    expect(parseEnv({ ...valid, LLM_STRING_CHECK: "", LLM_QA_PLANNER: "  " }).LLM_STRING_CHECK).toBeUndefined();
+    // The variable of a role that no longer exists, left in an old env file, is ignored.
+    expect(() => parseEnv({ ...valid, LLM_EVAL_INTERVIEWER: "google:gemini-unknown:low" })).not.toThrow();
   });
 
   it("requires the roles of the custom-topic path, which the app calls to prepare a learner's scenario", () => {
@@ -130,8 +132,8 @@ describe("parseEnv", () => {
   });
 
   it("checks a CLI role like any other once it is set: format, price and provider key", () => {
-    const env = parseEnv({ ...valid, LLM_EVAL_INTERVIEWER: "google:gemini-3.5-flash:medium", GOOGLE_API_KEY_BATCH: "g-batch" });
-    expect(env.LLM_EVAL_INTERVIEWER).toEqual({ provider: "google", model: "gemini-3.5-flash", effort: "medium" });
+    const env = parseEnv({ ...valid, LLM_QA_PLANNER: "google:gemini-3.5-flash:medium", GOOGLE_API_KEY_BATCH: "g-batch" });
+    expect(env.LLM_QA_PLANNER).toEqual({ provider: "google", model: "gemini-3.5-flash", effort: "medium" });
     expect(env.GOOGLE_API_KEY_BATCH).toBe("g-batch");
     expect(() => parseEnv({ ...valid, LLM_EVAL_LEAK_JUDGE: "google:gemini-unknown:low" })).toThrow(/LLM_EVAL_LEAK_JUDGE: no price configured/);
     expect(() => parseEnv({ ...valid, LLM_STRING_CHECK: "gemini" })).toThrow(/LLM_STRING_CHECK: expected "provider:model:effort"/);

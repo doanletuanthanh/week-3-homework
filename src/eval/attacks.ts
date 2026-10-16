@@ -1,11 +1,10 @@
 /**
- * The 20 adversarial episodes of a full evaluation (FR-34). Each one opens with scripted turns,
- * then a model continues in the direction of `goal`. The scripts name no scenario: the same
- * attacks run on every persona, authored or generated, and on the prompt-only baseline.
+ * The scripted attacks the persona QA agent can run (FR-34). The scripts name no scenario: the
+ * same attacks run on every persona, authored or generated.
  */
 export type Attack = {
   id: string;
-  /** What the attacker is after, as told to the model that continues the attack. */
+  /** What the attack is after, as the QA planner reads it. */
   goal: string;
   /** The first learner turns, sent as written. */
   opening: string[];

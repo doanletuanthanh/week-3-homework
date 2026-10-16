@@ -1,6 +1,6 @@
 # Operations
 
-Everything an operator does is a CLI command; there is no Review Console in this slice. Commands run on your machine and act on the database `.env.local` points at (`DATABASE_URL_DIRECT`, else `DATABASE_URL`).
+Operators work from the CLI or from the admin console at `/admin`. The console is open to the addresses in `ADMIN_EMAILS`; anyone else gets the same 404 as an unknown address. It has an overview (spend against the caps, a 30-day chart, the costliest roles, session cost), scenario review, learners, custom topics, config and the audit log. CLI commands run on your machine and act on the database `.env.local` points at (`DATABASE_URL_DIRECT`, else `DATABASE_URL`).
 
 ```bash
 pnpm il help            # every command with its one-line summary
@@ -34,17 +34,22 @@ A topic is a folder under `scenarios/` with a `topic.json` and one file per pers
 
 | Task | Command |
 |---|---|
-| Quick simulated interviews while tuning | `pnpm il eval <persona> --profile quick` |
-| The full evaluation (FR-34) | `pnpm il eval <persona> --profile full` |
-| Continue a run that stopped | `pnpm il eval --resume <run id>` |
+| Run the persona QA agent on the newest version (the lean eval) | `pnpm il eval <persona> [--fast] [--no-cache] [--concurrency N] [--trace]` |
 | Calibrate the lean eval: clean personas must pass every run, known-bad mutants must fail their declared row on the changed item | `pnpm il eval-calibrate [--persona <id>] [--operator <key>] [--runs N] [--only clean\|mutants] [--fast] [--yes]` |
-| List the leak flags of the full run, read one, rule on it | `pnpm il adjudicate list <persona>`, `pnpm il adjudicate show <flag id>`, `pnpm il adjudicate <flag id> leak\|not-leak "<reason>"` |
+| List the leak flags of the newest lean run, read one, rule on it | `pnpm il adjudicate list <persona>`, `pnpm il adjudicate show <flag id>`, `pnpm il adjudicate <flag id> leak\|not-leak "<reason>"` |
 | Check the fixed strings automatically (FR-36) | `pnpm il check-strings <persona\|product>` |
 | Approve or return fixed strings | `pnpm il approve-strings <persona\|product> [list]`, `... approve <key...>\|--all`, `... return <key> "<note>"` |
-| Publish if the interim gate passes; otherwise it lists every reason | `pnpm il publish <persona>` |
+| Approve the newest version on its newest finished lean run | `pnpm il approve <persona> "<note>"` |
+| Publish if the gate passes; otherwise it lists every reason | `pnpm il publish <persona>` |
 | Unpublish; `--stop-sessions` also withdraws its unfinished sessions | `pnpm il unpublish <persona> [--stop-sessions]` |
 
-A full run asks for confirmation with a cost estimate (`--yes` skips the question). Tracing is off during a run unless `--trace` is given. Each admin records their own ruling; two are needed.
+`/admin/scenarios` does the same from the browser: it starts a lean eval as a background job, shows the report and the probes, takes rulings and approvals, and publishes or unpublishes.
+
+The lean eval asks nothing before spending: `eval_lean_budget_usd` caps one run and `eval_daily_budget_usd` caps the day. By default its Gemini calls go through Batch Mode at half price and a run takes minutes to hours (20–26 minutes measured); `--fast` calls the models directly. Probes that already ran on the same content and models come from a cache, so an unchanged version costs nothing to evaluate again; `--no-cache` runs them again. Tracing is off unless `--trace` is given.
+
+The gate reads only the newest lean run of the exact version. A version is published when it passes `validate`, its lean run is done and meets every threshold but `no_leaks`, every leak flag of that run is ruled `not-leak` (the rulings settle `no_leaks`), its fixed strings and the product's are checked and approved, and an admin approved it on that same run. One ruling settles a flag, and the latest ruling of any admin counts; every ruling is kept. The rules are a table in `src/eval/publish-gate.ts`.
+
+The simulated-interview profiles (`quick`, `full`, `reduced`) and their prompt-only baseline were removed. Their stored runs stay readable for history; the gate ignores them.
 
 ## Judgement test sets (NFR-7)
 
@@ -99,6 +104,8 @@ Admins can also edit these at `/admin/config`. The CLI and the console accept th
 | `custom_path_enabled` | `true` | The switch of "Tạo chủ đề của bạn" (FR-56) |
 | `generation_daily_budget_usd` | `10` | LLM budget of scenario generation per day, apart from the session cap. One account may use 20 % |
 | `generation_reserve_usd` | `1` | Held for each generation attempt; the attempt stops when it has spent this |
+| `eval_lean_budget_usd` | `0.1` | Cap of one lean eval run. The agent drops its optional probes as it nears the cap, and the run stops at it |
+| `eval_daily_budget_usd` | `5` | LLM budget of evaluation per day (UTC+7), apart from the session cap. A lean run is not started when the day's eval spend plus its cap would go over it; calibration counts against it |
 | `guide_checks_per_day` | `5` | Guide checks (`/guide-check`) per account per day (UTC+7). Each check is one ANALYSIS call charged to the session scope with no session id, so the per-session cost report leaves it out but the daily cap counts it. A check whose call failed still counts. Demo accounts are not limited. `0` turns checks off |
 
 A change takes effect on the next request. The defaults are placeholders for a small pilot, not measured values.
@@ -115,7 +122,7 @@ A change takes effect on the next request. The defaults are placeholders for a s
   ```
 
 - **Custom topics.** A separate daily budget. An attempt reserves `generation_reserve_usd` before it starts and gives back what it did not spend. When the budget cannot hold another reserve, new attempts are refused and sessions are not affected.
-- **Evaluation.** A quick run of one persona cost 0.66 to 0.75 USD. A full run is 2,000 or more calls, roughly 20–40 USD.
+- **Evaluation.** A lean run measured 0.039–0.055 USD per persona in batch mode (calibration included) and 0.083–0.092 USD with `--fast`, on the curated personas; an unchanged version costs 0. A calibration of all 7 personas cost about 3.85 USD (`plans/reports/calibration-261015-lean-eval.md`). `pnpm il cost-report [--days n] [--run <id>]` prints spend by scope, role, day, session and eval run, from `llm_call`, without calling a model.
 - **Tracing.** The LangSmith free plan holds 5,000 traces a month and a session is up to about 70.
 
 ## Custom topics

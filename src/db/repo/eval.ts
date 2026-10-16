@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 import type { QaReport } from "@/eval/qa/types";
-import type { EpisodeResult, EvalProfile, EvalReport } from "@/eval/types";
+import type { EpisodeResult } from "@/eval/types";
 import type { Database, Executor } from "../client";
 import {
   adjudications,
@@ -21,77 +21,10 @@ export type AdjudicationRow = typeof adjudications.$inferSelect;
 export type StringApprovalRow = typeof stringApprovals.$inferSelect;
 export type VersionApprovalRow = typeof versionApprovals.$inferSelect;
 
-export async function createEvalRun(
-  db: Executor,
-  input: { scenarioId: string; version: number; profile: EvalProfile; turns: number; costEstimateUsd: number },
-): Promise<EvalRunRow> {
-  const [row] = await db.insert(evalRuns).values({ ...input, status: "running" }).returning();
-  return row;
-}
-
-export async function getEvalRun(db: Executor, runId: string): Promise<EvalRunRow | null> {
-  const [row] = await db.select().from(evalRuns).where(eq(evalRuns.id, runId)).limit(1);
-  return row ?? null;
-}
-
-/** Stores a finished episode. Writing the same episode twice keeps the first result. */
-export async function saveEpisode(db: Executor, runId: string, result: EpisodeResult): Promise<void> {
-  await db.insert(evalEpisodes).values({ runId, key: result.key, resultJson: result }).onConflictDoNothing();
-}
-
+/** The episodes of a stored simulated-interview run (`quick`, `full`, `reduced`), kept for history. */
 export async function listEpisodes(db: Executor, runId: string): Promise<EpisodeResult[]> {
   const rows = await db.select().from(evalEpisodes).where(eq(evalEpisodes.runId, runId)).orderBy(asc(evalEpisodes.key));
   return rows.map((row) => row.resultJson);
-}
-
-export async function markEvalRunRunning(db: Executor, runId: string): Promise<void> {
-  await db.update(evalRuns).set({ status: "running", failureReason: null }).where(eq(evalRuns.id, runId));
-}
-
-export async function markEvalRunFailed(db: Executor, runId: string, failureReason: "isolation" | "model" | "budget"): Promise<void> {
-  await db.update(evalRuns).set({ status: "failed", failureReason }).where(eq(evalRuns.id, runId));
-}
-
-/**
- * Takes the run for this database session, so two commands cannot play the same run at once and
- * pay for every episode twice. False when another session holds it. Released when the session ends.
- */
-export async function lockEvalRun(db: Executor, runId: string): Promise<boolean> {
-  const [row] = await db.execute<{ locked: boolean }>(sql`SELECT pg_try_advisory_lock(hashtext('eval_run'), hashtext(${runId})) AS locked`);
-  return row.locked;
-}
-
-/**
- * Closes a run: the report, the actual cost, and one `leak_flag` row per flag of the engine's
- * episodes, in one transaction. Baseline flags stay in the report only: they are about the
- * prompt-only persona, not about the one that could be published. A run that is already closed
- * is left as it is (false): its flags may have rulings by now.
- */
-export async function finishEvalRun(db: Database, runId: string, report: EvalReport, episodes: EpisodeResult[]): Promise<boolean> {
-  return db.transaction(async (tx) => {
-    const closed = await tx
-      .update(evalRuns)
-      .set({ status: "done", failureReason: null, reportJson: report, costActualUsd: report.cost.actualUsd, finishedAt: new Date() })
-      .where(and(eq(evalRuns.id, runId), ne(evalRuns.status, "done")))
-      .returning({ id: evalRuns.id });
-    if (closed.length === 0) return false;
-    const flags = episodes
-      .filter((episode) => episode.kind !== "baseline")
-      .flatMap((episode) =>
-        episode.flags.map((flag) => ({
-          evalRunId: runId,
-          episode: episode.key,
-          turn: flag.turn,
-          itemId: flag.itemId,
-          kind: flag.kind,
-          excerpt: flag.excerpt,
-          allowedHooks: flag.allowedHooks,
-          judgeReason: flag.reason,
-        })),
-      );
-    if (flags.length > 0) await tx.insert(leakFlags).values(flags);
-    return true;
-  });
 }
 
 /**

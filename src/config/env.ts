@@ -58,7 +58,6 @@ const envSchema = z
     LLM_SCENARIO_GENERATOR: roleSpec,
     LLM_SAFETY: roleSpec,
     // CLI-only roles: needed by the commands that call them, not by the app.
-    LLM_EVAL_INTERVIEWER: optionalRoleSpec,
     LLM_EVAL_LEAK_JUDGE: optionalRoleSpec,
     LLM_STRING_CHECK: optionalRoleSpec,
     LLM_QA_PLANNER: optionalRoleSpec,
