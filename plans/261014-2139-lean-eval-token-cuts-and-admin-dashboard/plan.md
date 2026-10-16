@@ -70,7 +70,7 @@ The hard cap `eval_lean_budget_usd = 0.10` aborts the run through the `recordCal
 | 7 | [Admin scenario review](./phase-07-admin-scenario-review.md) | Done: list, review, diff, probes, rulings, strings, approval, publish and unpublish, lean eval and persona drafts from the browser; curated personas only; 0 paid calls (stub) | 5, 6 | 2.5d |
 | 8 | [Admin learners, config, custom topics, audit](./phase-08-admin-learners-config-and-audit.md) | Done: learners, transcripts, custom-topic attempts, config editor and audit log; every learner-data read and config change logged; 0 LLM calls | 6 | 1.5d |
 | 9 | [Learner progress and interview-guide checker](./phase-09-learner-progress-and-guide-checker.md) | Done: `/progress` (0 calls) and `/guide-check` (1 call, ~0.0014 USD); leading recall 100% (36/36) in one paid run (0.045 USD) | 2 | 2.5d |
-| 10 | [Cleanup, docs and checks](./phase-10-cleanup-docs-and-checks.md) | Pending | all | 1d |
+| 10 | [Cleanup, docs and checks](./phase-10-cleanup-docs-and-checks.md) | Done: episode profiles, baseline and simulated learner removed; `il eval` lean only; docs updated; all five checks pass; 0 paid calls | all | 1d |
 
 Phase 6 can run in parallel with phases 2–3 after phase 1 (`src/app/admin` against `src/llm` + `src/eval` + `src/graphs`). Phase 3 waits for phase 2, because the agent must evaluate the production prompts and efforts.
 
@@ -81,12 +81,12 @@ Phase 6 can run in parallel with phases 2–3 after phase 1 (`src/app/admin` aga
 
 ## Success criteria
 
-- [ ] `pnpm il eval <persona> --profile lean` costs < 0.10 USD (measured in `llm_call`) on every curated persona (7 on disk), and < 0.01 USD for an unchanged re-eval.
-- [ ] The lean eval flags 100% of the seeded leak mutants and passes all 9 clean curated personas (phase 4). Two runs give the same verdict.
-- [ ] Every role runs the cheapest model that passes its judgement set 3/3 (phase 2). ANALYSIS stays on Flash (user decision), so sessions are ≈ 10% cheaper, mostly in the reveal.
-- [ ] `/admin` (admins only) shows spend by day, scope and role. A persona version can be evaluated, reviewed and published or unpublished from the browser. Config, custom attempts, learners and the audit log are visible, and every learner-data read is logged.
-- [ ] A learner sees their skill trend across sessions, and can check an interview guide for their app idea.
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e` all pass.
+- [x] `pnpm il eval <persona> --profile lean` costs < 0.10 USD (measured in `llm_call`) on every curated persona (7 on disk), and < 0.01 USD for an unchanged re-eval.
+- [ ] The lean eval flags 100% of the seeded leak mutants and passes all 9 clean curated personas (phase 4). Two runs give the same verdict. **Open:** mutant recall met; clean personas still fail `no_leaks` (phase 4 report).
+- [x] Every role runs the cheapest model that passes its judgement set 3/3 (phase 2). ANALYSIS stays on Flash (user decision), so sessions are ≈ 10% cheaper, mostly in the reveal.
+- [x] `/admin` (admins only) shows spend by day, scope and role. A persona version can be evaluated, reviewed and published or unpublished from the browser. Config, custom attempts, learners and the audit log are visible, and every learner-data read is logged.
+- [x] A learner sees their skill trend across sessions, and can check an interview guide for their app idea.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm test:int`, `pnpm test:e2e` all pass.
 
 ## Open questions
 
