@@ -1,7 +1,7 @@
 ---
 phase: 1
 title: "Routing test set, batch judgement runs and baseline"
-status: in-progress
+status: completed
 priority: P1
 effort: "1.5d"
 dependencies: []
@@ -84,12 +84,12 @@ Measure the critical weakness before changing anything. Add a `topic-route` judg
 - [x] +6 far-reference label lines
 - [x] `il transcript-run` and its test
 - [x] Baseline `topic-route` recorded (approved; 0.0514 USD)
-- [ ] Baseline transcript, 10 turns: waits for the Supabase restore (approved, ≈ 0.04 USD)
+- [x] Baseline transcript, 10 turns, after the user restored Supabase (0.0517 USD; `plans/reports/transcript-before-261023-chi-thu.md`)
 
 ## Success criteria
 - [x] `pnpm typecheck`, `pnpm lint`, `pnpm test` pass, with 0 paid calls in tests. The tester also ran int 672/672 and e2e 328/328.
 - [x] The baseline wrong-direct and missed-direct rates for the current Call 1 are written here, with the confusion pairs.
-- [ ] The 10-turn "before" transcript, with its word, sentence, token and latency medians, is saved under `plans/reports/`.
+- [x] The 10-turn "before" transcript, with its word, sentence, token and latency medians, is saved under `plans/reports/`.
 
 ## Results (2026-10-23)
 - **Baseline routing** (today's Call 1, 3.8 Flash, batch; `plans/reports/baseline-261023-topic-route.md`):
@@ -101,7 +101,13 @@ Measure the critical weakness before changing anything. Add a `topic-route` judg
     - `empty-hours-loss` (cl-12), `paper-ledger` (cl-14), `stuck-signal` (ch-13).
   - There are 0 sibling confusions among direct questions. The weakness is the forced choice, which is what phase 2 removes.
 - **How it was scored:** the CLI crashed writing `llm_call`, because the configured Supabase DB is unreachable ("tenant/user not found", likely a paused free project; the user will restore it). The finished batch job was scored offline from its stored responses with the same code. Response i matches case i because requests are enqueued in case order.
-- **Spend:** 0.0514 USD for the batch, plus 0.0021 USD lost on a transcript run that crashed at its first `llm_call` write. **Phase 1 total ≈ 0.054 USD.**
+- **Before transcript** (`plans/reports/transcript-before-261023-chi-thu.md`, run after the user restored Supabase):
+  - Turn 1, a general question, opened `tried-methods`.
+  - The persona volunteered the gist of locked items: `work-fatigue` in turns 1 and 3, `small-spend` in turn 5, and `shame` in turn 7. Turn 7 was a leading question, answered by elaborating the open `last-attempt`.
+  - Replies: median 140 words and 5 sentences.
+  - Inputs grew about 230 tokens a turn per call.
+  - Latency: about 7 s a turn (Call 1 2.4 s + Call 2 4.5 s).
+- **Spend:** 0.0514 USD for the batch, 0.0021 USD lost on a transcript run that crashed at its first `llm_call` write, and 0.0517 USD for the transcript rerun. **Phase 1 total ≈ 0.105 USD.**
 - The `label-classifier` baseline was skipped (user decision 2026-10-23). Phase 2's run, which still has the full transcript, serves as the baseline for phase 3's window.
 - **Review** (8/10, no critical; `plans/reports/code-reviewer-261023-phase-01.md`): approved as-is by the user. The warnings W1–W7 and suggestions S1–S11 stay open as follow-ups.
   - W1 flags three arguable lines (ch-15, cl-12, ct-11). Two of them are among the 9 baseline errors; without them the rate is 13%, so the conclusion is the same.

@@ -17,6 +17,14 @@ All nine errors are general questions forced onto a single tag. Three times it w
 - **Rescue:** a batch job keeps its responses, and our requests are queued in case order. A scratch script fetched the job, mapped response i to case i, and scored it with the repo's own `planTurn` and `scoreTopicRouteSet`. Nothing was paid twice.
 - **Rule from now on:** no paid CLI run while the configured database is down.
 
+## Later the same day: the before transcript
+The user restored the project. A read-only `cost-report` confirmed the DB answered, and then the 10-turn `transcript-run` ran for 0.0517 USD (`plans/reports/transcript-before-261023-chi-thu.md`). It showed all three complaints in one session:
+- turn 1, a general question, opened `tried-methods`;
+- the persona volunteered the gist of three locked items. One of them, `shame`, came in answer to a leading question;
+- replies had a median of 140 words, and each turn took about 7 s;
+- inputs grew about 230 tokens a turn per call.
+Phase 1 total: ≈ 0.105 USD.
+
 ## Small things worth remembering
 - `sentenceCount` first counted "Ờ… để chị nhớ coi." as two sentences. An ellipsis is a spoken pause, and the test caught it before any paid run.
 - One QA graph test runs five scripted QA runs. It takes about 2 s alone but passed 5 s under full-suite load with Docker up, so its timeout is now 15 s.

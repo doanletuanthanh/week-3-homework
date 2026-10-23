@@ -75,7 +75,7 @@ Drivers: Call 2 output drops from ~269 (eval figure) to ~90 tokens. Both inputs 
 
 | # | Phase | Status | Depends on | Effort |
 |---|-------|--------|------------|--------|
-| 1 | [Routing test set, batch judgement runs and baseline](./phase-01-start.md) | In progress: code, tests, docs and the routing baseline are done (wrong-route 16.1%, 9/56); the transcript baseline waits for the Supabase restore | — | 1.5d |
+| 1 | [Routing test set, batch judgement runs and baseline](./phase-01-start.md) | Done: wrong-route baseline 16.1% (9/56). Before-transcript: median 140 words a reply, persona drifts into locked items, ~7 s a turn | — | 1.5d |
 | 2 | [Director v2: topic routing with abstention and evidence](./phase-02-director-v2-topic-routing.md) | Pending | 1 | 2d |
 | 3 | [Session memory and bounded context](./phase-03-session-memory-and-bounded-context.md) | Pending | 2 | 2d |
 | 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | Pending | 3 | 1.5d |
@@ -88,7 +88,9 @@ Phase 5 touches the generation path (`src/graphs/generation-graph.ts`, `src/llm/
 
 Before each run, print the estimate and the plan's spend so far (`pnpm il cost-report`, scope `eval`/`generation` since 2026-10-23). If spend + estimate > 0.5 USD, stop and ask. Judgement sets run through Gemini Batch (half price) once phase 1 adds `--batch`.
 
-**Spent so far: ≈ 0.054 USD** (phase 1). The `llm_call` rows of these runs were not written: the DB was unreachable, so this running total is kept here by hand.
+**Spent so far: ≈ 0.105 USD** (phase 1). The first two runs wrote no `llm_call` rows because the DB was unreachable, so this running total is kept here by hand. The transcript rerun is recorded in `llm_call`.
+
+Remaining budget: ≈ 0.395 USD for the core runs of phases 2–6 (≈ 0.35 planned). The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
 
 Rule: run no paid CLI command while the configured DB is unreachable. The call is paid first, and then the `llm_call` write crashes the run.
 
@@ -96,7 +98,7 @@ Rule: run no paid CLI command while the configured DB is unreachable. The call i
 |---|---|---|
 | 1 | `topic-route` 56 lines (one pooled file), today's prompt, Flash, batch (baseline) | 0.06 → **0.0514 spent** |
 | 1 | ~~`label-classifier` far-reference baseline~~ skipped (user, 2026-10-23); phase 2's run is the baseline for phase 3 | 0.01 → 0 |
-| 1 | `transcript-run --turns 10` chị Thu, today's engine (before): first try crashed on the DB write (**0.0021 lost**); rerun after the Supabase restore | 0.04 |
+| 1 | `transcript-run --turns 10` chị Thu, today's engine (before): the first try crashed on the DB write (**0.0021 lost**); the rerun after the Supabase restore spent **0.0517** | 0.04 → **0.0538** |
 | 2 | `topic-route` × 3 + `label-classifier`, new prompt, unchanged tags, Flash, batch | 0.09 |
 | 2 | `topic-route` lines touched by curated tag edits, Flash, batch | 0.01 |
 | 3 | `label-classifier` with window + memory, batch | 0.03 |
