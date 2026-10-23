@@ -26,7 +26,7 @@ The three test commands need no key and spend nothing. To run the app with real 
 | `pnpm typecheck`, `pnpm lint` | TypeScript and ESLint |
 | `pnpm test`, `pnpm test:int`, `pnpm test:e2e` | Unit, integration, end-to-end tests |
 | `pnpm db:generate`, `pnpm db:migrate` | Write a migration from `src/db/schema.ts`; apply migrations to `DATABASE_URL_DIRECT` |
-| `pnpm il <command>` | The operator CLI: scenarios, the lean eval (`eval`, `eval-calibrate`), rulings and approval (`adjudicate`, `approve`), publishing, spend (`cost-report`), config, custom topics. See [docs/operations.md](docs/operations.md); most of it is also in the admin console at `/admin` |
+| `pnpm il <command>` | The operator CLI: scenarios, the lean eval (`eval`, `eval-calibrate`), judgement sets (`judgement-eval`), persona replies read without the app (`transcript-run`), rulings and approval (`adjudicate`, `approve`), publishing, spend (`cost-report`), config, custom topics. See [docs/operations.md](docs/operations.md); most of it is also in the admin console at `/admin` |
 
 ## Where things are
 

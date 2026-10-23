@@ -2,6 +2,7 @@ import { z } from "zod";
 import { callModel } from "@/llm/call-model";
 import { GUIDE_LABELS, buildGuideCheckMessages, guideCheckSchema, type GuideLabel } from "@/llm/prompts/guide-check";
 import { rate, type JudgementOptions, type SetScore } from "./judgement-eval";
+import { mapPooled } from "./pool";
 
 /**
  * `guide-check`: one interview guide per line, with the label each of its questions must get, in
@@ -67,15 +68,14 @@ export function scoreGuideSet(rows: GuideRow[]): SetScore {
 
 /** Runs the production guide check on each guide: one call per guide. */
 export async function runGuideSet(cases: GuideCase[], options: JudgementOptions): Promise<SetScore> {
-  const rows: GuideRow[] = [];
-  for (const entry of cases) {
+  const rows = await mapPooled(cases, options.concurrency ?? 1, async (entry): Promise<GuideRow> => {
     const reply = await callModel(
       "ANALYSIS",
       buildGuideCheckMessages({ guide: entry.questions.map((question) => question.text).join("\n"), idea: entry.idea ?? null }),
       { schema: guideCheckSchema, meta: { judgement_case: entry.id }, scope: options.scope },
       options.llmDeps,
     );
-    rows.push({ id: entry.id, expected: entry.questions.map((question) => question.expected), predicted: reply.output.questions.map((question) => question.label) });
-  }
+    return { id: entry.id, expected: entry.questions.map((question) => question.expected), predicted: reply.output.questions.map((question) => question.label) };
+  });
   return scoreGuideSet(rows);
 }

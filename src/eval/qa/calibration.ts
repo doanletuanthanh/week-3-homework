@@ -1,5 +1,6 @@
 import type { CallModelDeps } from "@/llm/call-model";
 import type { Scenario } from "@/scenario/schema";
+import { mapPooled } from "../pool";
 import { OPERATORS, mutantsOf, type OperatorKey } from "./mutants";
 import type { QaReport } from "./types";
 
@@ -140,31 +141,25 @@ export async function runCalibration(
   runOne: (spec: CalibrationSpec) => Promise<QaReport>,
   options: { concurrency: number; onResult?: (result: CalibrationResult) => void },
 ): Promise<CalibrationResult[]> {
-  const queue = [...specs];
-  const results: CalibrationResult[] = [];
-  const worker = async () => {
-    for (let spec = queue.shift(); spec; spec = queue.shift()) {
-      let result: CalibrationResult;
-      try {
-        result = resultOf(spec, await runOne(spec));
-      } catch (error) {
-        result = {
-          personaId: spec.personaId,
-          operator: spec.operator,
-          run: spec.run,
-          targetItemId: spec.targetItemId,
-          unmet: null,
-          error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
-          confirmed: false,
-          highRisk: [],
-          costUsd: error instanceof Error && "spentUsd" in error && typeof error.spentUsd === "number" ? error.spentUsd : 0,
-          calls: 0,
-        };
-      }
-      results.push(result);
-      options.onResult?.(result);
+  return mapPooled(specs, options.concurrency, async (spec) => {
+    let result: CalibrationResult;
+    try {
+      result = resultOf(spec, await runOne(spec));
+    } catch (error) {
+      result = {
+        personaId: spec.personaId,
+        operator: spec.operator,
+        run: spec.run,
+        targetItemId: spec.targetItemId,
+        unmet: null,
+        error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+        confirmed: false,
+        highRisk: [],
+        costUsd: error instanceof Error && "spentUsd" in error && typeof error.spentUsd === "number" ? error.spentUsd : 0,
+        calls: 0,
+      };
     }
-  };
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(options.concurrency, queue.length)) }, worker));
-  return results;
+    options.onResult?.(result);
+    return result;
+  });
 }

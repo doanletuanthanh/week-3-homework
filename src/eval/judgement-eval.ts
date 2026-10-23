@@ -18,18 +18,19 @@ import { buildOutputSafetyMessages, outputSafetySchema } from "@/llm/prompts/out
 import { buildVerifierMessages } from "@/llm/prompts/verifier";
 import { analysisSchema, endJudgeSchema, verifierSchema } from "@/llm/schemas";
 import type { Scenario } from "@/scenario/schema";
+import { mapPooled } from "./pool";
 
 /**
  * Hand-labelled test sets for NFR-7. One JSON object per line. Every case is played against a
  * scenario file; `transcript` holds the turns after the opening line, which is added from the
  * scenario.
  */
-const exchange = z.strictObject({ learner: z.string().min(1), persona: z.string().min(1) });
+export const exchangeSchema = z.strictObject({ learner: z.string().min(1), persona: z.string().min(1) });
 
 /** `label-classifier`: the label the production classifier must give a new question. */
 export const labelCaseSchema = z.strictObject({
   id: z.string().min(1),
-  transcript: z.array(exchange),
+  transcript: z.array(exchangeSchema),
   question: z.string().min(1),
   expected: z.enum(LABELS),
   note: z.string().optional(),
@@ -46,7 +47,7 @@ export const verdictCaseSchema = z.strictObject({
   unlocked: z.array(z.string()),
   told: z.array(z.string()).default([]),
   selected_hook: z.string().nullable(),
-  transcript: z.array(exchange).min(1),
+  transcript: z.array(exchangeSchema).min(1),
   expected: z.strictObject({ told: z.array(z.string()), hook_dropped: z.boolean() }),
   note: z.string().optional(),
 });
@@ -63,7 +64,7 @@ export const canvasCaseSchema = z.strictObject({
   unlocked: z.array(z.string()).default([]),
   told: z.array(z.string()).default([]),
   dropped: z.array(z.string()).default([]),
-  transcript: z.array(exchange).min(1),
+  transcript: z.array(exchangeSchema).min(1),
   notes: z.string().min(1),
   expected: z.array(z.strictObject({ phrase: z.string().min(1), kind: z.enum([...CANVAS_MATCH_KINDS, "none"]), item: z.string().optional() })).min(1),
   note: z.string().optional(),
@@ -76,7 +77,7 @@ export type CanvasCase = z.infer<typeof canvasCaseSchema>;
  */
 export const noveltyCaseSchema = z.strictObject({
   id: z.string().min(1),
-  transcript: z.array(exchange),
+  transcript: z.array(exchangeSchema),
   question: z.string().min(1),
   span: z.string().min(1),
   expected: z.enum(["novel", "said"]),
@@ -114,7 +115,7 @@ export const safetyCaseSchema = z.strictObject({
 });
 export type SafetyCase = z.infer<typeof safetyCaseSchema>;
 
-export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan", "guide-check"] as const;
+export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan", "guide-check", "topic-route"] as const;
 export type SetKind = (typeof SET_KINDS)[number];
 
 /** NFR-7: a set proves a gate only from this size up. */
@@ -297,7 +298,12 @@ export function scoreSafetySet(rows: { id: string; expected: "violation" | "clea
   };
 }
 
-export type JudgementOptions = { scope: CallScope; llmDeps?: Partial<CallModelDeps> };
+export type JudgementOptions = {
+  scope: CallScope;
+  llmDeps?: Partial<CallModelDeps>;
+  /** Cases whose calls run at the same time; 1 (the default) runs them one after another. A batch transport needs them together. */
+  concurrency?: number;
+};
 
 /** Runs the production moderation call on each topic and keeps what code made of its reply. */
 export async function runModerationSet(cases: ModerationCase[], options: JudgementOptions): Promise<SetScore> {
@@ -351,7 +357,8 @@ export async function runSafetySet(scenario: Scenario, cases: SafetyCase[], opti
   return scoreSafetySet(rows);
 }
 
-const toTranscript = (scenario: Scenario, exchanges: { learner: string; persona: string }[]) => [
+/** The transcript the engine reads for a case: the scenario's opening line, then the case's exchanges. */
+export const toTranscript = (scenario: Scenario, exchanges: { learner: string; persona: string }[]) => [
   { index: 0, learnerText: null as string | null, personaText: scenario.opening_line },
   ...exchanges.map((turn, position) => ({ index: position + 1, learnerText: turn.learner as string | null, personaText: turn.persona })),
 ];
@@ -365,8 +372,7 @@ export function itemIds(scenario: Scenario, caseId: string, ids: string[]): stri
 
 /** Runs the production Call 1 on each case and keeps the label a learner would be shown for it. */
 export async function runLabelSet(scenario: Scenario, cases: LabelCase[], options: JudgementOptions): Promise<SetScore> {
-  const rows = [];
-  for (const entry of cases) {
+  const rows = await mapPooled(cases, options.concurrency ?? 1, async (entry) => {
     const transcript = toTranscript(scenario, entry.transcript);
     const state: EngineState = { ...initialState(scenario.openness_start), turnIndex: entry.transcript.length };
     const reply = await callModel(
@@ -376,15 +382,15 @@ export async function runLabelSet(scenario: Scenario, cases: LabelCase[], option
       options.llmDeps,
     );
     const { analysis } = planTurn({ scenario, state, analysis: reply.output, transcript, question: entry.question });
-    rows.push({ id: entry.id, expected: entry.expected, predicted: analysis.label });
-  }
+    return { id: entry.id, expected: entry.expected, predicted: analysis.label };
+  });
   return scoreLabelSet(rows);
 }
 
 /** Runs the production turn judge on each case and keeps the verdict code accepted. */
 export async function runVerdictSet(scenario: Scenario, cases: VerdictCase[], options: JudgementOptions): Promise<SetScore> {
-  const rows: VerdictRow[] = [];
-  for (const entry of cases) {
+  // Every case is checked against the scenario before any call, so a broken set spends nothing.
+  const prepared = cases.map((entry) => {
     const turnIndex = entry.transcript.length;
     const at = (itemId: string) => ({ itemId, turn: turnIndex });
     const hook = entry.selected_hook === null ? null : itemIds(scenario, entry.id, [entry.selected_hook])[0];
@@ -396,18 +402,21 @@ export async function runVerdictSet(scenario: Scenario, cases: VerdictCase[], op
       selectedHook: hook,
     };
     itemIds(scenario, entry.id, entry.expected.told);
+    return { entry, state, hook };
+  });
+  const rows = await mapPooled(prepared, options.concurrency ?? 1, async ({ entry, state, hook }): Promise<VerdictRow> => {
     const verdict = await judgeTurn(
       { scenario, state, transcript: toTranscript(scenario, entry.transcript) },
       { scope: options.scope, meta: { judgement_case: entry.id }, llmDeps: options.llmDeps },
     );
     const { applied } = applyVerdict(scenario, state, verdict);
-    rows.push({
+    return {
       id: entry.id,
       hookSelected: hook !== null,
       expected: entry.expected,
       predicted: { told: applied.disclosed_item_ids, hook_dropped: applied.hook_dropped },
-    });
-  }
+    };
+  });
   return scoreVerdictSet(rows);
 }
 

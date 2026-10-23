@@ -208,14 +208,24 @@ describe("il judgement-eval", () => {
 
   it("prints each NFR-7 rate and exits 1 when a hard gate is missed", async () => {
     // Every question of the starter set is called leading: good questions are blamed.
-    const models = roleModels({ ANALYSIS: repeat(18, { structured: rawAnalysis({ label: "leading", introduced_span: [0, 0] }) }) });
+    const models = roleModels({ ANALYSIS: repeat(24, { structured: rawAnalysis({ label: "leading", introduced_span: [0, 0] }) }) });
     const { io, out } = capture();
 
     expect(await runJudgementEval(["evalsets/label-classifier.jsonl"], io, models.llmDeps)).toBe(1);
 
-    expect(out[0]).toBe("Bộ thử label-classifier: 18 ca, kịch bản chi-thu");
-    expect(out[1]).toBe("[CHƯA ĐẠT] Câu tốt bị gắn nhầm leading: 100.0% (12/12), cổng ≤ 5.0%");
-    expect(out[2]).toBe("[CHƯA ĐẠT] Đồng thuận với nhãn gán tay: 33.3% (6/18), cổng ≥ 85.0%");
+    expect(out[0]).toBe("Bộ thử label-classifier: 24 ca, kịch bản chi-thu");
+    expect(out[1]).toBe("[CHƯA ĐẠT] Câu tốt bị gắn nhầm leading: 100.0% (18/18), cổng ≤ 5.0%");
+    expect(out[2]).toBe("[CHƯA ĐẠT] Đồng thuận với nhãn gán tay: 25.0% (6/24), cổng ≥ 85.0%");
+  });
+
+  it("prints the same score when the cases run together as when they run one by one", async () => {
+    const run = async (args: string[]) => {
+      const models = roleModels({ ANALYSIS: repeat(24, { structured: rawAnalysis({ label: "leading", introduced_span: [0, 0] }) }) });
+      const { io, out } = capture();
+      expect(await runJudgementEval(["evalsets/label-classifier.jsonl", ...args], io, models.llmDeps)).toBe(1);
+      return out;
+    };
+    expect(await run(["--concurrency", "8"])).toEqual(await run([]));
   });
 
   it("exits 2 on the starter set when every rate passes: the set is too small to prove the gate", async () => {

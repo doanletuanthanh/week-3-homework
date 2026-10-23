@@ -16,6 +16,7 @@ import { publishCommand, unpublishCommand } from "./commands/publish";
 import { seedDemoCommand } from "./commands/seed-demo";
 import { approveStringsCommand, checkStringsCommand } from "./commands/strings";
 import { traceCommand } from "./commands/trace";
+import { transcriptRunCommand } from "./commands/transcript-run";
 import { validateCommand } from "./commands/validate";
 import { operatorEmail } from "./operator";
 import type { CliIo, Command } from "./scenario-file";
@@ -83,7 +84,8 @@ async function main(): Promise<number> {
     "approve-strings": approveStringsCommand(connected, operatorEmail),
     publish: publishCommand(connected, operatorEmail),
     unpublish: unpublishCommand(connected, operatorEmail),
-    "judgement-eval": judgementEvalCommand(llmDeps),
+    "judgement-eval": judgementEvalCommand(llmDeps, batchCollector),
+    "transcript-run": transcriptRunCommand(llmDeps),
     "cost-report": costReportCommand(connected),
     "measure-latency": measureLatencyCommand({ cookie: process.env.IL_MEASURE_COOKIE }),
     // Reads the whole environment as the app does, so a bad value stops the command before it starts a session.

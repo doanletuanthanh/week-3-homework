@@ -5,6 +5,7 @@ import { z } from "zod";
 import { roleSpecFromEnv } from "@/config/env";
 import type { ToolCache } from "@/db/repo/eval-tool-cache";
 import { assertIsolated } from "@/eval/isolation";
+import { mapPooled } from "@/eval/pool";
 import { FLOOR_ATTACKS, floorActions } from "@/eval/qa/floor";
 import { judgeReplies } from "@/eval/qa/reply-judge";
 import { itemAlias, itemIdOf, publicFields } from "@/eval/qa/scenario-view";
@@ -136,18 +137,10 @@ async function runCached(action: Action, attempt: 0 | 1, context: ToolContext, o
 
 /** Runs actions a few at a time and returns their observations in the order the actions were given. */
 async function runPool(actions: Action[], context: ToolContext, options: QaRunOptions, attempt: 0 | 1 = 0): Promise<JudgedObservation[]> {
-  const queue = actions.map((action) => ({ action, key: actionKey(action) }));
-  const done: JudgedObservation[] = [];
-  const worker = async () => {
-    for (let next = queue.shift(); next; next = queue.shift()) {
-      const { action, key } = next;
-      const result = await runCached(action, attempt, context, options);
-      done.push({ key, action, ...result, readings: {} });
-    }
-  };
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(options.concurrency, queue.length)) }, worker));
-  const order = new Map(actions.map((action, index) => [actionKey(action), index]));
-  return done.sort((a, b) => order.get(a.key)! - order.get(b.key)!);
+  return mapPooled(actions, options.concurrency, async (action): Promise<JudgedObservation> => {
+    const result = await runCached(action, attempt, context, options);
+    return { key: actionKey(action), action, ...result, readings: {} };
+  });
 }
 
 /** Actions not run or queued yet, in order, each once. */

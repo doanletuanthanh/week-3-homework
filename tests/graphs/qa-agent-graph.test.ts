@@ -161,6 +161,7 @@ describe("runQaAgent: plan → execute → judge → reflect → report", () => 
 });
 
 describe("tool cache", () => {
+  // Several whole scripted runs: about 2 s alone, past the 5 s default when the full suite loads every core.
   it("serves a second run on the same content and models from the cache, with fresh reply ids", async () => {
     const store = new Map<string, unknown>();
     const toolCache = { get: async (key: string) => (store.get(key) ?? null) as never, set: async (key: string, value: unknown) => void store.set(key, value) };
@@ -213,7 +214,7 @@ describe("tool cache", () => {
     const third = script();
     await runQaAgent(edited, { runId: RUN_ID, version: 2, budget: new Budget(0.1), llmDeps: third.llmDeps, concurrency: 1, toolCache });
     expect(third.calls("ANALYSIS")).toHaveLength(chiThu.items.length + ATTACK_REPLIES);
-  });
+  }, 15_000);
 });
 
 describe("budget", () => {

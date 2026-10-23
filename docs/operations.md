@@ -56,11 +56,32 @@ The simulated-interview profiles (`quick`, `full`, `reduced`) and their prompt-o
 ```bash
 pnpm il judgement-eval evalsets/turn-verdict.jsonl
 pnpm il judgement-eval <file.jsonl> --kind <kind> --scenario <scenario file>
+pnpm il judgement-eval evalsets/topic-route.jsonl --batch
 ```
 
-Runs a hand-labelled set through the production prompt and prints the rates NFR-7 names. Kinds: `label-classifier`, `turn-verdict`, `canvas-judge`, `leading-novelty`, `moderation`, `output-safety`, `reply-judge` (lean eval reply judge), `qa-plan` (lean eval planner; each line names its own scenario file and mutation operator, so `--scenario` is not used), `guide-check` (the learner guide checker; each line is one guide with the label of each question in order; gate: leading recall ≥ 90%; no scenario is used); the kind is taken from the file name when `--kind` is left out.
+Runs a hand-labelled set through the production prompt and prints the rates NFR-7 names. Kinds:
+- `label-classifier`, `turn-verdict`, `canvas-judge`, `leading-novelty`, `moderation`, `output-safety`.
+- `reply-judge`: the lean eval's reply judge.
+- `qa-plan`: the lean eval's planner. Each line names its own scenario file and mutation operator, so `--scenario` is not used.
+- `guide-check`: the learner guide checker. Each line is one guide, with the label of each question in order; no scenario is used. Gate: leading recall ≥ 90%.
+- `topic-route`: which item Call 1 routes a question to, read where code acts on it. Each line names its own scenario file, so one set pools several personas. `expected` is an item id, `broad` (a general question, or one about several topics) or `none` (no topic). Gates over the whole set: wrong-route ≤ 2.1% (one line in 48) and missed ≤ 20%. It also prints the confusion pairs (expected → predicted), which show which tags to rewrite.
 
-Format: one JSON object per line, with an `id`, the input fields of that kind, `expected`, and a free `note`. The files in `evalsets/` are the reference for each kind's fields. A set proves a gate only from 100 lines up; the committed sets are starters of 8 to 18 lines.
+The kind is taken from the file name when `--kind` is left out.
+
+`--batch` sends the Gemini calls through Batch Mode at half price, all cases at once. A run then takes minutes instead of seconds. `--concurrency N` sets how many cases run at the same time (default 1, or 64 with `--batch`). It applies to `topic-route`, `label-classifier`, `turn-verdict` and `guide-check`.
+
+Format: one JSON object per line, with an `id`, the input fields of that kind, `expected`, and a free `note`. The files in `evalsets/` are the reference for each kind's fields. A set proves a gate only from 100 lines up; the committed sets are starters of 8 to 24 lines. `topic-route` (56 lines) has its own floor of 48.
+
+## Reading persona replies before and after a prompt change
+
+```bash
+pnpm il transcript-run scenarios/ux-chi-tieu/chi-thu.json --turns 10        # prints the estimate, calls nothing
+pnpm il transcript-run scenarios/ux-chi-tieu/chi-thu.json --turns 10 --yes  # plays the turns
+```
+
+Plays a list of questions through the real turn engine in memory, with no app, no session and no sign-in. The default list is the demo transcript `evalsets/demo/<persona>-transcript.json`; use `--questions <file>` for another one with the same `questions` field. Past the end of the list, the questions start over.
+
+For each turn it prints the question, the reply, its words and sentences, whether it is a list, the opened item, the label, and for each call the input, output and reasoning tokens, the latency and the cost. At the end it prints medians. Only `llm_call` rows are written, with scope `eval`. A 10-turn run costs about 0.03–0.04 USD on 3.8 Flash.
 
 ## Sessions
 
