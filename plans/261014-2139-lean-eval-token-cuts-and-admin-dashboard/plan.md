@@ -5,7 +5,7 @@ status: in-progress
 priority: P1
 effort: "~20d"
 tags: [llm-cost, eval, admin, dashboard, langgraph]
-blockedBy: []
+blockedBy: [261023-1532-chat-agent-routing-memory-and-generator-v2]
 blocks: []
 created: 2026-10-14
 ---
@@ -78,6 +78,7 @@ Phase 6 can run in parallel with phases 2–3 after phase 1 (`src/app/admin` aga
 
 - `261003-1818-interviewlab-bootstrap-s1-and-custom-topics` (in progress). This plan replaces its phase 4 publish gate (the `full` profile, two admins) and its "no Review Console" decision. Its other open items (deploy, latency, real phones) do not conflict. No `blockedBy` is needed, because nothing here waits on them.
 - `261010-1200-library-topic-layer-and-app-topics` (in progress, phase 6 done). No file overlap except `docs/operations.md`, which phase 10 edits last.
+- `261023-1532-chat-agent-routing-memory-and-generator-v2` (added 2026-10-23). It rebuilds Call 1 routing and Call 2 replies: the source of the clean-persona `topic` brushes. Phase 4's gate rule waits for it (`blockedBy`); the judge's tolerance for brushes caused by overlapping item content stays this plan's decision.
 
 ## Success criteria
 
