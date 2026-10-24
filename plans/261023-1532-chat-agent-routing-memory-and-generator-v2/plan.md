@@ -49,6 +49,11 @@ Rejected: one tool-calling agent per turn that unlocks items itself (the model w
 - Memory is **in-session only**, stored in `turn.decision_json`. No new table, no migration.
 - Director model: **measure Flash-Lite, then decide**. The switch happens only if every gate passes 3/3 and the user approves the measured result. Until then, the 2026-10-14 decision stands: ANALYSIS stays on 3.8 Flash.
 - Paid verification **≤ 0.5 USD for the whole plan**, every run approved first. Everything else runs on stubs and scripted models (memory `llm-budget-zero-paid-calls`).
+- Hooks (user, phase 2 code review, 2026-10-23/24):
+  - Topics a question only touches are a fallback pool. Their hook never takes the slot from the direct topic or from a story's next step.
+  - No such hook is dropped while the learner asks directly about a locked item.
+  - A hook drawn from that pool carries its own do-not-assert.
+  - The validation decision still holds: a broad question drops one hook.
 
 ## Invariants kept
 
@@ -76,7 +81,7 @@ Drivers: Call 2 output drops from ~269 (eval figure) to ~90 tokens. Both inputs 
 | # | Phase | Status | Depends on | Effort |
 |---|-------|--------|------------|--------|
 | 1 | [Routing test set, batch judgement runs and baseline](./phase-01-start.md) | Done: wrong-route baseline 16.1% (9/56). Before-transcript: median 140 words a reply, persona drifts into locked items, ~7 s a turn | — | 1.5d |
-| 2 | [Director v2: topic routing with abstention and evidence](./phase-02-director-v2-topic-routing.md) | Pending | 1 | 2d |
+| 2 | [Director v2: topic routing with abstention and evidence](./phase-02-director-v2-topic-routing.md) | Done: wrong-route 16.1% → 1.8% (1/56) on unchanged tags, 0/56 after one tag rewrite; missed 0%; labels 100% | 1 | 2d |
 | 3 | [Session memory and bounded context](./phase-03-session-memory-and-bounded-context.md) | Pending | 2 | 2d |
 | 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | Pending | 3 | 1.5d |
 | 5 | [Scenario generator v2](./phase-05-scenario-generator-v2.md) | Pending | 2 | 2d |
@@ -88,9 +93,9 @@ Phase 5 touches the generation path (`src/graphs/generation-graph.ts`, `src/llm/
 
 Before each run, print the estimate and the plan's spend so far (`pnpm il cost-report`, scope `eval`/`generation` since 2026-10-23). If spend + estimate > 0.5 USD, stop and ask. Judgement sets run through Gemini Batch (half price) once phase 1 adds `--batch`.
 
-**Spent so far: ≈ 0.105 USD** (phase 1). The first two runs wrote no `llm_call` rows because the DB was unreachable, so this running total is kept here by hand. The transcript rerun is recorded in `llm_call`.
+**Spent so far: ≈ 0.210 USD** (phase 1 ≈ 0.105, phase 2 0.1053). Phase 1's first two runs wrote no `llm_call` rows because the DB was unreachable, so this running total is kept here by hand. Every later run is recorded in `llm_call`.
 
-Remaining budget: ≈ 0.395 USD for the core runs of phases 2–6 (≈ 0.35 planned). The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
+Remaining budget: ≈ 0.29 USD for the core runs of phases 3–6 (≈ 0.25 planned). The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
 
 Rule: run no paid CLI command while the configured DB is unreachable. The call is paid first, and then the `llm_call` write crashes the run.
 
@@ -99,8 +104,8 @@ Rule: run no paid CLI command while the configured DB is unreachable. The call i
 | 1 | `topic-route` 56 lines (one pooled file), today's prompt, Flash, batch (baseline) | 0.06 → **0.0514 spent** |
 | 1 | ~~`label-classifier` far-reference baseline~~ skipped (user, 2026-10-23); phase 2's run is the baseline for phase 3 | 0.01 → 0 |
 | 1 | `transcript-run --turns 10` chị Thu, today's engine (before): the first try crashed on the DB write (**0.0021 lost**); the rerun after the Supabase restore spent **0.0517** | 0.04 → **0.0538** |
-| 2 | `topic-route` × 3 + `label-classifier`, new prompt, unchanged tags, Flash, batch | 0.09 |
-| 2 | `topic-route` lines touched by curated tag edits, Flash, batch | 0.01 |
+| 2 | `topic-route` (56 lines pooled) + `label-classifier`, new prompt, unchanged tags, Flash, batch | 0.09 → **0.0864 spent** |
+| 2 | `topic-route` lines touched by curated tag edits (chị Hạnh's 18), Flash, batch | 0.01 → **0.0189 spent** |
 | 3 | `label-classifier` with window + memory, batch | 0.03 |
 | 4 | `transcript-run --turns 10` (after) | 0.04 |
 | 5 | 2 real custom topics end to end | 0.07 |
@@ -116,8 +121,8 @@ Rule: run no paid CLI command while the configured DB is unreachable. The call i
 
 ## Success criteria
 
-- [ ] On the three `topic-route` sets pooled (≥ 48 lines per run), with the production Director model: wrong-direct ≤ 1 line (≈ 2%) and missed-direct ≤ 20%, against a recorded baseline.
-- [ ] `label-classifier` agreement ≥ 94.4% (the 2026-10-14 Flash result) with 0 leading false positives; far-reference lines no worse than baseline. Turn-judge changes are covered by unit tests; `turn-verdict` has no paid rerun, because its cases are one exchange long.
+- [x] On the three `topic-route` sets pooled (≥ 48 lines per run), with the production Director model: wrong-direct ≤ 1 line (≈ 2%) and missed-direct ≤ 20%, against a recorded baseline. Phase 2 measured this on Flash: 1/56 wrong and 0/36 missed, against a 9/56 baseline. If phase 6 switches the Director model, its 3/3 gate must prove this again.
+- [ ] `label-classifier` agreement ≥ 94.4% (the 2026-10-14 Flash result) with 0 leading false positives; far-reference lines no worse than baseline. Turn-judge changes are covered by unit tests; `turn-verdict` has no paid rerun, because its cases are one exchange long. Phase 2 scored 100% (24/24) with 0 leading false positives on the full transcript; phase 3 compares the window against that run.
 - [ ] A scripted 30-turn session shows Call 1 and Call 2 prompts bounded after turn 5: growth ≤ one gist line per turn. Unit test, 0 paid calls.
 - [ ] Demo `transcript-run --turns 10` after phase 4: median reply ≤ 60 words, closed questions answered in ≤ 2 sentences, no list-formatted reply, gist fill ≥ 90%, latency not worse than before. The user reads before/after and accepts.
 - [ ] A generator retry patches only the broken items (repair output ≤ 25% of a full scenario's). Every passed scenario has a routing check. 2 real topics pass.
