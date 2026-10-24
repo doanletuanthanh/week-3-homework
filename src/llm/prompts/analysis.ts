@@ -1,4 +1,5 @@
 import { HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
+import { ROUTE_BROAD_MAX } from "@/config/limits";
 import type { AnalysisContext, TranscriptLine, VerdictMaterial } from "@/engine/contexts";
 import { tokenize } from "@/engine/tokens";
 import { LABELS, type Label } from "@/engine/types";
@@ -61,6 +62,24 @@ export const LABEL_DEFINITION: Record<Label, string> = {
 
 export const LABEL_DEFINITIONS = LABELS.map((label) => LABEL_DEFINITION[label]).join("\n");
 
+/**
+ * How a question is routed to the topics in <chu_de>: one direct topic, only with the words of
+ * <cau_hoi_moi> that show it, or none. Shared by Call 1 and the generator's routing check, so a
+ * prompt that uses it must also give `DATA_BLOCK_RULE`, the topics in a <chu_de> block as
+ * `T<n>: <tag>` lines, the question in a <cau_hoi_moi> block as `index:token` pairs cut by
+ * `tokenize` (the tokens `checkAnalysis` checks the span against), and a response schema with
+ * the `topic` object of `analysisSchema`.
+ */
+export const ROUTING_RULES = [
+  "topic: câu hỏi mới hỏi vào chủ đề nào trong <chu_de>.",
+  "- direct: mã T của MỘT chủ đề mà câu hỏi hỏi đúng vào phần riêng của nó, phân biệt được với các chủ đề gần nó; kèm direct_span là [chỉ số token đầu, chỉ số token cuối] (tính cả hai đầu) của cụm trong <cau_hoi_moi> chỉ ra phần riêng đó. Câu hỏi hợp với hai chủ đề trở lên, hoặc chỉ hỏi chung chung, thì direct là null và direct_span là null.",
+  `- broad: mã T của các chủ đề (tối đa ${ROUTE_BROAD_MAX}, không tính chủ đề direct) mà câu hỏi chạm tới nhưng không hỏi đúng vào phần riêng; không có thì mảng rỗng.`,
+  'Ví dụ, với các chủ đề T1 "cách đi làm buổi sáng", T2 "giờ giấc đi làm", T3 "chi phí đi lại":',
+  '"Sáng anh đi làm bằng gì ạ?" → direct T1, direct_span [2, 5] (cụm "đi làm bằng gì"); broad rỗng.',
+  '"Chuyện đi làm của anh thế nào ạ?" → direct null; broad [T1, T2, T3].',
+  '"Cuối tuần anh hay làm gì?" → direct null; broad rỗng.',
+].join("\n");
+
 const LABEL_RULES = [
   "Gán nhãn cho câu hỏi mới của người hỏi (trường label), chọn đúng một:",
   LABEL_DEFINITIONS,
@@ -70,7 +89,7 @@ const LABEL_RULES = [
   "- Các trường bằng chứng không dùng tới thì để null.",
   "Loại câu hỏi (trường question_type): open (câu hỏi mở), closed (chỉ trả lời có/không hoặc chọn một), hypothetical_future (hỏi về điều sẽ làm hoặc nếu... thì...), past_specific (hỏi về một lần cụ thể đã xảy ra), other.",
   "hook_id: mã (H...) của câu trong <cau_goi_mo_da_tha> hoặc <cau_goi_mo_duoc_chon> mà câu hỏi mới đang hỏi tiếp; không có thì null.",
-  "topic_tags: mã (T...) của chủ đề trong <chu_de> mà câu hỏi mới hỏi thẳng vào; không có thì mảng rỗng. Chọn nhiều nhất một, là chủ đề khớp rõ nhất.",
+  ROUTING_RULES,
 ].join("\n");
 
 /**

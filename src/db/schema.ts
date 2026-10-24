@@ -228,7 +228,10 @@ export const turns = pgTable(
     learnerTokens: jsonb("learner_tokens").$type<string[]>(),
     personaText: text("persona_text").notNull(),
     personaTokens: jsonb("persona_tokens").$type<string[]>().notNull(),
-    /** Call 1 output as returned, before any check. */
+    /**
+     * Call 1 output as returned, before any check. Rows written before topic routing hold
+     * `topic_tags` where `topic` is now: the column is only shown, never planned from again.
+     */
     analysisJson: jsonb("analysis_json").$type<RawAnalysis>(),
     /** What code made of it: checked analysis, corrections, rules run, item opened, openness. */
     decisionJson: jsonb("decision_json").$type<TurnDecision>(),

@@ -6,7 +6,7 @@ import { MIN_ROUTE_SET_SIZE, routeCaseSchema, runTopicRouteSet, scoreTopicRouteS
 import type { Scenario } from "@/scenario/schema";
 import { validateScenario } from "@/scenario/validate";
 import { runJudgementEval } from "../../cli/commands/judgement-eval";
-import { chiThu, rawAnalysis } from "../helpers/engine-fixtures";
+import { chiThu, rawAnalysis, topic } from "../helpers/engine-fixtures";
 import { repeat, roleModels } from "../helpers/eval-models";
 
 const SET = "evalsets/topic-route.jsonl";
@@ -94,22 +94,25 @@ describe("runTopicRouteSet", () => {
   const scenarios = new Map([[CHI_THU, chiThu]]);
   const tag = (itemId: string) => alias(chiThu, "tag", itemId);
 
-  it("keeps the item code would act on: the first tag Call 1 gave, after code checked it", async () => {
+  it("keeps the item code would act on: the direct topic Call 1 gave, once code checked its words", async () => {
     const cases = parseTestSet(
       [
         `{"id":"direct","scenario":"${CHI_THU}","transcript":[],"question":"Chị đã thử những cách nào ạ?","expected":"tried-methods","note":"n"}`,
         `{"id":"broad","scenario":"${CHI_THU}","transcript":[],"question":"Chị quản lý chi tiêu thế nào ạ?","expected":"broad","note":"n"}`,
+        `{"id":"no-words","scenario":"${CHI_THU}","transcript":[],"question":"Chị quản lý tiền thế nào ạ?","expected":"broad","note":"n"}`,
         `{"id":"unknown-tag","scenario":"${CHI_THU}","transcript":[],"question":"Chị đi làm bằng gì ạ?","expected":"none","note":"n"}`,
       ].join("\n"),
       routeCaseSchema,
     );
     const models = roleModels({
       ANALYSIS: [
-        { structured: rawAnalysis({ topic_tags: [tag("tried-methods"), tag("weekly-batch")] }) },
-        // A general question pushed onto one tag: today's engine would open it.
-        { structured: rawAnalysis({ topic_tags: [tag("weekly-batch")] }) },
-        // A tag that names no item is dropped by code.
-        { structured: rawAnalysis({ topic_tags: ["T99"] }) },
+        { structured: rawAnalysis({ topic: topic(tag("tried-methods"), [3, 4], [tag("weekly-batch")]) }) },
+        // A general question pushed onto one topic, with words: the engine opens it.
+        { structured: rawAnalysis({ topic: topic(tag("weekly-batch"), [0, 1]) }) },
+        // A direct topic whose words are not in the question is only a hint.
+        { structured: rawAnalysis({ topic: topic(tag("tried-methods"), [2, 40]) }) },
+        // A topic that names no item is dropped by code.
+        { structured: rawAnalysis({ topic: topic("T99") }) },
       ],
     });
 

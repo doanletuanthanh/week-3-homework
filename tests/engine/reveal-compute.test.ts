@@ -4,7 +4,7 @@ import type { CanvasMatchKind } from "@/engine/reveal-types";
 import { toBrowserReveal } from "@/engine/seal";
 import { tokenize } from "@/engine/tokens";
 import { CANVAS_EXPLANATION } from "@/strings/product-strings";
-import { DROPPED, a, chiThu, engineSession, told } from "../helpers/engine-fixtures";
+import { DROPPED, a, chiThu, engineSession, told, topic } from "../helpers/engine-fixtures";
 import { NOTES, assemble, basisOf, fullParts, judgedNotes, playedSession, rangeOf, selectionOf } from "../helpers/reveal-fixtures";
 
 const session = playedSession();
@@ -144,8 +144,8 @@ describe("resolveCanvasMatches: ten fixed canvases", () => {
 describe("settle", () => {
   it("applies the end judge's verdict about the last turn, and applying it twice changes nothing", () => {
     const played = engineSession();
-    played.turn({ topic_tags: [a("tag", "money-home")] });
-    played.turn({ prev_turn_verdict: told("money-home"), topic_tags: [a("tag", "paid-app")] });
+    played.turn({ topic: topic(a("tag", "money-home")) });
+    played.turn({ prev_turn_verdict: told("money-home"), topic: topic(a("tag", "paid-app")) });
     const basis = basisOf(played);
     expect(basis.state.ledger).toEqual([]);
 
@@ -233,7 +233,7 @@ describe("commentSlots (addendum §3.3)", () => {
 
   it("praises the grounded question that opened the heaviest item, else the earliest one", () => {
     const played = engineSession();
-    played.turn({ topic_tags: [a("tag", "paid-app")] });
+    played.turn({ topic: topic(a("tag", "paid-app")) });
     played.turn({ prev_turn_verdict: DROPPED, label: "boundary_probe", grounded_turn_id: 1 });
     played.turn({ hook_id: a("hook", "paid-app"), label: "confirm_grounded", grounded_turn_id: 1 });
     const opened = basisOf(played);
@@ -258,8 +258,8 @@ describe("commentSlots (addendum §3.3)", () => {
   it("triggers 'heard but did not follow up' for a noted item whose hook was ignored, never for the replay target", () => {
     // Two ignored hooks: paid-app (the heavier one, so the replay target) and small-spend.
     const played = engineSession();
-    played.turn({ topic_tags: [a("tag", "paid-app")] });
-    played.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "small-spend")] });
+    played.turn({ topic: topic(a("tag", "paid-app")) });
+    played.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "small-spend")) });
     played.turn({ prev_turn_verdict: DROPPED });
     const notes = "app trả phí bỏ không\nkhoản lặt vặt không ghi";
     const noted = basisOf(played, notes);
@@ -283,7 +283,7 @@ describe("commentSlots (addendum §3.3)", () => {
 
   it("shows the habit card only from the scenario's threshold of ignored hooks", () => {
     const played = engineSession();
-    played.turn({ topic_tags: [a("tag", "paid-app")] });
+    played.turn({ topic: topic(a("tag", "paid-app")) });
     played.turn({ prev_turn_verdict: DROPPED });
     const once = basisOf(played);
     expect(chiThu.habit_threshold).toBe(2);

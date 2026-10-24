@@ -10,7 +10,7 @@ import type { AppUser } from "@/server/auth";
 import { getRevealView, getTranscriptView, runReveal, submitGuess } from "@/server/reveal";
 import { buildSessionView } from "@/server/session-view";
 import { runTurn } from "@/server/turns";
-import { DROPPED, a, chiThu } from "../helpers/engine-fixtures";
+import { DROPPED, a, chiThu, topic } from "../helpers/engine-fixtures";
 import { NOTES } from "../helpers/reveal-fixtures";
 import { LEADING_ONLY, PLAYED, agreeAll, endedSession, judgeStep, revealModels, sessionRow, type ScriptedTurn } from "../helpers/session-fixtures";
 import type { ScriptedStep } from "../helpers/scripted-model";
@@ -63,8 +63,8 @@ const PRIMARY: Fixture[] = [
   {
     name: "a second ignored hook with a note comment",
     script: [
-      { analysis: { topic_tags: [a("tag", "paid-app")] } },
-      { analysis: { prev_turn_verdict: DROPPED, topic_tags: [a("tag", "small-spend")] } },
+      { analysis: { topic: topic(a("tag", "paid-app")) } },
+      { analysis: { prev_turn_verdict: DROPPED, topic: topic(a("tag", "small-spend")) } },
       { analysis: { prev_turn_verdict: DROPPED } },
     ],
     notes: "app trả phí bỏ không\nkhoản lặt vặt không ghi",
@@ -85,7 +85,7 @@ const PRIMARY: Fixture[] = [
   {
     name: "the hook turn is itself a leading turn",
     script: [
-      { analysis: { topic_tags: [a("tag", "paid-app")], label: "leading", introduced_span: [0, 1] } },
+      { analysis: { topic: topic(a("tag", "paid-app")), label: "leading", introduced_span: [0, 1] } },
       { analysis: { prev_turn_verdict: DROPPED } },
       { analysis: { label: "leading", introduced_span: [2, 3] } },
     ],

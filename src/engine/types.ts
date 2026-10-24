@@ -25,8 +25,14 @@ export type RawAnalysis = {
   grounded_turn_id: number | null;
   introduced_span: number[] | null;
   hook_id: string | null;
-  topic_tags: string[];
+  topic: RawTopic;
 };
+
+/**
+ * Which topics a question asks about. `direct` is the one topic it asks about specifically, with
+ * the tokens of the question that show it; `broad` are topics it only touches.
+ */
+export type RawTopic = { direct: string | null; direct_span: number[] | null; broad: string[] };
 
 /** Call 1 output after code checked every reference. Ids are scenario item ids. */
 export type CheckedAnalysis = {
@@ -38,9 +44,17 @@ export type CheckedAnalysis = {
   introduced_span: TokenRange | null;
   /** Item whose hook the question picks up: dropped by verdict and still pickable. */
   hook_item_id: string | null;
-  /** Item whose topic tag the question touches; at most one. */
+  /** Item whose topic the question asks about specifically; at most one. The only topic an unlock reads. */
   tag_item_id: string | null;
+  /** Set with `tag_item_id`: tokens of the learner's question that show its topic. */
+  tag_span: TokenRange | null;
+  /** Items whose topics the question touches without asking about one specifically: a hook at most, never an unlock. */
+  hint_item_ids: string[];
 };
+
+/** A checked analysis as a turn row keeps it: rows written before topic routing have no `tag_span` or `hint_item_ids`. */
+export type StoredAnalysis = Omit<CheckedAnalysis, "tag_span" | "hint_item_ids"> &
+  Partial<Pick<CheckedAnalysis, "tag_span" | "hint_item_ids">>;
 
 /** One change code made to the model's output, kept for `trace`. */
 export type Correction = { field: string; from: unknown; to: unknown; reason: string };

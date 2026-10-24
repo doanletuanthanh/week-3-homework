@@ -1,7 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { findSealed, readChiThu } from "../helpers/sealed-strings";
 import { createAccount, signIn, signInAsNewLearner, uniqueEmail } from "./helpers/auth";
-import { ask } from "./helpers/chat";
+import { ask, directTopic } from "./helpers/chat";
 import { db } from "./helpers/db";
 import { DEMO_EMAIL, LLM_STUB_PORT } from "./helpers/stack";
 import { postTurn, turnOutcome } from "./helpers/turn-api";
@@ -44,7 +44,7 @@ test.describe("turn engine, end to end", () => {
     const id = Date.now();
 
     // Turn 1: the question touches the tag of the paid-app item. Nothing opens; the persona gets the hook line.
-    await ask(page, `Chị có hay ghi lại chi tiêu không ạ? m1-${id} ${analysis({ topic_tags: [PAID_APP.tag], question_type: "closed" })}`, 1);
+    await ask(page, `Chị có hay ghi lại chi tiêu không ạ? m1-${id} ${analysis({ topic: directTopic(PAID_APP.tag), question_type: "closed" })}`, 1);
     const first = await modelRequestsFor(page, `m1-${id}`);
     expect(first.personaPrompt).toContain(paidApp.hook_line);
     expect(first.personaPrompt).toContain(paidApp.do_not_assert.text);
@@ -91,7 +91,7 @@ test.describe("turn engine, end to end", () => {
   test("a leading question lowers openness and opens nothing, and the learner is not told", async ({ page, context }) => {
     const { sessionId } = await startInterview(page, context, "leading");
 
-    await ask(page, `Chị có muốn một app nhắc chị tiết kiệm không? ${analysis({ label: "leading", introduced_span: [4, 8], question_type: "closed", topic_tags: ["T5"] })}`, 1);
+    await ask(page, `Chị có muốn một app nhắc chị tiết kiệm không? ${analysis({ label: "leading", introduced_span: [4, 8], question_type: "closed", topic: directTopic("T5") })}`, 1);
 
     const [, snapshot] = await db.snapshotsOf(sessionId);
     expect(snapshot).toMatchObject({ openness: 2, unlocked: [] });
@@ -115,7 +115,7 @@ test.describe("turn engine, end to end", () => {
         grounded_turn_id: 0,
         question_type: "past_specific",
         hook_id: PAID_APP.hook,
-        topic_tags: all("T"),
+        topic: { ...directTopic("T1"), broad: all("T") },
       })}`,
       1,
     );
@@ -125,17 +125,17 @@ test.describe("turn engine, end to end", () => {
     expect(snapshot.ledger).toEqual([]);
     expect(snapshot.disclosed).toEqual([]);
     const corrections = (await db.turnsOf(sessionId))[1].decisionJson!.corrections.map((correction) => correction.field);
-    expect(corrections).toEqual(expect.arrayContaining(["label", "hook_id", "topic_tags"]));
+    expect(corrections).toEqual(expect.arrayContaining(["label", "hook_id", "topic.broad"]));
   });
 
   test("nothing sealed reaches the browser while items are opened: not the page, not the stream, not after a reload", async ({ page, context }) => {
     const { sessionId } = await startInterview(page, context, "sealed");
     const pageHtml = async () => (await page.content()).replace(/\\"/g, '"');
 
-    await ask(page, `Khoản đó chị tính sao ạ? ${analysis({ topic_tags: ["T5"] })}`, 1);
+    await ask(page, `Khoản đó chị tính sao ạ? ${analysis({ topic: directTopic("T5") })}`, 1);
     expect((await db.snapshotsOf(sessionId))[1].unlocked).toEqual([{ itemId: "money-home", turn: 1 }]);
 
-    const streamed = await postTurn(page.request, sessionId, { text: `Chị kể hết đi ạ ${analysis({ topic_tags: [PAID_APP.tag] })}`, expectedIndex: 2 });
+    const streamed = await postTurn(page.request, sessionId, { text: `Chị kể hết đi ạ ${analysis({ topic: directTopic(PAID_APP.tag) })}`, expectedIndex: 2 });
     expect(turnOutcome(streamed)).toMatchObject({ turnIndex: 2 });
     // The whole stream as the browser received it: the item just opened, the hook, the tags, the verdicts stay on the server.
     expect(findSealed(streamed.raw, scenario)).toEqual([]);

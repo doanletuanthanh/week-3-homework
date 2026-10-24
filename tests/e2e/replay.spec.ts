@@ -1,6 +1,6 @@
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import { signInAsNewLearner, uniqueEmail } from "./helpers/auth";
-import { composer, sendButton } from "./helpers/chat";
+import { composer, directTopic, sendButton } from "./helpers/chat";
 import { db } from "./helpers/db";
 import { notes } from "./helpers/interview";
 import { LEADING_QUESTIONS, PRIMARY_NOTES, PRIMARY_QUESTIONS, endedInterview, expectResult, guess, transcriptDrawer } from "./helpers/reveal";
@@ -254,7 +254,7 @@ test.describe("Màn 7: a primary replay", () => {
   test("partial: another item was opened and told, and the target is shown with its question", async ({ page, context }) => {
     const { sessionId } = await primaryOffer(page, context, "replay-partial");
     await startReplay(page, 3);
-    await askReplay(page, `Chị đã thử ghi chi tiêu bằng những cách nào rồi ạ? ${analysis({ topic_tags: ["T1"] })} ${toldVerdict("I1")}`, 3, 1);
+    await askReplay(page, `Chị đã thử ghi chi tiêu bằng những cách nào rồi ạ? ${analysis({ topic: directTopic("T1") })} ${toldVerdict("I1")}`, 3, 1);
     await expect(result(page)).toHaveCount(0);
     await askReplay(page, "Rồi sau đó thì sao ạ?", 4, 2);
     await askReplay(page, "Chị kể thêm cho em nghe được không ạ?", 5, 3);
@@ -515,7 +515,7 @@ test.describe("the replay routes", () => {
     expect(await (await post("replay", { action: "skip" })).json()).toEqual({ error: "not_offered" });
 
     // A replay turn, as the browser receives it: persona text, the judge's start, then the count.
-    const turn = await post("replay/turns", { text: `Chị hay định ghi lại lắm ạ? ${analysis({ topic_tags: ["T2"] })}`, expectedIndex: 1, turnKey: crypto.randomUUID() });
+    const turn = await post("replay/turns", { text: `Chị hay định ghi lại lắm ạ? ${analysis({ topic: directTopic("T2") })}`, expectedIndex: 1, turnKey: crypto.randomUUID() });
     expect(turn.headers()["content-type"]).toContain("ndjson");
     const raw = await turn.text();
     const events = raw.split("\n").filter(Boolean).map((line) => JSON.parse(line) as { type: string } & Record<string, unknown>);

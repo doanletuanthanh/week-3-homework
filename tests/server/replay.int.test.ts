@@ -18,7 +18,7 @@ import { getRevealView, getTranscriptView } from "@/server/reveal";
 import { buildSessionView } from "@/server/session-view";
 import { postgresTurnStore } from "@/server/turn-store";
 import { runTurn } from "@/server/turns";
-import { a, chiThu, told } from "../helpers/engine-fixtures";
+import { a, chiThu, told, topic } from "../helpers/engine-fixtures";
 import { LOCAL_DATABASE_URL } from "../helpers/local-stack";
 import {
   FALLBACK_CLAIM,
@@ -308,7 +308,7 @@ describe("runReplayTurn: a primary replay", () => {
   it("partial: the persona told another item this replay opened, and not the target", async () => {
     const { learner, sessionId } = await revealedSession();
     await start(learner, sessionId);
-    const opening = await replayTurn(learner, sessionId, 1, { analysis: { topic_tags: [a("tag", "tried-methods")] }, judge: [judged(toldItems("tried-methods"))] });
+    const opening = await replayTurn(learner, sessionId, 1, { analysis: { topic: topic(a("tag", "tried-methods")) }, judge: [judged(toldItems("tried-methods"))] });
     expect(opening.result).toMatchObject({ ok: true, outcome: null });
     await replayTurn(learner, sessionId, 2);
     const { result } = await replayTurn(learner, sessionId, 3);
@@ -784,7 +784,7 @@ describe("sealing while the replay runs (PRD §12.2 item 5)", () => {
   it("no payload carries anything of the target, and a replay turn answers with the reply and the count alone", async () => {
     const { learner, sessionId } = await revealedSession();
     await start(learner, sessionId);
-    const { result } = await replayTurn(learner, sessionId, 1, { analysis: { topic_tags: [a("tag", TARGET_ID)] } });
+    const { result } = await replayTurn(learner, sessionId, 1, { analysis: { topic: topic(a("tag", TARGET_ID)) } });
     expect(result).toEqual({ ok: true, personaText: "Câu trả lời luyện lại 1.", replayTurnIndex: 1, unchecked: false, outcome: null });
 
     const sent = await payloads(learner, sessionId);
@@ -853,7 +853,7 @@ const ENDINGS: Ending[] = [
   {
     name: "primary replay, partial",
     setup: () => revealedSession(),
-    play: (learner, sessionId) => playTurns(learner, sessionId, [{ analysis: { topic_tags: [a("tag", "tried-methods")] }, judge: [judged(toldItems("tried-methods"))] }, {}, {}]),
+    play: (learner, sessionId) => playTurns(learner, sessionId, [{ analysis: { topic: topic(a("tag", "tried-methods")) }, judge: [judged(toldItems("tried-methods"))] }, {}, {}]),
     result: "partial",
     unsealed: PRIMARY_UNSEALED,
   },

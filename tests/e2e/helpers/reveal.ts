@@ -1,4 +1,5 @@
 import { expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { directTopic } from "./chat";
 import { db } from "./db";
 import { postEnd, startInterview } from "./interview";
 import { postTurn, turnOutcome } from "./turn-api";
@@ -16,9 +17,9 @@ const verdict = (hookDropped: boolean, told: string[] = []) => ({ hook_dropped: 
  * words "tại chị lười"), two questions about the future. The replay moment is `paid-app`.
  */
 export const PRIMARY_QUESTIONS = [
-  `Chị quản lý tiền nong thế nào ạ? ${analysis({ topic_tags: ["T5"], question_type: "open" })}`,
-  `Chị có hay ghi lại chi tiêu không ạ? ${analysis({ prev_turn_verdict: verdict(true, ["I5"]), topic_tags: ["T2"] })}`,
-  `Lần gần nhất chị ghi là khi nào ạ? ${analysis({ prev_turn_verdict: verdict(true), topic_tags: ["T3"], question_type: "past_specific", label: "confirm_grounded", grounded_turn_id: 2 })}`,
+  `Chị quản lý tiền nong thế nào ạ? ${analysis({ topic: directTopic("T5"), question_type: "open" })}`,
+  `Chị có hay ghi lại chi tiêu không ạ? ${analysis({ prev_turn_verdict: verdict(true, ["I5"]), topic: directTopic("T2") })}`,
+  `Lần gần nhất chị ghi là khi nào ạ? ${analysis({ prev_turn_verdict: verdict(true), topic: directTopic("T3"), question_type: "past_specific", label: "confirm_grounded", grounded_turn_id: 2 })}`,
   `Chắc tại chị lười nên mới bỏ đúng không ạ? ${analysis({ prev_turn_verdict: verdict(true, ["I3"]), label: "leading", introduced_span: [1, 3] })}`,
   `Sau này chị có định ghi lại không ạ? ${analysis({ question_type: "hypothetical_future" })}`,
   `Nếu có app tự ghi thì chị sẽ dùng chứ ạ? ${analysis({ question_type: "hypothetical_future" })}`,

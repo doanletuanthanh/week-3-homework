@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { decideUnlock } from "@/engine/unlock";
 import { initialState, type CheckedAnalysis, type EngineState } from "@/engine/types";
-import { a, chiThu, engineSession, unlockedIds } from "../helpers/engine-fixtures";
+import { a, chiThu, engineSession, topic, unlockedIds } from "../helpers/engine-fixtures";
 
 const DROPPED = { hook_dropped: true, disclosed_item_ids: [], violations: [] };
-const paidAppTag = { topic_tags: [a("tag", "paid-app")] };
+const paidAppTag = { topic: topic(a("tag", "paid-app")) };
 const paidAppHook = a("hook", "paid-app");
 
 /** Turn 1 touches the paid-app tag, so the engine asks the persona to drop that hook. */
@@ -106,17 +106,17 @@ describe("unlock gate: follow-up path", () => {
 
 describe("unlock gate: surface, past-story and trust paths", () => {
   it("opens a surface item when its tag is touched without leading", () => {
-    const plan = engineSession().turn({ topic_tags: [a("tag", "money-home")], question_type: "closed" });
+    const plan = engineSession().turn({ topic: topic(a("tag", "money-home")), question_type: "closed" });
     expect(plan.unlockedItemId).toBe("money-home");
   });
 
   it("does not open a surface item on a leading question", () => {
-    const plan = engineSession().turn({ topic_tags: [a("tag", "money-home")], label: "leading", introduced_span: [0, 1] });
+    const plan = engineSession().turn({ topic: topic(a("tag", "money-home")), label: "leading", introduced_span: [0, 1] });
     expect(plan.unlockedItemId).toBeNull();
   });
 
   it("opens a past-story item only on a specific-past question about its tag", () => {
-    const tag = { topic_tags: [a("tag", "last-attempt")] };
+    const tag = { topic: topic(a("tag", "last-attempt")) };
     expect(engineSession().turn({ ...tag, question_type: "open" }).unlockedItemId).toBeNull();
     expect(engineSession().turn({ ...tag, question_type: "hypothetical_future" }).unlockedItemId).toBeNull();
     expect(engineSession().turn({ ...tag, question_type: "past_specific", label: "leading", introduced_span: [0, 0] }).unlockedItemId).toBeNull();
@@ -125,7 +125,7 @@ describe("unlock gate: surface, past-story and trust paths", () => {
 
   it("opens a past-story item through its dropped hook as well as through its tag", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "last-attempt")] }); // not past_specific: hook selected instead
+    session.turn({ topic: topic(a("tag", "last-attempt")) }); // not past_specific: hook selected instead
     expect(session.state.selectedHook).toBe("last-attempt");
 
     const plan = session.turn({ prev_turn_verdict: DROPPED, hook_id: a("hook", "last-attempt"), question_type: "past_specific" });
@@ -135,7 +135,7 @@ describe("unlock gate: surface, past-story and trust paths", () => {
 
   it("does not open a trust item while openness is below its threshold", () => {
     const session = engineSession();
-    const plan = session.turn({ topic_tags: [a("tag", "installment")] }); // openness 4, threshold 6
+    const plan = session.turn({ topic: topic(a("tag", "installment")) }); // openness 4, threshold 6
     expect(plan.unlockedItemId).toBeNull();
     expect(plan.rules).toContainEqual({ itemId: "installment", path: "trust", outcome: "not_satisfied" });
   });
@@ -147,11 +147,11 @@ describe("unlock gate: surface, past-story and trust paths", () => {
     expect(session.state.openness).toBe(5);
 
     // This turn raises openness to 6, the threshold, but the rule reads 5.
-    const reaching = session.turn({ label: "boundary_probe", grounded_turn_id: 2, topic_tags: [a("tag", "installment")] });
+    const reaching = session.turn({ label: "boundary_probe", grounded_turn_id: 2, topic: topic(a("tag", "installment")) });
     expect([reaching.opennessBefore, reaching.opennessAfter]).toEqual([5, 6]);
     expect(reaching.unlockedItemId).toBeNull();
 
-    const next = session.turn({ topic_tags: [a("tag", "installment")] });
+    const next = session.turn({ topic: topic(a("tag", "installment")) });
     expect(next.opennessBefore).toBe(6);
     expect(next.unlockedItemId).toBe("installment");
   });
@@ -165,6 +165,8 @@ describe("unlock gate: surface, past-story and trust paths", () => {
       introduced_span: [0, 1],
       hook_item_id: null,
       tag_item_id: "installment",
+      tag_span: [2, 3],
+      hint_item_ids: [],
     };
     expect(decideUnlock({ scenario: chiThu, state, analysis }).unlockedItemId).toBeNull();
   });
@@ -178,6 +180,8 @@ describe("unlock gate: prerequisite, single unlock and priority", () => {
     introduced_span: null,
     hook_item_id: null,
     tag_item_id: null,
+    tag_span: null,
+    hint_item_ids: [],
     ...overrides,
   });
   const droppedHook = (itemId: string, droppedAt: number) => ({ itemId, droppedAt, pickedAt: null, ignoredAt: null, closedAt: null });
@@ -254,7 +258,7 @@ describe("unlock gate: prerequisite, single unlock and priority", () => {
 
   it("records one rule run for every locked item, and none for open items", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "money-home")] });
+    session.turn({ topic: topic(a("tag", "money-home")) });
     const plan = session.turn();
     expect(plan.rules.map((run) => run.itemId)).toEqual(chiThu.items.map((item) => item.id).filter((id) => id !== "money-home"));
   });

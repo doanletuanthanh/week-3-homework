@@ -1,7 +1,7 @@
 import type { Focus } from "@/db/schema";
 import type { Scenario, UnlockPath } from "@/scenario/schema";
 import type { TokenRange } from "./tokens";
-import type { CheckedAnalysis, EngineState, Label, Verdict } from "./types";
+import type { EngineState, Label, StoredAnalysis, Verdict } from "./types";
 
 /**
  * The moment the learner is offered to replay (PRD §9.2). `primary` targets one item whose hook
@@ -18,8 +18,8 @@ export type RevealTurn = {
   learnerText: string | null;
   learnerTokens: string[] | null;
   personaText: string;
-  /** Call 1 output after the code checks; null for the opening line. */
-  analysis: CheckedAnalysis | null;
+  /** Call 1 output after the code checks, as stored; null for the opening line. */
+  analysis: StoredAnalysis | null;
   unlockedItemId: string | null;
   /** This question lowered the persona's openness. */
   opennessDropped: boolean;

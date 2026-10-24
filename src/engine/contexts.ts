@@ -115,7 +115,11 @@ export type PersonaContext = {
   items: { content: string; mode: PersonaItemMode }[];
   /** At most one hook line to drop this turn. */
   hookLine: string | null;
-  /** The constraint of the one touched tag, and only while its item is locked. */
+  /**
+   * At most one constraint, of a locked item: the one the question asks about directly, or else
+   * the touched topic whose hook is dropped, so a hook drawn from the touched topics always goes
+   * out with its own constraint.
+   */
   doNotAssert: string | null;
   question: string;
 };
@@ -123,14 +127,15 @@ export type PersonaContext = {
 /** Call 2. `stateAfter` is the state after this turn's unlock decision and hook choice. */
 export function buildPersonaContext(
   scenario: Scenario,
-  decision: { stateAfter: EngineState; justUnlockedItemId: string | null; tagItemId: string | null },
+  decision: { stateAfter: EngineState; justUnlockedItemId: string | null; tagItemId: string | null; hintItemIds: string[] },
   transcript: TranscriptLine[],
   question: string,
 ): PersonaContext {
-  const { stateAfter, justUnlockedItemId, tagItemId } = decision;
+  const { stateAfter, justUnlockedItemId, tagItemId, hintItemIds } = decision;
   const unlocked = new Set(stateAfter.unlocked.map((entry) => entry.itemId));
   const told = new Set(stateAfter.disclosed.map((entry) => entry.itemId));
   const lockedItem = (id: string | null) => scenario.items.find((item) => item.id === id && !unlocked.has(item.id));
+  const hookFromHint = stateAfter.selectedHook !== null && hintItemIds.includes(stateAfter.selectedHook) ? stateAfter.selectedHook : null;
 
   return {
     persona: {
@@ -148,7 +153,7 @@ export function buildPersonaContext(
         mode: item.id === justUnlockedItemId ? "tell_now" : told.has(item.id) ? "already_told" : "tell_when_fitting",
       })),
     hookLine: lockedItem(stateAfter.selectedHook)?.hook_line ?? null,
-    doNotAssert: lockedItem(tagItemId)?.do_not_assert.text ?? null,
+    doNotAssert: (lockedItem(tagItemId) ?? lockedItem(hookFromHint))?.do_not_assert.text ?? null,
     question,
   };
 }

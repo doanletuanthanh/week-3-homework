@@ -5,7 +5,7 @@ import { ATTACKS, findAttack } from "@/eval/attacks";
 import { IsolationError, assertIsolated, isolationViolations } from "@/eval/isolation";
 import { turnInputSchema } from "@/server/turns";
 import { inMemoryTurnStore } from "@/server/in-memory-turn-store";
-import { THIRTY_TURN_SCRIPT, chiThu, engineSession, rawAnalysis, told, a } from "../helpers/engine-fixtures";
+import { THIRTY_TURN_SCRIPT, chiThu, engineSession, rawAnalysis, told, a, topic } from "../helpers/engine-fixtures";
 import { sealedStrings } from "../helpers/sealed-strings";
 
 describe("attacks", () => {
@@ -77,7 +77,7 @@ describe("isolation check", () => {
 
   it("finds the do-not-assert of an item that is already open in the persona call", () => {
     const session = engineSession();
-    const plan = session.turn({ topic_tags: [a("tag", "money-home")] });
+    const plan = session.turn({ topic: topic(a("tag", "money-home")) });
     expect(plan.unlockedItemId).toBe("money-home");
     const moneyHome = chiThu.items.find((item) => item.id === "money-home")!;
     const context = { ...plan.personaContext, doNotAssert: moneyHome.do_not_assert.text };
@@ -119,7 +119,7 @@ describe("inMemoryTurnStore", () => {
   it("gives the same state and transcript the engine fixture reaches, turn after turn", async () => {
     const store = inMemoryTurnStore(chiThu);
     const session = engineSession();
-    const steps = [{ topic_tags: [a("tag", "money-home")] }, { prev_turn_verdict: told("money-home"), topic_tags: [a("tag", "paid-app")] }];
+    const steps = [{ topic: topic(a("tag", "money-home")) }, { prev_turn_verdict: told("money-home"), topic: topic(a("tag", "paid-app")) }];
 
     for (const [index, step] of steps.entries()) {
       const basis = await store.loadState();
@@ -141,7 +141,7 @@ describe("inMemoryTurnStore", () => {
   it("applies the final verdict to the last turn, cut down to what can be true", async () => {
     const store = inMemoryTurnStore(chiThu);
     const session = engineSession();
-    const plan = session.turn({ topic_tags: [a("tag", "paid-app")] }, "Câu 1?");
+    const plan = session.turn({ topic: topic(a("tag", "paid-app")) }, "Câu 1?");
     await store.commitTurn({ turnKey: "k", question: "Câu 1?", personaText: "x", analysis: rawAnalysis(), plan, latencyMs: 1 });
 
     // The judge claims an item was told that is not open: only the hook drop is kept.

@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { buildAnalysisContext, buildJudgeContext } from "@/engine/contexts";
 import type { TurnPlan } from "@/engine/plan-turn";
 import type { EngineState } from "@/engine/types";
-import { buildAnalysisMessages } from "@/llm/prompts/analysis";
+import { ROUTING_RULES, buildAnalysisMessages } from "@/llm/prompts/analysis";
 import { buildPersonaMessages } from "@/llm/prompts/persona";
 import { buildTurnJudgeMessages } from "@/llm/prompts/turn-judge";
 import { sealedParts } from "@/eval/isolation";
-import { THIRTY_TURN_SCRIPT, a, chiThu, engineSession, unlockedIds } from "../helpers/engine-fixtures";
+import { THIRTY_TURN_SCRIPT, a, chiThu, engineSession, topic, unlockedIds } from "../helpers/engine-fixtures";
 
 const text = (messages: BaseMessage[]) => messages.map((message) => message.text).join("\n");
 
@@ -84,14 +84,14 @@ describe("context isolation over a scripted 30-turn session", () => {
     }
   });
 
-  it("gives Call 2 the do-not-assert of at most one tag, only while that item is locked, never of an item just opened", () => {
+  it("gives Call 2 the do-not-assert of at most one item, the direct topic's or the dropped hook's, only while it is locked, never of an item just opened", () => {
     let withConstraint = 0;
     for (const { plan, personaPrompt } of turns) {
       const present = chiThu.items.filter((item) => personaPrompt.includes(item.do_not_assert.text));
       expect(present.length, `turn ${plan.turnIndex}`).toBeLessThanOrEqual(1);
       for (const item of present) {
         withConstraint += 1;
-        expect(item.id).toBe(plan.analysis.tag_item_id);
+        expect([plan.analysis.tag_item_id, plan.hookToDrop]).toContain(item.id);
         expect(unlockedIds(plan.stateAfter)).not.toContain(item.id);
         expect(item.id).not.toBe(plan.unlockedItemId);
       }
@@ -173,9 +173,15 @@ describe("prompt layout", () => {
   it("keeps the Call 1 system message identical across turns", () => {
     const session = engineSession();
     const first = buildAnalysisMessages(buildAnalysisContext(chiThu, session.state, [...session.transcript], "Một?"))[0].text;
-    session.turn({ topic_tags: [a("tag", "money-home")] });
+    session.turn({ topic: topic(a("tag", "money-home")) });
     const second = buildAnalysisMessages(buildAnalysisContext(chiThu, session.state, [...session.transcript], "Hai?"))[0].text;
     expect(second).toBe(first);
+  });
+
+  it("routes topics in Call 1 with the shared routing rules, and no longer forces one topic on every question", () => {
+    const system = buildAnalysisMessages(buildAnalysisContext(chiThu, engineSession().state, [], "Một?"))[0].text;
+    expect(system).toContain(ROUTING_RULES);
+    expect(system).not.toMatch(/topic_tags|khớp rõ nhất/);
   });
 
   it("drops the skeleton's sentence limit and lets the persona talk freely", () => {

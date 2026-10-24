@@ -1,5 +1,5 @@
 import type { Scenario } from "@/scenario/schema";
-import type { Correction, RawAnalysis, Verdict } from "./types";
+import type { Correction, RawAnalysis, RawTopic, Verdict } from "./types";
 
 /**
  * Prompts never show scenario ids: a slug such as an item id can describe the secret it names.
@@ -30,11 +30,12 @@ export function resolveAlias(scenario: Pick<Scenario, "items">, kind: AliasKind,
 }
 
 /** Call 1 output with every alias turned into a scenario id. Unknown references are dropped. */
-export type ResolvedAnalysis = Omit<RawAnalysis, "prev_turn_verdict" | "hook_id" | "topic_tags"> & {
+export type ResolvedAnalysis = Omit<RawAnalysis, "prev_turn_verdict" | "hook_id" | "topic"> & {
   /** `disclosed_item_ids` are item ids, `violations` are do-not-assert ids. */
   verdict: Verdict;
   hook_item_id: string | null;
-  tag_item_ids: string[];
+  /** `direct` and `broad` are item ids; `direct_span` is not checked yet. */
+  topic: RawTopic;
 };
 
 const UNKNOWN = "không có trong kịch bản";
@@ -75,11 +76,16 @@ export function resolveAliases(
     else hookItemId = scenario.items[index].id;
   }
 
-  const tagItemIds: string[] = [];
-  for (const tag of raw.topic_tags) {
-    const index = itemIndex(scenario, "tag", tag);
-    if (index === null) corrections.push({ field: "topic_tags", from: tag, to: null, reason: UNKNOWN });
-    else if (!tagItemIds.includes(scenario.items[index].id)) tagItemIds.push(scenario.items[index].id);
+  const tagItemId = (field: string, value: unknown): string | null => {
+    const index = itemIndex(scenario, "tag", value);
+    if (index === null) corrections.push({ field, from: value, to: null, reason: UNKNOWN });
+    return index === null ? null : scenario.items[index].id;
+  };
+  const direct = raw.topic.direct === null ? null : tagItemId("topic.direct", raw.topic.direct);
+  const broad: string[] = [];
+  for (const tag of raw.topic.broad) {
+    const itemId = tagItemId("topic.broad", tag);
+    if (itemId !== null && !broad.includes(itemId)) broad.push(itemId);
   }
 
   return {
@@ -90,7 +96,7 @@ export function resolveAliases(
       grounded_turn_id: raw.grounded_turn_id,
       introduced_span: raw.introduced_span,
       hook_item_id: hookItemId,
-      tag_item_ids: tagItemIds,
+      topic: { direct, direct_span: raw.topic.direct_span, broad },
     },
     corrections,
   };

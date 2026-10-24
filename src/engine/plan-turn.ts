@@ -6,7 +6,7 @@ import { buildPersonaContext, type PersonaContext, type TranscriptLine } from ".
 import { chooseHook, updateLedger } from "./hooks";
 import { nextOpenness } from "./openness";
 import { tokenize } from "./tokens";
-import type { CheckedAnalysis, Correction, EngineState, RawAnalysis, RuleRun, Verdict } from "./types";
+import type { CheckedAnalysis, Correction, EngineState, RawAnalysis, RuleRun, StoredAnalysis, Verdict } from "./types";
 import { decideUnlock } from "./unlock";
 
 const NO_VERDICT: Verdict = { hook_dropped: false, disclosed_item_ids: [], violations: [] };
@@ -29,11 +29,10 @@ export type TurnPlan = {
   personaContext: PersonaContext;
 };
 
-/** The part of a plan stored with the turn, for `trace`. */
-export type TurnDecision = Pick<
-  TurnPlan,
-  "analysis" | "corrections" | "rules" | "unlockedItemId" | "opennessBefore" | "opennessAfter"
->;
+/** The part of a plan stored with the turn, for `trace`. Rows keep the analysis of the code that wrote them. */
+export type TurnDecision = Pick<TurnPlan, "corrections" | "rules" | "unlockedItemId" | "opennessBefore" | "opennessAfter"> & {
+  analysis: StoredAnalysis;
+};
 
 /**
  * Everything code decides in one turn, between Call 1 and Call 2 (addendum §1 steps 2 to 4).
@@ -108,7 +107,7 @@ export function planTurn(input: {
     stateAfter,
     personaContext: buildPersonaContext(
       scenario,
-      { stateAfter, justUnlockedItemId: unlockedItemId, tagItemId: checked.tag_item_id },
+      { stateAfter, justUnlockedItemId: unlockedItemId, tagItemId: checked.tag_item_id, hintItemIds: checked.hint_item_ids },
       transcript,
       question,
     ),

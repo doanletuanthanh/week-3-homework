@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildChecks, resolveClaims, resolveVerdicts, type RawClaim } from "@/engine/reveal-claims";
 import { commentSlots, resolveCanvasMatches, settle } from "@/engine/reveal-compute";
 import type { RevealBasis, RevealParts } from "@/engine/reveal-types";
-import { DROPPED, a, chiThu, engineSession } from "../helpers/engine-fixtures";
+import { DROPPED, a, chiThu, engineSession, topic } from "../helpers/engine-fixtures";
 import { NOTES, assemble, basisOf, fullParts, generatedClaims, judgedNotes, playedSession, rangeOf, selectionOf, verifierFor } from "../helpers/reveal-fixtures";
 
 const basis = basisOf(playedSession(), NOTES);
@@ -72,8 +72,8 @@ describe("resolveClaims: a claim with a broken reference is dropped whole (FR-21
 /** Two ignored hooks, both in the notes: paid-app is the replay target, small-spend gets the note comment. */
 function notedSession() {
   const session = engineSession();
-  session.turn({ topic_tags: [a("tag", "paid-app")] });
-  session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "small-spend")], label: "leading", introduced_span: [0, 1] });
+  session.turn({ topic: topic(a("tag", "paid-app")) });
+  session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "small-spend")), label: "leading", introduced_span: [0, 1] });
   session.turn({ prev_turn_verdict: DROPPED });
   const notes = "app trả phí bỏ không\nkhoản lặt vặt không ghi";
   const noted = basisOf(session, notes);
@@ -114,7 +114,7 @@ describe("resolveClaims: the note comment and sealing", () => {
 
     const session = engineSession();
     // The question that got the hook dropped was itself leading: turn 1 is the hook turn and a leading turn.
-    session.turn({ topic_tags: [a("tag", "paid-app")], label: "leading", introduced_span: [0, 0] });
+    session.turn({ topic: topic(a("tag", "paid-app")), label: "leading", introduced_span: [0, 0] });
     session.turn({ prev_turn_verdict: DROPPED });
     const hookTurnCited = basisOf(session);
     expect(selectionOf(hookTurnCited)).toEqual({ level: "primary", forkAfterTurn: 1, targetItemId: "paid-app" });
@@ -132,8 +132,8 @@ describe("resolveClaims: the note comment and sealing", () => {
   it("does not seal the habit card when no item is held: fallback 1 and no replay", () => {
     const session = engineSession();
     // Two ignored hooks of items that cannot be replayed (trust and surface), and a leading question.
-    session.turn({ topic_tags: [a("tag", "installment")] });
-    session.turn({ prev_turn_verdict: DROPPED, label: "leading", introduced_span: [0, 1], topic_tags: [a("tag", "money-home")] });
+    session.turn({ topic: topic(a("tag", "installment")) });
+    session.turn({ prev_turn_verdict: DROPPED, label: "leading", introduced_span: [0, 1], topic: topic(a("tag", "money-home")) });
     session.turn({ prev_turn_verdict: DROPPED });
     const fallback = basisOf(session);
     expect(selectionOf(fallback).level).toBe("fallback1");
@@ -166,9 +166,9 @@ describe("resolveClaims: the note comment and sealing", () => {
 
   it("keeps the note comment to the one turn that ignored the noted hook", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "small-spend")] });
-    session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "work-fatigue")] });
-    session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "paid-app")] });
+    session.turn({ topic: topic(a("tag", "small-spend")) });
+    session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "work-fatigue")) });
+    session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "paid-app")) });
     session.turn({ prev_turn_verdict: DROPPED });
     const text = "số không khớp vì khoản lặt vặt\nnhìn số cả ngày nên ngán";
     const three = basisOf(session, text);
@@ -282,7 +282,7 @@ describe("assembleReveal: what the verifier decides (addendum §2.5)", () => {
 
   it("hides a leading comment whose first turn was not new, even when a later turn was: its pair is about the first", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "paid-app")] });
+    session.turn({ topic: topic(a("tag", "paid-app")) });
     session.turn({ prev_turn_verdict: DROPPED, label: "leading", introduced_span: [0, 1] });
     session.turn({ label: "leading", introduced_span: [2, 3] });
     const two = basisOf(session);
@@ -303,9 +303,9 @@ describe("assembleReveal: what the verifier decides (addendum §2.5)", () => {
 
   it("keeps on the habit card only the turns the verifier agreed ignored a hook", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "paid-app")] });
-    session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "small-spend")] });
-    session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "work-fatigue")] });
+    session.turn({ topic: topic(a("tag", "paid-app")) });
+    session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "small-spend")) });
+    session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "work-fatigue")) });
     session.turn({ prev_turn_verdict: DROPPED });
     const three = basisOf(session);
     const threeParts: RevealParts = { judge: { ok: true, verdict: { hook_dropped: false, disclosed_item_ids: [], violations: [] }, matches: [] }, generator: generatedClaims(three) };

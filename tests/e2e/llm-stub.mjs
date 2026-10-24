@@ -7,7 +7,7 @@
 //   [stub:fail-persona]    Call 1 succeeds, Call 2 gets HTTP 500
 //   [stub:break-stream]    Call 2 sends two pieces, then the connection is cut
 //   [stub:slow]            Call 2 waits between pieces, so a test can watch the reply arrive
-//   [stub:analysis={...}]  JSON (no spaces) merged over the neutral analysis
+//   [stub:analysis={...}]  JSON (no spaces) merged over the neutral analysis (one level: a `topic` replaces it whole)
 // It also answers the three reveal calls, told apart by the first sentence of their prompt:
 //   - the end judge gets a neutral verdict and no canvas match;
 //   - the generator gets one claim for every slot the prompt lists;
@@ -56,7 +56,7 @@ const NEUTRAL_ANALYSIS = {
   grounded_turn_id: null,
   introduced_span: null,
   hook_id: null,
-  topic_tags: [],
+  topic: { direct: null, direct_span: null, broad: [] },
 };
 
 const textOf = (content) => (typeof content === "string" ? content : (content ?? []).map((part) => part.text ?? "").join(""));

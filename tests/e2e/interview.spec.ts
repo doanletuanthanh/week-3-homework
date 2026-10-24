@@ -38,7 +38,7 @@ test.describe("interview", () => {
       [1, "Cuối tháng chị thường xoay xở thế nào ạ?", "Chị trả lời câu thứ 1 (trong khối dữ liệu)."],
     ]);
     expect(turns[1].learnerTokens).toEqual(["Cuối", "tháng", "chị", "thường", "xoay", "xở", "thế", "nào", "ạ?"]);
-    expect(turns[1].analysisJson).toMatchObject({ label: "open", question_type: "other", topic_tags: [] });
+    expect(turns[1].analysisJson).toMatchObject({ label: "open", question_type: "other", topic: { direct: null, direct_span: null, broad: [] } });
     expect(turns[1].decisionJson).toMatchObject({ unlockedItemId: null, opennessBefore: 4, opennessAfter: 4 });
     expect(await db.snapshotsOf(sessionId)).toMatchObject([{ index: 0, openness: 4 }, { index: 1, openness: 4, unlocked: [] }]);
 
@@ -246,7 +246,7 @@ test.describe("turn API", () => {
     expect(deltas.map((event) => (event.type === "delta" ? event.text : "")).join("")).toBe("Chị trả lời câu thứ 1 (trong khối dữ liệu).");
     expect(events.at(-1)).toEqual({ type: "done", personaText: "Chị trả lời câu thứ 1 (trong khối dữ liệu).", turnIndex: 1 });
     // No analysis field of any kind in what the browser received.
-    expect(reply.raw).not.toMatch(/label|verdict|hook|unlock|openness|topic_tags|analysis|decision|snapshot/i);
+    expect(reply.raw).not.toMatch(/label|verdict|hook|unlock|openness|direct_span|tag_span|hint_item_ids|analysis|decision|snapshot/i);
   });
 
   test("refuses an empty, over-long or malformed request with 400 and no model call", async ({ page, context }) => {

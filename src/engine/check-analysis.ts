@@ -1,12 +1,14 @@
+import { ROUTE_BROAD_MAX } from "@/config/limits";
 import type { ResolvedAnalysis } from "./aliases";
-import { isValidRange } from "./tokens";
+import { isValidRange, type TokenRange } from "./tokens";
 import { isGoodLabel, type CheckedAnalysis, type Correction, type EngineState } from "./types";
 
 /**
  * Checks every reference in Call 1 output before any rule reads it. Code cannot check meaning,
- * only that the evidence a label needs points at something real; a label without it becomes
- * `open`. `state` is snapshot t-1 with the verdict for turn t-1 already applied, so a hook the
- * persona dropped last turn can be picked up in this one.
+ * only that the evidence a label or a direct topic needs points at something real; a label
+ * without it becomes `open`, a direct topic without it becomes a hint. `state` is snapshot t-1
+ * with the verdict for turn t-1 already applied, so a hook the persona dropped last turn can be
+ * picked up in this one.
  */
 export function checkAnalysis(
   analysis: ResolvedAnalysis,
@@ -47,9 +49,24 @@ export function checkAnalysis(
     }
   }
 
-  const [tagItemId = null, ...extraTags] = analysis.tag_item_ids;
-  if (extraTags.length > 0) {
-    corrections.push({ field: "topic_tags", from: analysis.tag_item_ids, to: [tagItemId], reason: "chỉ giữ tag đầu tiên" });
+  // A direct topic needs the words of the question that show it. Without them the model still
+  // said the question touches that topic, so it is kept as a hint, first in line.
+  const { direct, direct_span: span } = analysis.topic;
+  const tagSpan: TokenRange | null = direct !== null && isValidRange(span, learnerTokenCount) ? [span[0], span[1]] : null;
+  const tagItemId = tagSpan === null ? null : direct;
+  const demoted = direct !== null && tagSpan === null ? [direct] : [];
+  if (demoted.length > 0) {
+    corrections.push({
+      field: "topic.direct",
+      from: direct,
+      to: null,
+      reason: "direct không có bằng chứng (direct_span trống hoặc ngoài phạm vi token của câu hỏi): chuyển sang broad",
+    });
+  }
+  const touched = [...new Set([...demoted, ...analysis.topic.broad])].filter((itemId) => itemId !== tagItemId);
+  const hintItemIds = touched.slice(0, ROUTE_BROAD_MAX);
+  if (touched.length > hintItemIds.length) {
+    corrections.push({ field: "topic.broad", from: touched, to: hintItemIds, reason: `chỉ giữ ${ROUTE_BROAD_MAX} chủ đề đầu tiên` });
   }
 
   return {
@@ -60,6 +77,8 @@ export function checkAnalysis(
       introduced_span: label === "leading" ? [analysis.introduced_span![0], analysis.introduced_span![1]] : null,
       hook_item_id: hookItemId,
       tag_item_id: tagItemId,
+      tag_span: tagSpan,
+      hint_item_ids: hintItemIds,
     },
     corrections,
   };

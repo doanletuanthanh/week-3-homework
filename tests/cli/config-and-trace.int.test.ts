@@ -1,16 +1,16 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
-import { adminAccessLog, config, llmCalls, users } from "@/db/schema";
+import { adminAccessLog, config, llmCalls, turns, users } from "@/db/schema";
 import type { CallModelDeps } from "@/llm/call-model";
 import { runTurn } from "@/server/turns";
 import { runConfig } from "../../cli/commands/config";
 import { runTrace } from "../../cli/commands/trace";
 import { operatorEmail } from "../../cli/operator";
 import { CliError } from "../../cli/scenario-file";
-import { DROPPED, a, rawAnalysis, told } from "../helpers/engine-fixtures";
+import { DROPPED, a, rawAnalysis, told, topic } from "../helpers/engine-fixtures";
 import { scriptedModel } from "../helpers/scripted-model";
 import { createLearner, resetDatabase, startSession } from "../helpers/test-db";
 
@@ -127,7 +127,7 @@ describe("il trace", () => {
     const learner = await createLearner("linh@example.com");
     const session = await startSession(learner);
     const { model } = scriptedModel([
-      { structured: rawAnalysis({ topic_tags: [a("tag", "paid-app")], label: "confirm_grounded", grounded_turn_id: 0, question_type: "closed" }) },
+      { structured: rawAnalysis({ topic: topic(a("tag", "paid-app")), label: "confirm_grounded", grounded_turn_id: 0, question_type: "closed" }) },
       { text: "Có lần chị định ghi lại nhưng rồi cũng bỏ." },
       { structured: rawAnalysis({ prev_turn_verdict: DROPPED, hook_id: a("hook", "paid-app"), label: "boundary_probe", grounded_turn_id: 1 }) },
       { text: "Chị đang trả phí một app mà gần như không mở." },
@@ -160,11 +160,13 @@ describe("il trace", () => {
     // Postgres stores JSON keys in its own order, so the line is compared as an object.
     const call1 = turn1.split("\n").find((line) => line.startsWith("  Call 1: "))!;
     expect(JSON.parse(call1.slice("  Call 1: ".length))).toEqual(
-      rawAnalysis({ topic_tags: [a("tag", "paid-app")], label: "confirm_grounded", grounded_turn_id: 0, question_type: "closed" }),
+      rawAnalysis({ topic: topic(a("tag", "paid-app")), label: "confirm_grounded", grounded_turn_id: 0, question_type: "closed" }),
     );
     expect(turn1).toContain("  Verdict cho lượt 0: (không áp dụng)");
     expect(turn1).toContain(`    - label: "confirm_grounded" → "open" (grounded_turn_id không trỏ tới lượt persona nào trước lượt này)`);
-    expect(turn1).toContain("  Sau khi kiểm: nhãn = open; loại = closed; grounded_turn_id = null; introduced_span = null; hook = null; tag = paid-app");
+    expect(turn1).toContain(
+      "  Sau khi kiểm: nhãn = open; loại = closed; grounded_turn_id = null; introduced_span = null; hook = null; direct = paid-app; direct_span = [0,0]; broad = (không)",
+    );
     expect(turn1).toContain("    - paid-app [follow_up]: không thỏa");
     expect(turn1).toContain("    - shame [follow_up]: tiên quyết còn khóa");
     expect(turn1).toContain("  Item mở: (không)");
@@ -187,6 +189,19 @@ describe("il trace", () => {
     const turn3 = text.slice(text.indexOf("\nLượt 3\n"));
     expect(turn3).toContain("  Verdict cho lượt 2: hook đã thả = false; đã kể = paid-app; vi phạm = dna-installment");
     expect(turn3).not.toContain("GẮN CỜ");
+  });
+
+  it("reads turns stored before topic routing, whose analysis has no span and no broad topics", async () => {
+    const { session } = await playedSession();
+    await getDb()
+      .update(turns)
+      .set({ decisionJson: sql`${turns.decisionJson} #- '{analysis,tag_span}' #- '{analysis,hint_item_ids}'` })
+      .where(eq(turns.sessionId, session.id));
+    const { io, out, err } = capture();
+
+    expect(await runTrace([session.id], io, getDb(), admin)).toBe(0);
+    expect(err).toEqual([]);
+    expect(out.join("\n")).toContain("hook = null; direct = paid-app; direct_span = null; broad = (không)");
   });
 
   it("makes no model call and records the access", async () => {

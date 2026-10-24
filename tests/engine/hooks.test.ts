@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { chooseHook, isClosingQuestion, updateLedger } from "@/engine/hooks";
 import type { CheckedAnalysis, HookEntry } from "@/engine/types";
-import { a, chiThu, engineSession, unlockedIds } from "../helpers/engine-fixtures";
+import { a, chiThu, engineSession, topic, unlockedIds } from "../helpers/engine-fixtures";
 
 const DROPPED = { hook_dropped: true, disclosed_item_ids: [], violations: [] };
 
@@ -12,6 +12,8 @@ const analysis = (overrides: Partial<CheckedAnalysis> = {}): CheckedAnalysis => 
   introduced_span: null,
   hook_item_id: null,
   tag_item_id: null,
+  tag_span: null,
+  hint_item_ids: [],
   ...overrides,
 });
 
@@ -75,11 +77,56 @@ describe("chooseHook", () => {
     expect(choose({ analysis: closing, ledger: [entry("paid-app", 1), entry("installment", 2)], unlocked: ["last-attempt"] })).toBe("shame");
   });
 
-  it("recognises a closing question only as open label, open type, no tag", () => {
+  it("recognises a closing question only as open label, open type, no topic", () => {
     expect(isClosingQuestion(analysis({ question_type: "open" }))).toBe(true);
     expect(isClosingQuestion(analysis({ question_type: "closed" }))).toBe(false);
     expect(isClosingQuestion(analysis({ question_type: "open", tag_item_id: "money-home" }))).toBe(false);
     expect(isClosingQuestion(analysis({ question_type: "open", label: "confirm_grounded" }))).toBe(false);
+  });
+
+  it("does not take a broad question for a closing one", () => {
+    expect(isClosingQuestion(analysis({ question_type: "open", hint_item_ids: ["money-home"] }))).toBe(false);
+  });
+
+  it("selects the hook of a topic the question only touches", () => {
+    expect(choose({ analysis: analysis({ hint_item_ids: ["work-fatigue"], question_type: "closed" }) })).toBe("work-fatigue");
+  });
+
+  it("on a broad question, selects the heaviest eligible hook among the touched topics, then scenario order", () => {
+    // small-spend and work-fatigue both weigh 2, small-spend first in the scenario; installment weighs 3.
+    const broad = (hints: string[]) => analysis({ hint_item_ids: hints, question_type: "open" });
+    expect(choose({ analysis: broad(["small-spend", "work-fatigue", "installment"]) })).toBe("installment");
+    expect(choose({ analysis: broad(["work-fatigue", "small-spend"]) })).toBe("small-spend");
+    expect(choose({ analysis: broad(["work-fatigue", "installment"]), ledger: [entry("installment", 1)] })).toBe("work-fatigue");
+  });
+
+  it("selects no hook on a broad question whose touched items are open or already dropped", () => {
+    const broad = analysis({ hint_item_ids: ["money-home", "paid-app"], question_type: "open" });
+    expect(choose({ analysis: broad, unlocked: ["money-home"], ledger: [entry("paid-app", 1)] })).toBeNull();
+  });
+
+  it("never lets a touched topic take the slot from the direct topic or a story's next step, however heavy", () => {
+    // installment (weight 3) is heavier than small-spend (2); paid-app (3) comes before shame (3) in the scenario.
+    expect(choose({ analysis: analysis({ tag_item_id: "small-spend", hint_item_ids: ["installment"], question_type: "closed" }) })).toBe("small-spend");
+    expect(
+      choose({
+        unlocked: ["last-attempt"],
+        justUnlocked: "last-attempt",
+        analysis: analysis({ tag_item_id: "last-attempt", hint_item_ids: ["paid-app"], question_type: "past_specific" }),
+      }),
+    ).toBe("shame");
+  });
+
+  it("falls back to a touched topic when the question asks directly about an item that is already open", () => {
+    const touched = analysis({ tag_item_id: "money-home", hint_item_ids: ["installment"], question_type: "closed" });
+    expect(choose({ analysis: touched, unlocked: ["money-home"] })).toBe("installment");
+  });
+
+  it("drops no touched topic's hook while the question asks directly about a locked item with no hook to give", () => {
+    const touched = (direct: string) => analysis({ tag_item_id: direct, hint_item_ids: ["installment"], question_type: "closed" });
+    // small-spend's hook was already dropped; shame's prerequisite is still locked.
+    expect(choose({ analysis: touched("small-spend"), ledger: [entry("small-spend", 1)] })).toBeNull();
+    expect(choose({ analysis: touched("shame") })).toBeNull();
   });
 });
 
@@ -93,11 +140,28 @@ describe("hook lifecycle through whole turns", () => {
     expect(plan.personaContext.hookLine).toBe("Có lần chị định ghi lại nhưng rồi cũng bỏ.");
   });
 
+  it("a broad question opens nothing and drops the heaviest touched hook, with that item's constraint", () => {
+    const installment = chiThu.items.find((item) => item.id === "installment")!;
+    const plan = engineSession().turn({ topic: topic(null, null, [a("tag", "small-spend"), a("tag", "installment")]), question_type: "open" });
+    expect(plan.unlockedItemId).toBeNull();
+    expect(plan.hookToDrop).toBe("installment");
+    expect(plan.personaContext).toMatchObject({ hookLine: installment.hook_line, doNotAssert: installment.do_not_assert.text });
+  });
+
+  it("asked again about a locked item whose hook is spent, drops no other hook and keeps that item's constraint", () => {
+    const smallSpend = chiThu.items.find((item) => item.id === "small-spend")!;
+    const session = engineSession();
+    session.turn({ topic: topic(a("tag", "small-spend")) });
+    const plan = session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "small-spend"), [0, 0], [a("tag", "installment")]) });
+    expect(plan.hookToDrop).toBeNull();
+    expect(plan.personaContext).toMatchObject({ hookLine: null, doNotAssert: smallSpend.do_not_assert.text });
+  });
+
   it("a hook with a negative verdict is not in the ledger and is selected again on the next eligible turn", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "paid-app")] });
+    session.turn({ topic: topic(a("tag", "paid-app")) });
 
-    const second = session.turn({ topic_tags: [a("tag", "paid-app")] }); // verdict for turn 1: not dropped
+    const second = session.turn({ topic: topic(a("tag", "paid-app")) }); // verdict for turn 1: not dropped
 
     expect(second.previousState.ledger).toEqual([]);
     expect(second.hookToDrop).toBe("paid-app");
@@ -105,8 +169,8 @@ describe("hook lifecycle through whole turns", () => {
 
   it("marks a hook ignored when the turn right after the drop does not pick it, and keeps it pickable", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "paid-app")] });
-    const second = session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "money-home")] });
+    session.turn({ topic: topic(a("tag", "paid-app")) });
+    const second = session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "money-home")) });
 
     expect(second.stateAfter.ledger).toEqual([entry("paid-app", 1, { ignoredAt: 2 })]);
 
@@ -117,7 +181,7 @@ describe("hook lifecycle through whole turns", () => {
 
   it("does not mark a hook ignored when it is picked on the very next turn", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "paid-app")] });
+    session.turn({ topic: topic(a("tag", "paid-app")) });
     const second = session.turn({ prev_turn_verdict: DROPPED, hook_id: a("hook", "paid-app") });
     expect(second.stateAfter.ledger).toEqual([entry("paid-app", 1, { pickedAt: 2 })]);
   });

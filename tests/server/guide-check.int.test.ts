@@ -10,7 +10,7 @@ import { recordCallToDb, type CallModelDeps } from "@/llm/call-model";
 import { checkGuide, guideChecksLeft } from "@/server/guide-check";
 import { progressOf } from "@/server/progress";
 import { runTurn } from "@/server/turns";
-import { a, rawAnalysis } from "../helpers/engine-fixtures";
+import { a, rawAnalysis, topic } from "../helpers/engine-fixtures";
 import { ALLOW, respondingModels } from "../helpers/custom-fixtures";
 import { scriptedModel } from "../helpers/scripted-model";
 import { createLearner, resetDatabase, startSession } from "../helpers/test-db";
@@ -132,7 +132,7 @@ describe("progress", () => {
     const learner = await createLearner("linh@example.com");
     const session = await startSession(learner);
     const { model } = scriptedModel([
-      { structured: rawAnalysis({ topic_tags: [a("tag", "paid-app")], label: "open", question_type: "closed" }) },
+      { structured: rawAnalysis({ topic: topic(a("tag", "paid-app")), label: "open", question_type: "closed" }) },
       { text: "Không đều đâu em." },
     ]);
     const llmDeps: Partial<CallModelDeps> = { roleSpec: () => ({ provider: "openai", model: "gpt-6-luna", effort: "low" }), createModel: () => model };

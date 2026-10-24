@@ -4,6 +4,9 @@ export const DAY_ZONE = "Asia/Ho_Chi_Minh";
 /** Longest learner question, in characters (PRD Màn 4). */
 export const MAX_QUESTION_CHARS = 500;
 
+/** Topics one question may touch without asking about any of them specifically; each can only bring a hook. */
+export const ROUTE_BROAD_MAX = 3;
+
 /** Longest notes canvas, in characters (PRD Màn 4). */
 export const MAX_CANVAS_CHARS = 5000;
 

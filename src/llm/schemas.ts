@@ -12,7 +12,7 @@ export const verdictSchema = z.object({
   violations: z.array(z.string()),
 });
 
-/** Call 1 (addendum §2.1). */
+/** Call 1 (addendum §2.1). `topic` replaces the addendum's `topic_tags`: a direct topic comes with the words that show it. */
 export const analysisSchema = z.object({
   prev_turn_verdict: verdictSchema,
   question_type: z.enum(QUESTION_TYPES),
@@ -20,7 +20,11 @@ export const analysisSchema = z.object({
   grounded_turn_id: z.number().int().nullable(),
   introduced_span: z.array(z.number().int()).nullable(),
   hook_id: z.string().nullable(),
-  topic_tags: z.array(z.string()),
+  topic: z.object({
+    direct: z.string().nullable(),
+    direct_span: z.array(z.number().int()).nullable(),
+    broad: z.array(z.string()),
+  }),
 });
 
 /** The turn judge (addendum §2.6): a verdict for the persona turn that has no later Call 1. */

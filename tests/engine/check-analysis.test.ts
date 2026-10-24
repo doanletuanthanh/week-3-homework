@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ROUTE_BROAD_MAX } from "@/config/limits";
 import { resolveAliases } from "@/engine/aliases";
 import { applyVerdict } from "@/engine/apply-verdict";
 import { checkAnalysis } from "@/engine/check-analysis";
 import { initialState, type EngineState, type HookEntry } from "@/engine/types";
-import { a, chiThu, engineSession, rawAnalysis, unlockedIds } from "../helpers/engine-fixtures";
+import { a, chiThu, engineSession, rawAnalysis, topic, unlockedIds } from "../helpers/engine-fixtures";
 
 const QUESTION = "Chị có muốn một app nhắc chị tiết kiệm không?"; // 10 tokens
 
@@ -91,7 +92,7 @@ describe("checkAnalysis: leading needs the added words", () => {
   });
 });
 
-describe("checkAnalysis: hook_id and topic tags", () => {
+describe("checkAnalysis: hook_id", () => {
   it("accepts a hook that a verdict confirmed as dropped and whose item is still locked", () => {
     const { checked } = check({ hook_id: a("hook", "paid-app") }, { ledger: [dropped("paid-app", 3)] });
     expect(checked.hook_item_id).toBe("paid-app");
@@ -116,17 +117,62 @@ describe("checkAnalysis: hook_id and topic tags", () => {
       expect(corrections).toEqual([expect.objectContaining({ field: "hook_id", from: hookId, to: null })]);
     },
   );
+});
 
-  it("drops tags that are not in the scenario and keeps only the first of the rest", () => {
-    const { checked, corrections } = check({
-      topic_tags: ["T99", "vay mượn và nợ", a("tag", "money-home"), a("tag", "installment")],
-    });
-    expect(checked.tag_item_id).toBe("money-home");
-    expect(corrections.map((correction) => correction.field)).toEqual(["topic_tags", "topic_tags", "topic_tags"]);
+describe("checkAnalysis: a direct topic needs the words that show it", () => {
+  const tag = (itemId: string) => a("tag", itemId);
+
+  it("keeps a direct topic whose span is inside the learner's question", () => {
+    const { checked, corrections } = check({ topic: topic(tag("money-home"), [2, 4], [tag("installment")]) });
+    expect(checked).toMatchObject({ tag_item_id: "money-home", tag_span: [2, 4], hint_item_ids: ["installment"] });
+    expect(corrections).toEqual([]);
   });
 
-  it("has no tag when the model returned none", () => {
-    expect(check({ topic_tags: [] }).checked.tag_item_id).toBeNull();
+  it.each([
+    ["null", null],
+    ["empty", []],
+    ["a single index", [4]],
+    ["end before start", [8, 4]],
+    ["past the last token", [4, 10]],
+    ["a negative start", [-2, 3]],
+    ["fractions", [1.2, 3]],
+  ])("moves a direct topic to the hints, first, when direct_span is %s", (_name, span) => {
+    const { checked, corrections } = check({ topic: topic(tag("money-home"), span, [tag("installment")]) });
+    expect(checked).toMatchObject({ tag_item_id: null, tag_span: null, hint_item_ids: ["money-home", "installment"] });
+    expect(corrections).toEqual([expect.objectContaining({ field: "topic.direct", from: "money-home", to: null })]);
+  });
+
+  it("does not list the direct topic among the hints as well", () => {
+    const { checked, corrections } = check({
+      topic: topic(tag("money-home"), [0, 1], [tag("money-home"), tag("installment"), tag("money-home")]),
+    });
+    expect(checked).toMatchObject({ tag_item_id: "money-home", hint_item_ids: ["installment"] });
+    expect(corrections).toEqual([]);
+  });
+
+  it(`keeps at most ${ROUTE_BROAD_MAX} hints, a demoted direct topic first`, () => {
+    const broad = ["paid-app", "installment", "roommate", "small-spend"].map(tag);
+    const { checked, corrections } = check({ topic: topic(tag("money-home"), null, broad) });
+    expect(checked.hint_item_ids).toEqual(["money-home", "paid-app", "installment"]);
+    expect(corrections.map((correction) => correction.field)).toEqual(["topic.direct", "topic.broad"]);
+    expect(corrections[1]).toMatchObject({
+      from: ["money-home", "paid-app", "installment", "roommate", "small-spend"],
+      to: ["money-home", "paid-app", "installment"],
+    });
+  });
+
+  it("drops topics that name no item of the scenario, with a correction for each", () => {
+    const { checked, corrections } = check({ topic: topic("T99", [0, 1], ["vay mượn và nợ", tag("money-home"), "I5", tag("money-home")]) });
+    expect(checked).toMatchObject({ tag_item_id: null, tag_span: null, hint_item_ids: ["money-home"] });
+    expect(corrections).toEqual([
+      expect.objectContaining({ field: "topic.direct", from: "T99", to: null }),
+      expect.objectContaining({ field: "topic.broad", from: "vay mượn và nợ", to: null }),
+      expect.objectContaining({ field: "topic.broad", from: "I5", to: null }),
+    ]);
+  });
+
+  it("has no topic when the model returned none", () => {
+    expect(check({}).checked).toMatchObject({ tag_item_id: null, tag_span: null, hint_item_ids: [] });
   });
 });
 
@@ -197,8 +243,8 @@ describe("applyVerdict", () => {
 
   it("does not record a hook as dropped, or an item as told, when the verdict is missing its positives", () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "money-home")] }); // opens money-home (surface)
-    session.turn({ topic_tags: [a("tag", "paid-app")] }); // selects the paid-app hook
+    session.turn({ topic: topic(a("tag", "money-home")) }); // opens money-home (surface)
+    session.turn({ topic: topic(a("tag", "paid-app")) }); // selects the paid-app hook
     const plan = session.turn(); // verdict: nothing dropped, nothing told
 
     expect(unlockedIds(plan.stateAfter)).toEqual(["money-home"]);

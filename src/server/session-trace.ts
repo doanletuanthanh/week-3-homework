@@ -54,7 +54,8 @@ export function describeTrace({ session, scenario, turns }: SessionTrace): { tit
           : { label: "Sửa của code", items: decision.corrections.map((fix) => `${fix.field}: ${JSON.stringify(fix.from)} → ${JSON.stringify(fix.to)} (${fix.reason})`) },
         {
           label: "Sau khi kiểm",
-          text: `nhãn = ${analysis.label}; loại = ${analysis.question_type}; grounded_turn_id = ${analysis.grounded_turn_id}; introduced_span = ${JSON.stringify(analysis.introduced_span)}; hook = ${analysis.hook_item_id}; tag = ${analysis.tag_item_id}`,
+          // Rows written before topic routing have no span or broad topics.
+          text: `nhãn = ${analysis.label}; loại = ${analysis.question_type}; grounded_turn_id = ${analysis.grounded_turn_id}; introduced_span = ${JSON.stringify(analysis.introduced_span)}; hook = ${analysis.hook_item_id}; direct = ${analysis.tag_item_id}; direct_span = ${JSON.stringify(analysis.tag_span ?? null)}; broad = ${none(analysis.hint_item_ids ?? [])}`,
         },
         { label: "Luật mở khóa", items: decision.rules.map((rule) => `${rule.itemId} [${rule.path}]: ${OUTCOME_TEXT[rule.outcome]}`) },
         { label: "Item mở", text: decision.unlockedItemId ?? "(không)" },

@@ -5,7 +5,7 @@ import type { EngineState, RawAnalysis, Verdict } from "@/engine/types";
 import { assertIsolated } from "@/eval/isolation";
 import { runTurnGraph, type TurnGraphResult, type TurnRunOptions } from "@/graphs/turn-graph";
 import { LlmCallError } from "@/llm/call-model";
-import { NO_VERDICT, a, chiThu, rawAnalysis } from "../helpers/engine-fixtures";
+import { NO_VERDICT, a, chiThu, rawAnalysis, topic } from "../helpers/engine-fixtures";
 import { roleModels } from "../helpers/eval-models";
 import { QUESTIONS, playedSession } from "../helpers/reveal-fixtures";
 import type { ScriptedStep } from "../helpers/scripted-model";
@@ -122,7 +122,7 @@ describe("a replay turn through the turn graph", () => {
 
   it("opens the target first when another item's rule holds too", async () => {
     // `last-attempt` (a past-story item) and the heavier `paid-app` both qualify on this question.
-    const both: Partial<RawAnalysis> = { ...PICK_UP, topic_tags: [a("tag", "last-attempt")], question_type: "past_specific" };
+    const both: Partial<RawAnalysis> = { ...PICK_UP, topic: topic(a("tag", "last-attempt")), question_type: "past_specific" };
     const heavier = await replay([{ analysis: both }]);
     expect(heavier.results[0].plan.unlockedItemId).toBe("paid-app");
 

@@ -246,7 +246,7 @@ test.describe("notes and end API: who may call them and what they answer", () =>
     expect(late).toEqual({ status: 409, json: { error: "frozen" } });
     expect(again).toEqual({ status: 200, json: { ended: true } });
     for (const reply of [saved, ended, late, again]) {
-      expect(JSON.stringify(reply.json)).not.toMatch(/label|verdict|hook|unlock|openness|topic_tags|analysis|decision|snapshot|item|canvas/i);
+      expect(JSON.stringify(reply.json)).not.toMatch(/label|verdict|hook|unlock|openness|direct_span|tag_span|hint_item_ids|analysis|decision|snapshot|item|canvas/i);
     }
     expect((await db.session(sessionId)).canvasText).toBe("ghi chú cuối");
   });

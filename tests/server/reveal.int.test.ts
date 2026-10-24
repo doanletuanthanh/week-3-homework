@@ -5,7 +5,7 @@ import { isOnWaitlist, joinWaitlist } from "@/db/repo/waitlist";
 import { llmCalls, sessions, snapshots, waitlist } from "@/db/schema";
 import { endSession, freezeAbandonedCanvas } from "@/server/canvas";
 import { getRevealView, getTranscriptView, runReveal, submitGuess } from "@/server/reveal";
-import { DROPPED, a, chiThu } from "../helpers/engine-fixtures";
+import { DROPPED, a, chiThu, topic } from "../helpers/engine-fixtures";
 import { NOTES } from "../helpers/reveal-fixtures";
 import {
   NO_REPLAY,
@@ -73,8 +73,8 @@ describe("runReveal: the three calls and the stored result", () => {
 
   it("writes the end judge's verdict about the last persona turn to that turn and its snapshot", async () => {
     const { sessionId } = await endedSession("linh@example.com", [
-      { analysis: { topic_tags: [a("tag", "money-home")] } },
-      { analysis: { prev_turn_verdict: DROPPED, topic_tags: [a("tag", "paid-app")] } },
+      { analysis: { topic: topic(a("tag", "money-home")) } },
+      { analysis: { prev_turn_verdict: DROPPED, topic: topic(a("tag", "paid-app")) } },
     ]);
     expect((await turnRows(sessionId))[2]).toMatchObject({ hookSelected: "paid-app", verdictJson: null });
 

@@ -4,7 +4,7 @@ import type { JudgePart, RevealBasis, RevealJson } from "@/engine/reveal-types";
 import { toBrowserResult, toBrowserReveal, toBrowserTranscript } from "@/engine/seal";
 import { SESSION_STATUSES } from "@/db/schema";
 import type { ScenarioItem } from "@/scenario/schema";
-import { DROPPED, a, chiThu, engineSession } from "../helpers/engine-fixtures";
+import { DROPPED, a, chiThu, engineSession, topic } from "../helpers/engine-fixtures";
 import { NOTES, assemble, basisOf, fullParts, generatedClaims, judgedNotes, playedSession, rangeOf, verifierFor } from "../helpers/reveal-fixtures";
 
 type Fixture = { name: string; basis: RevealBasis; notes: string; reveal: RevealJson };
@@ -38,8 +38,8 @@ function mainFixture(): Fixture {
 
 function notedFixture(): Fixture {
   const session = engineSession();
-  session.turn({ topic_tags: [a("tag", "paid-app")] });
-  session.turn({ prev_turn_verdict: DROPPED, topic_tags: [a("tag", "small-spend")], label: "leading", introduced_span: [0, 1] });
+  session.turn({ topic: topic(a("tag", "paid-app")) });
+  session.turn({ prev_turn_verdict: DROPPED, topic: topic(a("tag", "small-spend")), label: "leading", introduced_span: [0, 1] });
   session.turn({ prev_turn_verdict: DROPPED });
   const notes = "app trả phí bỏ không\nkhoản lặt vặt không ghi";
   const basis = basisOf(session, notes);
@@ -53,9 +53,9 @@ function notedFixture(): Fixture {
 function leadingHookFixture(): Fixture {
   const session = engineSession();
   // The question that got the hook dropped was leading: turn 1 is both the hook turn and a leading turn.
-  session.turn({ topic_tags: [a("tag", "paid-app")], label: "leading", introduced_span: [0, 1] });
+  session.turn({ topic: topic(a("tag", "paid-app")), label: "leading", introduced_span: [0, 1] });
   session.turn({ prev_turn_verdict: DROPPED });
-  session.turn({ label: "leading", introduced_span: [2, 3], topic_tags: [a("tag", "installment")] });
+  session.turn({ label: "leading", introduced_span: [2, 3], topic: topic(a("tag", "installment")) });
   const notes = "có vẻ đang trả tiền cho app nào đó";
   const basis = basisOf(session, notes);
   const judge = judgeOf(basis, notes, [["đang trả tiền cho app nào đó", "paid-app"]]);
@@ -66,7 +66,7 @@ const PRIMARY = [mainFixture(), notedFixture(), leadingHookFixture()];
 
 function fallbackFixture(): Fixture {
   const session = engineSession();
-  session.turn({ label: "leading", introduced_span: [0, 1], topic_tags: [a("tag", "installment")] });
+  session.turn({ label: "leading", introduced_span: [0, 1], topic: topic(a("tag", "installment")) });
   session.turn({});
   session.turn({ label: "leading", introduced_span: [2, 3] });
   const notes = "ghi vội vài dòng";

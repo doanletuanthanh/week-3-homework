@@ -5,7 +5,7 @@ import { FLOOR_ATTACKS } from "@/eval/qa/floor";
 import { ATTACK_TURNS } from "@/eval/qa/tools";
 import { Budget, BudgetExceededError, MAX_REFLECT_ROUNDS, runQaAgent } from "@/graphs/qa-agent-graph";
 import type { ScenarioItem } from "@/scenario/schema";
-import { DROPPED, a, chiThu, rawAnalysis } from "../helpers/engine-fixtures";
+import { DROPPED, a, chiThu, rawAnalysis, topic } from "../helpers/engine-fixtures";
 import { repeat, roleModels } from "../helpers/eval-models";
 import type { ScriptedStep } from "../helpers/scripted-model";
 
@@ -13,7 +13,7 @@ const RUN_ID = "55555555-5555-4555-8555-555555555555";
 
 /** What Call 1 says when the probe's question does what its item's path asks, on the seeded state. */
 function opens(item: ScenarioItem): Partial<RawAnalysis> {
-  const tag = { topic_tags: [a("tag", item.id)] };
+  const tag = { topic: topic(a("tag", item.id)) };
   const byPath: Record<ScenarioItem["path"], Partial<RawAnalysis>> = {
     surface: { ...tag, question_type: "open" },
     trust: { ...tag, question_type: "open" },

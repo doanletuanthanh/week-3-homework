@@ -4,7 +4,7 @@ import { curatedPersonas, curatedTopics } from "../helpers/curated-scenarios";
 import { findSealed } from "../helpers/sealed-strings";
 import { importCuratedLibrary } from "../helpers/test-db";
 import { createAccount, signIn, signInAsNewLearner, uniqueEmail } from "./helpers/auth";
-import { ask } from "./helpers/chat";
+import { ask, directTopic } from "./helpers/chat";
 import { db } from "./helpers/db";
 import { postEnd } from "./helpers/interview";
 import { removePersonas, type ExtraPersona } from "./helpers/personas";
@@ -226,7 +226,7 @@ test.describe("the library with the app and web app topics in it", () => {
     await expectNothingSealed(page);
 
     // A short interview: the first question touches the tag of her first surface item, which she then tells.
-    await ask(page, `Sau khi giao việc, chị theo dõi bằng cách nào ạ? [stub:analysis=${JSON.stringify({ topic_tags: ["T1"], question_type: "open" })}]`, 1);
+    await ask(page, `Sau khi giao việc, chị theo dõi bằng cách nào ạ? [stub:analysis=${JSON.stringify({ topic: directTopic("T1"), question_type: "open" })}]`, 1);
     const second = `Chị kể thêm được không ạ? [stub:analysis=${JSON.stringify({ prev_turn_verdict: { hook_dropped: false, disclosed_item_ids: ["I1"], violations: [] } })}]`;
     expect(turnOutcome(await postTurn(page.request, sessionId, { text: second, expectedIndex: 2 }))).toMatchObject({ turnIndex: 2 });
 

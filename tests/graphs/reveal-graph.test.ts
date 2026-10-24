@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RevealBasis } from "@/engine/reveal-types";
 import { runRevealGraph, type RevealRunOptions } from "@/graphs/reveal-graph";
-import { NO_VERDICT, a, chiThu, engineSession } from "../helpers/engine-fixtures";
+import { NO_VERDICT, a, chiThu, engineSession, topic } from "../helpers/engine-fixtures";
 import { roleModels } from "../helpers/eval-models";
 import { NOTES, basisOf, playedSession, rangeOf } from "../helpers/reveal-fixtures";
 import type { ScriptedStep } from "../helpers/scripted-model";
@@ -180,7 +180,7 @@ describe("runRevealGraph", () => {
 
   it("applies the end judge's verdict about the last turn before anything is counted", async () => {
     const session = engineSession();
-    session.turn({ topic_tags: [a("tag", "money-home")] });
+    session.turn({ topic: topic(a("tag", "money-home")) });
     const judge: ScriptedStep = {
       structured: { last_turn_verdict: { hook_dropped: false, disclosed_item_ids: [a("item", "money-home"), "I99"], violations: [] }, canvas_matches: [] },
     };

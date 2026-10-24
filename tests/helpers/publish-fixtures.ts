@@ -23,7 +23,7 @@ const OPEN_QUESTION = {
     grounded_turn_id: null,
     introduced_span: null,
     hook_id: null,
-    topic_tags: [],
+    topic: { direct: null, direct_span: null, broad: [] },
   },
 };
 

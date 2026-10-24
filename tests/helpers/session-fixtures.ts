@@ -7,7 +7,7 @@ import { recordCallToDb } from "@/llm/call-model";
 import type { AppUser } from "@/server/auth";
 import { endSession } from "@/server/canvas";
 import { runTurn } from "@/server/turns";
-import { DROPPED, NO_VERDICT, a, rawAnalysis, told } from "./engine-fixtures";
+import { DROPPED, NO_VERDICT, a, rawAnalysis, told, topic } from "./engine-fixtures";
 import { roleModels } from "./eval-models";
 import { NOTES, QUESTIONS, rangeOf } from "./reveal-fixtures";
 import { scriptedModel, type ScriptedStep } from "./scripted-model";
@@ -38,16 +38,16 @@ export async function playTurns(learner: AppUser, sessionId: string, script: Scr
  * moment is `paid-app`, whose hook was dropped at turn 2.
  */
 export const PLAYED: ScriptedTurn[] = [
-  { analysis: { topic_tags: [a("tag", "money-home")], question_type: "open" } },
-  { analysis: { prev_turn_verdict: told("money-home"), topic_tags: [a("tag", "paid-app")] } },
-  { analysis: { prev_turn_verdict: DROPPED, topic_tags: [a("tag", "last-attempt")], question_type: "past_specific", label: "confirm_grounded", grounded_turn_id: 2 } },
+  { analysis: { topic: topic(a("tag", "money-home")), question_type: "open" } },
+  { analysis: { prev_turn_verdict: told("money-home"), topic: topic(a("tag", "paid-app")) } },
+  { analysis: { prev_turn_verdict: DROPPED, topic: topic(a("tag", "last-attempt")), question_type: "past_specific", label: "confirm_grounded", grounded_turn_id: 2 } },
   { analysis: { prev_turn_verdict: told("last-attempt"), label: "leading", introduced_span: [1, 3] } },
   { analysis: { question_type: "hypothetical_future" } },
   { analysis: { question_type: "hypothetical_future" } },
 ].map((turn, position) => ({ ...turn, question: QUESTIONS[(position + 1) as keyof typeof QUESTIONS] }) as ScriptedTurn);
 
 /** A session with no ignored hook and no leading question: it has no replay moment. */
-export const NO_REPLAY: ScriptedTurn[] = [{ analysis: { topic_tags: [a("tag", "money-home")] } }, { analysis: { prev_turn_verdict: told("money-home") } }];
+export const NO_REPLAY: ScriptedTurn[] = [{ analysis: { topic: topic(a("tag", "money-home")) } }, { analysis: { prev_turn_verdict: told("money-home") } }];
 
 /** A session whose only fault is a leading question at turn 1: fallback 1. */
 export const LEADING_ONLY: ScriptedTurn[] = [{ analysis: { label: "leading", introduced_span: [0, 1] } }, {}, { analysis: { label: "leading", introduced_span: [2, 3] } }];

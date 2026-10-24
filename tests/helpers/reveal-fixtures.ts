@@ -4,7 +4,7 @@ import type { CanvasMatchKind, GeneratorPart, JudgePart, RevealBasis, RevealJson
 import { selectReplay } from "@/engine/select-replay";
 import { tokenize, type TokenRange } from "@/engine/tokens";
 import type { Label, RawAnalysis } from "@/engine/types";
-import { DROPPED, a, chiThu, engineSession, told } from "./engine-fixtures";
+import { DROPPED, a, chiThu, engineSession, told, topic } from "./engine-fixtures";
 
 type Session = ReturnType<typeof engineSession>;
 
@@ -68,9 +68,9 @@ export const QUESTIONS = {
 export function playedSession(): Session {
   const session = engineSession();
   const script: Partial<RawAnalysis>[] = [
-    { topic_tags: [a("tag", "money-home")], question_type: "open" },
-    { prev_turn_verdict: told("money-home"), topic_tags: [a("tag", "paid-app")] },
-    { prev_turn_verdict: DROPPED, topic_tags: [a("tag", "last-attempt")], question_type: "past_specific", label: "confirm_grounded", grounded_turn_id: 2 },
+    { topic: topic(a("tag", "money-home")), question_type: "open" },
+    { prev_turn_verdict: told("money-home"), topic: topic(a("tag", "paid-app")) },
+    { prev_turn_verdict: DROPPED, topic: topic(a("tag", "last-attempt")), question_type: "past_specific", label: "confirm_grounded", grounded_turn_id: 2 },
     { prev_turn_verdict: told("last-attempt"), label: "leading", introduced_span: [1, 3] },
     { question_type: "hypothetical_future" },
     { question_type: "hypothetical_future" },
