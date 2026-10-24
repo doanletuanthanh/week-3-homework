@@ -43,7 +43,7 @@
       "id": "private-notebook",
       "content": "Giao việc trong nhóm chat xong, tối nào chị cũng tự chép lại vào một cuốn sổ riêng, mỗi người một trang. Cuốn sổ đó mới là thứ chị tin, và cả nhóm không ai biết là nó có.",
       "secret_terms": ["cuốn sổ riêng", "mỗi người một trang"],
-      "topic_tag": "cách chị tự theo dõi việc đã giao",
+      "topic_tag": "cách riêng của chị để nhớ từng việc đã giao",
       "path": "surface",
       "hook_line": "Giao xong thì chị cũng có cách của chị để nhớ.",
       "do_not_assert": { "id": "dna-private-notebook", "text": "Không tự nói chị ghi lại việc đã giao ở đâu hay bằng cách nào." },
