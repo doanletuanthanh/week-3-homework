@@ -75,6 +75,11 @@ describe("Gemini batch transport", () => {
     expect(request.generation_config.response_json_schema).not.toHaveProperty("$schema");
   });
 
+  it("caps the output only when a cap is given", () => {
+    expect(toGeminiRequest([new HumanMessage("hỏi")], spec, undefined, 400).generation_config).toEqual({ thinking_config: { thinking_level: "LOW" }, max_output_tokens: 400 });
+    expect(toGeminiRequest([new HumanMessage("hỏi")], spec).generation_config).not.toHaveProperty("max_output_tokens");
+  });
+
   it("reads usage with thoughts billed as output, and leaves thought parts out of the text", () => {
     const message = fromGeminiResponse(reply("xin chào").response);
     expect(message.text).toBe("xin chào");
@@ -130,5 +135,7 @@ describe("Gemini batch transport", () => {
     expect(result.output).toEqual({ x: "a" });
     // 1M input tokens of gemini-3.8-flash: 0.75 USD standard, half in a batch.
     expect(records[0].costUsd).toBeCloseTo(0.375);
+    // The role's output cap reaches the batch request.
+    expect(JSON.stringify(api.sent)).toContain('"max_output_tokens":1024');
   });
 });

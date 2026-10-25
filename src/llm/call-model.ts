@@ -3,11 +3,11 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import type { AIMessage, AIMessageChunk, BaseMessage } from "@langchain/core/messages";
 import type { z } from "zod";
 import { roleSpecFromEnv } from "@/config/env";
-import { LLM_ATTEMPT_TIMEOUT_MS, LLM_MAX_RETRIES } from "@/config/limits";
+import { LLM_ATTEMPT_TIMEOUT_MS, LLM_MAX_RETRIES, MAX_OUTPUT_TOKENS } from "@/config/limits";
 import { getDb } from "@/db/client";
 import { recordLlmCall, type LlmCallRecord } from "@/db/repo/llm-calls";
 import type { LlmScope } from "@/db/schema";
-import { createChatModel } from "./create-model";
+import { createChatModel, type ModelOptions } from "./create-model";
 import { costUsd, ZERO_USAGE, type PriceTier, type TokenUsage } from "./pricing";
 import type { Role, RoleSpec } from "./roles";
 
@@ -41,7 +41,7 @@ export type CallModelResult<T> = {
 /** Seams for tests: the provider client and the `llm_call` writer. */
 export type CallModelDeps = {
   roleSpec: (role: Role) => RoleSpec;
-  createModel: (spec: RoleSpec) => BaseChatModel;
+  createModel: (spec: RoleSpec, options?: ModelOptions) => BaseChatModel;
   recordCall: (record: LlmCallRecord) => Promise<void>;
   attemptTimeoutMs: number;
   /** Cancels every call made with these dependencies: a run that is being stopped as a whole. */
@@ -71,7 +71,7 @@ export const recordCallToDb: CallModelDeps["recordCall"] = async (record) => {
 
 const defaultDeps: CallModelDeps = {
   roleSpec: roleSpecFromEnv,
-  createModel: (spec) => createChatModel(spec),
+  createModel: (spec, options) => createChatModel(spec, options),
   recordCall: recordCallToDb,
   attemptTimeoutMs: LLM_ATTEMPT_TIMEOUT_MS,
 };
@@ -146,7 +146,7 @@ export async function callModel<T>(
   const deps = { ...defaultDeps, ...depsOverride };
   const messages = deps.rewriteMessages ? deps.rewriteMessages(role, builtMessages) : builtMessages;
   const spec = deps.roleSpec(role);
-  const model = deps.createModel(spec);
+  const model = deps.createModel(spec, { maxOutputTokens: MAX_OUTPUT_TOKENS[role] });
   const { schema, scope, onDelta } = options;
   const signal = options.signal && deps.signal ? AbortSignal.any([options.signal, deps.signal]) : (options.signal ?? deps.signal);
   let deltaSent = false;

@@ -1,3 +1,5 @@
+import type { Role } from "@/llm/roles";
+
 /** Days start at midnight in Vietnam, where the learners are. */
 export const DAY_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -27,6 +29,12 @@ export const PENDING_ACTION_TTL_MS = 15 * 60 * 1000;
 
 /** One model attempt is abandoned after this long. */
 export const LLM_ATTEMPT_TIMEOUT_MS = 45_000;
+
+/**
+ * Output token caps per role, reasoning tokens included. A guard against runaway replies, about
+ * four times the longest reply a turn asks for; the prompt sets the length. Other roles are uncapped.
+ */
+export const MAX_OUTPUT_TOKENS: Partial<Record<Role, number>> = { PERSONA: 400, ANALYSIS: 1024 };
 
 /** Technical retries after the first attempt of a model call. */
 export const LLM_MAX_RETRIES = 2;

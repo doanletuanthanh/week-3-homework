@@ -128,7 +128,14 @@ export function planTurn(input: {
     memory: acceptMemory(input.analysis.memory, memoryTurnFor(turnIndex)),
     personaContext: buildPersonaContext(
       scenario,
-      { stateAfter, justUnlockedItemId: unlockedItemId, tagItemId: checked.tag_item_id, hintItemIds: checked.hint_item_ids },
+      {
+        stateAfter,
+        justUnlockedItemId: unlockedItemId,
+        tagItemId: checked.tag_item_id,
+        hintItemIds: checked.hint_item_ids,
+        label: checked.label,
+        questionType: checked.question_type,
+      },
       transcript,
       question,
       input.memory,

@@ -2,8 +2,9 @@ import type { Scenario } from "@/scenario/schema";
 import { alias } from "./aliases";
 import { memoryTurnFor, splitContext, type SessionMemory } from "./memory";
 import { opennessLevel, type OpennessLevel } from "./openness";
+import { replyShape, type ReplyShape } from "./reply-plan";
 import { tokenize } from "./tokens";
-import type { EngineState, MemoryEntry } from "./types";
+import type { EngineState, Label, MemoryEntry, QuestionType } from "./types";
 
 /**
  * The isolation boundary. Each builder takes the whole scenario and returns only what one call
@@ -128,7 +129,12 @@ export type PersonaContext = {
   /** Gists of older exchanges and the details the persona gave about itself; data, not directions. */
   memory: SessionMemory;
   opennessLevel: OpennessLevel;
-  /** Open items only. */
+  /** How long the reply is and what it holds. */
+  shape: ReplyShape;
+  /**
+   * Open items this turn is about, never every open item: at most one to tell now, told items the
+   * question routes to, and untold ones it only touches.
+   */
   items: { content: string; mode: PersonaItemMode }[];
   /** At most one hook line to drop this turn. */
   hookLine: string | null;
@@ -141,10 +147,28 @@ export type PersonaContext = {
   question: string;
 };
 
+/**
+ * The one untold item Call 2 tells this turn, first match wins: the item that just opened, the
+ * item the question asks about directly, or the item that opened last turn and went untold (one
+ * more turn, told briefly). Any other candidate waits for a later turn: one main idea per reply.
+ */
+function itemToTell(input: { justUnlockedItemId: string | null; tagItemId: string | null; retryItemId: string | null }) {
+  if (input.justUnlockedItemId !== null) return { itemId: input.justUnlockedItemId, retry: false };
+  if (input.tagItemId !== null) return { itemId: input.tagItemId, retry: false };
+  return input.retryItemId === null ? null : { itemId: input.retryItemId, retry: true };
+}
+
 /** Call 2. `stateAfter` is the state after this turn's unlock decision and hook choice. */
 export function buildPersonaContext(
   scenario: Scenario,
-  decision: { stateAfter: EngineState; justUnlockedItemId: string | null; tagItemId: string | null; hintItemIds: string[] },
+  decision: {
+    stateAfter: EngineState;
+    justUnlockedItemId: string | null;
+    tagItemId: string | null;
+    hintItemIds: string[];
+    label: Label;
+    questionType: QuestionType;
+  },
   transcript: TranscriptLine[],
   question: string,
   memory: MemoryEntry[] = [],
@@ -153,8 +177,25 @@ export function buildPersonaContext(
   const { stateAfter, justUnlockedItemId, tagItemId, hintItemIds } = decision;
   const unlocked = new Set(stateAfter.unlocked.map((entry) => entry.itemId));
   const told = new Set(stateAfter.disclosed.map((entry) => entry.itemId));
+  const untold = (id: string | null) => (id !== null && unlocked.has(id) && !told.has(id) ? id : null);
+  const retryItemId = untold(stateAfter.unlocked.find((entry) => entry.turn === stateAfter.turnIndex - 1)?.itemId ?? null);
+  const tell = itemToTell({ justUnlockedItemId, tagItemId: untold(tagItemId), retryItemId });
+  const routed = new Set([tagItemId, ...hintItemIds]);
   const lockedItem = (id: string | null) => scenario.items.find((item) => item.id === id && !unlocked.has(item.id));
   const hookFromHint = stateAfter.selectedHook !== null && hintItemIds.includes(stateAfter.selectedHook) ? stateAfter.selectedHook : null;
+  // A told item comes back only when the question routes to it; an untold one the question only
+  // touches is offered for when it fits; nothing else open is repeated.
+  const modeOf = (id: string): PersonaItemMode | null => {
+    if (id === tell?.itemId) return "tell_now";
+    if (!routed.has(id)) return null;
+    if (told.has(id)) return "already_told";
+    return hintItemIds.includes(id) ? "tell_when_fitting" : null;
+  };
+  const items = scenario.items.flatMap((item) => {
+    const mode = unlocked.has(item.id) ? modeOf(item.id) : null;
+    return mode === null ? [] : [{ content: item.content, mode }];
+  });
+  const level = opennessLevel(stateAfter.openness);
 
   return {
     persona: {
@@ -165,13 +206,14 @@ export function buildPersonaContext(
     surfaceFacts: scenario.surface_facts,
     transcript: split.window,
     memory: split.memory,
-    opennessLevel: opennessLevel(stateAfter.openness),
-    items: scenario.items
-      .filter((item) => unlocked.has(item.id))
-      .map((item) => ({
-        content: item.content,
-        mode: item.id === justUnlockedItemId ? "tell_now" : told.has(item.id) ? "already_told" : "tell_when_fitting",
-      })),
+    opennessLevel: level,
+    shape: replyShape({
+      tell: tell === null ? "none" : tell.retry ? "retry" : "new",
+      label: decision.label,
+      questionType: decision.questionType,
+      opennessLevel: level,
+    }),
+    items,
     hookLine: lockedItem(stateAfter.selectedHook)?.hook_line ?? null,
     doNotAssert: (lockedItem(tagItemId) ?? lockedItem(hookFromHint))?.do_not_assert.text ?? null,
     question,

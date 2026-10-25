@@ -2,9 +2,10 @@ import type { BaseMessage } from "@langchain/core/messages";
 import { describe, expect, it } from "vitest";
 import { buildAnalysisContext, buildJudgeContext, buildPersonaContext } from "@/engine/contexts";
 import type { TurnPlan } from "@/engine/plan-turn";
-import type { EngineState } from "@/engine/types";
+import { initialState, type EngineState } from "@/engine/types";
 import { ROUTING_RULES, buildAnalysisMessages } from "@/llm/prompts/analysis";
-import { buildPersonaMessages } from "@/llm/prompts/persona";
+import { PERSONA_GUARD_RULES, SHAPE_TEXT, buildPersonaMessages } from "@/llm/prompts/persona";
+import { REPLY_SHAPES } from "@/engine/reply-plan";
 import { buildTurnJudgeMessages } from "@/llm/prompts/turn-judge";
 import { isolationViolations, sealedParts } from "@/eval/isolation";
 import { THIRTY_TURN_SCRIPT, a, chiThu, engineSession, topic, unlockedIds } from "../helpers/engine-fixtures";
@@ -112,7 +113,7 @@ describe("context isolation over a scripted 30-turn session", () => {
       expect(plan.personaContext).not.toHaveProperty("openness");
       expect(personaPrompt).not.toMatch(/openness|trust_threshold|follow_up|past_story|weight/);
       expect(Object.keys(plan.personaContext).sort()).toEqual(
-        ["doNotAssert", "hookLine", "items", "memory", "opennessLevel", "persona", "question", "surfaceFacts", "transcript"].sort(),
+        ["doNotAssert", "hookLine", "items", "memory", "opennessLevel", "persona", "question", "shape", "surfaceFacts", "transcript"].sort(),
       );
     }
   });
@@ -184,11 +185,27 @@ describe("prompt layout", () => {
     expect(system).not.toMatch(/topic_tags|khớp rõ nhất/);
   });
 
-  it("drops the skeleton's sentence limit and lets the persona talk freely", () => {
+  it("asks for short spoken answers, keeps the guard rules verbatim, and no longer invites rambling", () => {
     const system = buildPersonaMessages(engineSession().turn().personaContext)[0].text;
-    expect(system).not.toMatch(/1 đến 3 câu/);
-    expect(system).toContain("Nói thoải mái");
-    expect(system).toContain("không tự bịa thêm");
+    expect(system).not.toMatch(/lan man|Nói thoải mái|1 đến 3 câu/);
+    expect(system).toContain("Không liệt kê hay gạch đầu dòng");
+    for (const rule of PERSONA_GUARD_RULES) expect(system).toContain(`${rule}
+`);
+  });
+
+  it("keeps the system message identical across the turns of a session", () => {
+    const session = engineSession();
+    const systems = THIRTY_TURN_SCRIPT.slice(0, 12).map((step) => buildPersonaMessages(session.turn(step).personaContext)[0].text);
+    expect(systems[11]).toBe(systems[1]);
+  });
+
+  it("puts the shape's direction in this turn's directions", () => {
+    const context = engineSession().turn().personaContext;
+    for (const shape of REPLY_SHAPES) {
+      const directions = buildPersonaMessages({ ...context, shape }).at(-1)!.text;
+      expect(directions).toContain(SHAPE_TEXT[shape]);
+      for (const other of REPLY_SHAPES.filter((entry) => entry !== shape)) expect(directions).not.toContain(SHAPE_TEXT[other]);
+    }
   });
 });
 
@@ -257,10 +274,89 @@ describe("memory in prompts", () => {
     const session = sessionWithMemory();
     const memory = [...session.memory, { turn: 2, gist: "Tóm tắt.", claims: [other.do_not_assert.text] }];
     const stateAfter = session.state;
-    const decision = { stateAfter, justUnlockedItemId: null, tagItemId: asked.id, hintItemIds: [] };
+    const decision = { stateAfter, justUnlockedItemId: null, tagItemId: asked.id, hintItemIds: [], label: "open" as const, questionType: "open" as const };
     const clean = buildPersonaContext(chiThu, decision, [...session.transcript], "Hỏi?", [...session.memory]);
     const leaky = buildPersonaContext(chiThu, decision, [...session.transcript], "Hỏi?", memory);
     expect(isolationViolations(chiThu, stateAfter, { call: "PERSONA", context: clean })).toEqual([]);
     expect(isolationViolations(chiThu, stateAfter, { call: "PERSONA", context: leaky })).toContain("do-not-assert of 2 items");
+  });
+});
+
+describe("which open items Call 2 hears", () => {
+  const [opened, asked, missed, toldTouched, toldElsewhere, touched, oldUntold] = chiThu.items;
+  const stateAfter: EngineState = {
+    ...initialState(chiThu.openness_start),
+    turnIndex: 8,
+    unlocked: [
+      { itemId: opened.id, turn: 8 },
+      { itemId: asked.id, turn: 3 },
+      { itemId: missed.id, turn: 7 },
+      { itemId: toldTouched.id, turn: 2 },
+      { itemId: toldElsewhere.id, turn: 4 },
+      { itemId: touched.id, turn: 5 },
+      { itemId: oldUntold.id, turn: 6 },
+    ],
+    disclosed: [
+      { itemId: toldTouched.id, turn: 3 },
+      { itemId: toldElsewhere.id, turn: 5 },
+    ],
+  };
+  const build = (decision: Partial<Parameters<typeof buildPersonaContext>[1]> = {}) =>
+    buildPersonaContext(
+      chiThu,
+      {
+        stateAfter,
+        justUnlockedItemId: opened.id,
+        tagItemId: asked.id,
+        hintItemIds: [toldTouched.id, touched.id],
+        label: "open",
+        questionType: "closed",
+        ...decision,
+      },
+      [{ index: 0, learnerText: null, personaText: chiThu.opening_line }],
+      "Hỏi?",
+    );
+  const modes = (context: ReturnType<typeof build>) =>
+    Object.fromEntries(context.items.map((item) => [chiThu.items.find((entry) => entry.content === item.content)!.id, item.mode]));
+
+  it("tells one item at most: the one opened now before the one asked about, and that before last turn's untold one", () => {
+    expect(modes(build())).toEqual({ [opened.id]: "tell_now", [toldTouched.id]: "already_told", [touched.id]: "tell_when_fitting" });
+    expect(modes(build({ justUnlockedItemId: null }))).toMatchObject({ [asked.id]: "tell_now" });
+    expect(modes(build({ justUnlockedItemId: null }))).not.toHaveProperty(missed.id);
+    expect(modes(build({ justUnlockedItemId: null, tagItemId: null }))).toMatchObject({ [missed.id]: "tell_now" });
+  });
+
+  it("offers an untold item the question only touches for when it fits, and keeps a touched told one consistent", () => {
+    const context = modes(build());
+    expect(context[touched.id]).toBe("tell_when_fitting");
+    expect(context[toldTouched.id]).toBe("already_told");
+  });
+
+  it("gives last turn's untold item one more turn, told briefly, and no more", () => {
+    const retry = build({ justUnlockedItemId: null, tagItemId: null, hintItemIds: [] });
+    expect(modes(retry)).toEqual({ [missed.id]: "tell_now" });
+    expect(retry.shape).toBe("story_brief");
+    const later = buildPersonaContext(
+      chiThu,
+      { stateAfter: { ...stateAfter, turnIndex: 9 }, justUnlockedItemId: null, tagItemId: null, hintItemIds: [], label: "open", questionType: "open" },
+      [],
+      "Hỏi?",
+    );
+    // Turn 9 retries the item opened at turn 8 instead; the one from turn 7 is not heard again.
+    expect(modes(later)).toEqual({ [opened.id]: "tell_now" });
+  });
+
+  it("leaves out open items the question does not route to", () => {
+    const context = modes(build());
+    expect(context).not.toHaveProperty(toldElsewhere.id);
+    expect(context).not.toHaveProperty(oldUntold.id);
+  });
+
+  it("asks for a story only when an item is told, so a closed question that only touches one gets a single line", () => {
+    expect(build().shape).toBe("story");
+    const noRetry = { ...stateAfter, turnIndex: 10 };
+    const touchedOnly = build({ stateAfter: noRetry, justUnlockedItemId: null, tagItemId: null, hintItemIds: [touched.id] });
+    expect(modes(touchedOnly)).toEqual({ [touched.id]: "tell_when_fitting" });
+    expect(touchedOnly.shape).toBe("one_line");
   });
 });

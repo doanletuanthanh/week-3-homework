@@ -119,7 +119,7 @@ export function runTranscriptRun(args: string[], io: CliIo, llmDeps: Partial<Cal
         gists.asked += 1;
         if (plan.memory?.gist) gists.filled += 1;
       }
-      io.out(`Lượt ${turn} · nhãn ${plan.analysis.label} · loại ${plan.analysis.question_type} · mở: ${plan.unlockedItemId ?? "—"}`);
+      io.out(`Lượt ${turn} · nhãn ${plan.analysis.label} · loại ${plan.analysis.question_type} · mở: ${plan.unlockedItemId ?? "—"} · dạng ${plan.personaContext.shape}`);
       io.out(`  Hỏi: ${question}`);
       io.out(`  Đáp: ${personaText}`);
       if (asked !== null) io.out(`  Ghi nhớ lượt ${asked}: ${plan.memory?.gist || "(trống)"}${plan.memory?.claims.length ? ` · chi tiết: ${plan.memory.claims.join("; ")}` : ""}`);

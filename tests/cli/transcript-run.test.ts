@@ -58,7 +58,7 @@ describe("il transcript-run", () => {
     expect(out).toContain(`  Hỏi: ${DEMO_QUESTIONS[0]}`);
     // The last turn asks the first question again.
     expect(out.filter((line) => line === `  Hỏi: ${DEMO_QUESTIONS[0]}`)).toHaveLength(2);
-    expect(out).toContain(`Lượt ${turns} · nhãn open · loại open · mở: —`);
+    expect(out).toContain(`Lượt ${turns} · nhãn open · loại open · mở: — · dạng short`);
     expect(out.find((line) => line.startsWith("  → 8 từ, 2 câu ·"))).toContain("Call 1: 2000 vào / 90 ra (0 suy nghĩ)");
     expect(out.some((line) => line.includes("câu, dạng liệt kê ·"))).toBe(true);
     expect(out).toContain(`Câu trả lời dạng liệt kê: 1/${turns}.`);

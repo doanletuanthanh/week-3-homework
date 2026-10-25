@@ -71,7 +71,7 @@ export async function runGeneration(db: Database, attemptId: string, options: Ru
   // What earlier runs cost counts against the same reservation.
   let spent = claim.spentUsd;
   // Generation uses the batch key when there is one, so it does not share a rate limit with live turns.
-  const base: Partial<CallModelDeps> = { createModel: (spec) => createChatModel(spec, { batch: true }), ...options.llmDeps };
+  const base: Partial<CallModelDeps> = { createModel: (spec, modelOptions) => createChatModel(spec, { ...modelOptions, batch: true }), ...options.llmDeps };
   const recordCall = base.recordCall ?? recordCallToDb;
   const llmDeps: Partial<CallModelDeps> = {
     ...base,

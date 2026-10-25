@@ -2,7 +2,7 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import { AIMessage, type BaseMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import type { CallModelDeps } from "./call-model";
-import { createChatModel } from "./create-model";
+import { createChatModel, type ModelOptions } from "./create-model";
 import type { RoleSpec } from "./roles";
 
 /**
@@ -29,7 +29,12 @@ type Part = { text?: string; thought?: boolean };
 type GeminiRequest = {
   contents: { role: "user" | "model"; parts: Part[] }[];
   system_instruction?: { parts: Part[] };
-  generation_config: { thinking_config?: { thinking_level: string }; response_mime_type?: string; response_json_schema?: unknown };
+  generation_config: {
+    thinking_config?: { thinking_level: string };
+    max_output_tokens?: number;
+    response_mime_type?: string;
+    response_json_schema?: unknown;
+  };
 };
 type UsageMetadata = { promptTokenCount?: number; cachedContentTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
 type GeminiResponse = { candidates?: { content?: { parts?: Part[] } }[]; usageMetadata?: UsageMetadata };
@@ -233,7 +238,7 @@ function jsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
 }
 
 /** One LangChain conversation as a Gemini request: system text apart, the rest as user and model turns. */
-export function toGeminiRequest(messages: BaseMessage[], spec: RoleSpec, schema?: z.ZodType): GeminiRequest {
+export function toGeminiRequest(messages: BaseMessage[], spec: RoleSpec, schema?: z.ZodType, maxOutputTokens?: number): GeminiRequest {
   const text = (message: BaseMessage) => [{ text: message.text }];
   const system = messages.filter((message) => message.getType() === "system");
   const jsonSchema = schema ? jsonSchemaOf(schema) : undefined;
@@ -244,6 +249,7 @@ export function toGeminiRequest(messages: BaseMessage[], spec: RoleSpec, schema?
     ...(system.length > 0 ? { system_instruction: { parts: system.flatMap(text) } } : {}),
     generation_config: {
       thinking_config: { thinking_level: spec.effort.toUpperCase() },
+      ...(maxOutputTokens !== undefined ? { max_output_tokens: maxOutputTokens } : {}),
       ...(jsonSchema ? { response_mime_type: "application/json", response_json_schema: jsonSchema } : {}),
     },
   };
@@ -271,9 +277,9 @@ export function fromGeminiResponse(response: GeminiResponse): AIMessage {
  * The part of a chat model `callModel` uses, served by the batch collector: `invoke` for text,
  * `withStructuredOutput(..., { includeRaw })` for JSON. No streaming: nobody watches a batch.
  */
-export function geminiBatchModel(spec: RoleSpec, collector: GeminiBatchCollector): BaseChatModel {
+export function geminiBatchModel(spec: RoleSpec, collector: GeminiBatchCollector, options: ModelOptions = {}): BaseChatModel {
   const ask = async (messages: BaseMessage[], config: { signal?: AbortSignal } | undefined, schema?: z.ZodType) =>
-    fromGeminiResponse(await collector.enqueue(spec.model, toGeminiRequest(messages, spec, schema), config?.signal));
+    fromGeminiResponse(await collector.enqueue(spec.model, toGeminiRequest(messages, spec, schema, options.maxOutputTokens), config?.signal));
   const model = {
     invoke: (messages: BaseMessage[], config?: { signal?: AbortSignal }) => ask(messages, config),
     withStructuredOutput: (schema: z.ZodType) => ({
@@ -305,7 +311,8 @@ export function batchLlmDeps(collector: GeminiBatchCollector, base: Partial<Call
   const isGoogle = (spec: RoleSpec) => spec.provider === "google";
   return {
     ...base,
-    createModel: (spec) => (isGoogle(spec) ? geminiBatchModel(spec, collector) : (base.createModel ?? createChatModel)(spec)),
+    createModel: (spec, options) =>
+      isGoogle(spec) ? geminiBatchModel(spec, collector, options) : (base.createModel ?? createChatModel)(spec, options),
     priceTier: (spec) => (isGoogle(spec) ? "batch" : "standard"),
     attemptTimeoutMs: BATCH_ATTEMPT_TIMEOUT_MS,
   };

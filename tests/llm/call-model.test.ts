@@ -1,6 +1,7 @@
 import { HumanMessage } from "@langchain/core/messages";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { MAX_OUTPUT_TOKENS } from "@/config/limits";
 import type { LlmCallRecord } from "@/db/repo/llm-calls";
 import { callModel, LlmCallError, type CallModelDeps } from "@/llm/call-model";
 import { scriptedModel, type ScriptedStep } from "../helpers/scripted-model";
@@ -46,6 +47,16 @@ describe("callModel", () => {
     });
     expect(records[0].costUsd).toBe(result.costUsd);
     expect(calls).toHaveLength(1);
+  });
+
+  it("builds the client with the role's output cap, and none for an uncapped role", async () => {
+    const { deps } = harness([{ text: "a" }, { text: "b" }]);
+    const seen: unknown[] = [];
+    const createModel = deps.createModel!;
+    const capped: Partial<CallModelDeps> = { ...deps, createModel: (spec, modelOptions) => (seen.push(modelOptions), createModel(spec)) };
+    await callModel("PERSONA", messages, options, capped);
+    await callModel("FEEDBACK", messages, options, capped);
+    expect(seen).toEqual([{ maxOutputTokens: MAX_OUTPUT_TOKENS.PERSONA }, { maxOutputTokens: undefined }]);
   });
 
   it("attaches the call role and caller metadata for tracing", async () => {

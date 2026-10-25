@@ -95,7 +95,7 @@ describe.each(named)("%s", (file, { scenario, topic }) => {
       ...isolationViolations(scenario, state, { call: "REPLAY_JUDGE", context: buildJudgeContext(scenario, { ...state, turnIndex: 1 }, asked, { labelQuestion: true }) }),
       ...scenario.items.flatMap((item) => {
         const stateAfter = { ...state, turnIndex: 1, selectedHook: item.id };
-        const context = buildPersonaContext(scenario, { stateAfter, justUnlockedItemId: null, tagItemId: item.id, hintItemIds: [] }, asked.slice(0, 1), "Câu hỏi?");
+        const context = buildPersonaContext(scenario, { stateAfter, justUnlockedItemId: null, tagItemId: item.id, hintItemIds: [], label: "open", questionType: "open" }, asked.slice(0, 1), "Câu hỏi?");
         return isolationViolations(scenario, stateAfter, { call: "PERSONA", context });
       }),
     ];

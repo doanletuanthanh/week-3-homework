@@ -248,9 +248,9 @@ describe("runReplayTurn: a primary replay", () => {
     const opened = await replayTurn(learner, sessionId, 1, { analysis: PICK_UP, persona: "Chị cũng không nhớ rõ nữa." });
     expect(opened.result).toMatchObject({ ok: true, outcome: null });
     expect((await replayBranch(sessionId))!.result).toBeNull();
-    // From the next turn on the persona is asked to tell it when it fits.
+    // The next turn gives the untold item one more try: the persona is asked to tell it now, briefly.
     const next = await replayTurn(learner, sessionId, 2);
-    expect(next.models.prompts("PERSONA")[0]).toContain(`<dieu_chua_ke>\n- ${target.content}\n</dieu_chua_ke>`);
+    expect(next.models.prompts("PERSONA")[0]).toContain(`<dieu_noi_ngay>\n- ${target.content}\n</dieu_noi_ngay>`);
     const last = await replayTurn(learner, sessionId, 3);
 
     expect(last.result).toMatchObject({ ok: true, replayTurnIndex: 3, outcome: { level: "primary", result: "fail", target: { content: target.content } } });

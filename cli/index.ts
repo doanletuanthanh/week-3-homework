@@ -58,7 +58,7 @@ async function main(): Promise<number> {
   // Operator commands use the batch key when there is one, and keep their cost in `llm_call`
   // whenever a database is connected.
   const llmDeps = (): Partial<CallModelDeps> => ({
-    createModel: (spec) => createChatModel(spec, { batch: true }),
+    createModel: (spec, options) => createChatModel(spec, { ...options, batch: true }),
     recordCall: connected ? (record) => recordLlmCall(connected, record) : async () => {},
   });
   const batchCollector = (onJob: ConstructorParameters<typeof GeminiBatchCollector>[0]["onJob"]) =>
