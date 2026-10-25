@@ -30,8 +30,10 @@ import {
   branchRows,
   branchSnapshots,
   branchTurns,
+  FALLBACK_NOTES,
   eventNames,
   failingJudge,
+  fallbackRevealScript,
   fallbackSession,
   judged,
   mainBranch,
@@ -44,7 +46,7 @@ import {
   type ReplayStep,
 } from "../helpers/replay-fixtures";
 import { NOTES, QUESTIONS } from "../helpers/reveal-fixtures";
-import { NO_REPLAY, eventRows, sessionRow } from "../helpers/session-fixtures";
+import { NO_REPLAY, eventRows, sessionRow, type ScriptedTurn } from "../helpers/session-fixtures";
 import { createLearner, resetDatabase } from "../helpers/test-db";
 
 const db = () => getDb();
@@ -966,5 +968,31 @@ describe("resuming a session", () => {
     const main = await mainBranch(sessionId);
     expect((await db().select().from(turns).where(eq(turns.branchId, main.id))).map((turn) => turn.index).sort((x, y) => x - y)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(await db().select().from(snapshots).where(eq(snapshots.branchId, main.id))).toHaveLength(7);
+  });
+});
+
+describe("memory on the replay branch", () => {
+  const remember = (gist: string) => ({ memory: { gist, claims: [] } });
+
+  it("reads the main gists from before the fork, and writes its own for the main exchange leaving its window", async () => {
+    // A leading question at turn 8 forks the replay after turn 7. Main turns 8 and 9 remember turns 3 and 4.
+    const script: ScriptedTurn[] = [{}, {}, {}, {}, {}, { analysis: remember("Gist lượt 1.") }, { analysis: remember("Gist lượt 2.") }];
+    script.push({ analysis: { label: "leading", introduced_span: [0, 1], ...remember("Gist chính lượt 3.") } }, { analysis: remember("Gist chính lượt 4.") });
+    const { learner, sessionId } = await revealedSession(script, FALLBACK_NOTES, fallbackRevealScript());
+    await start(learner, sessionId);
+    const branch = (await replayBranch(sessionId))!;
+    expect(branch.forkAfterTurn).toBe(7);
+
+    const first = await replayTurn(learner, sessionId, 1, { analysis: remember("Gist luyện lại lượt 3.") });
+    const [firstPrompt] = first.models.prompts("ANALYSIS");
+    expect(firstPrompt).toContain("[lượt 1] Gist lượt 1.\n[lượt 2] Gist lượt 2.");
+    expect(firstPrompt).toContain("[lượt 3] người hỏi");
+    expect((await branchTurns(branch.id))[0].decisionJson!.memory).toEqual({ turn: 3, gist: "Gist luyện lại lượt 3.", claims: [] });
+
+    const second = await replayTurn(learner, sessionId, 2);
+    const [secondPrompt] = second.models.prompts("ANALYSIS");
+    expect(secondPrompt).toContain("[lượt 3] Gist luyện lại lượt 3.");
+    expect(secondPrompt).not.toContain("Gist chính");
+    expect(secondPrompt).toContain("[lượt 8] người hỏi: Câu hỏi luyện lại 1 của em ạ?");
   });
 });

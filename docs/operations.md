@@ -81,7 +81,7 @@ pnpm il transcript-run scenarios/ux-chi-tieu/chi-thu.json --turns 10 --yes  # pl
 
 Plays a list of questions through the real turn engine in memory, with no app, no session and no sign-in. The default list is the demo transcript `evalsets/demo/<persona>-transcript.json`; use `--questions <file>` for another one with the same `questions` field. Past the end of the list, the questions start over.
 
-For each turn it prints the question, the reply, its words and sentences, whether it is a list, the opened item, the label, and for each call the input, output and reasoning tokens, the latency and the cost. At the end it prints medians. Only `llm_call` rows are written, with scope `eval`. A 10-turn run costs about 0.03–0.04 USD on 3.8 Flash.
+For each turn it prints the question, the reply, its words and sentences, whether it is a list, the opened item, the label, and for each call the input, output and reasoning tokens, the latency and the cost. From turn 6 it also prints the gist Call 1 wrote for the exchange leaving the 5-exchange window. At the end it prints medians and the gist fill rate (non-empty gists against turns that asked for one). An empty gist is not an error, but that exchange then stays word for word in both prompts, so a low rate means the token savings are lost. Only `llm_call` rows are written, with scope `eval`. A 10-turn run costs about 0.03–0.04 USD on 3.8 Flash.
 
 ## Sessions
 

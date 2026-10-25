@@ -647,3 +647,25 @@ describe("runTurn: demo sessions", () => {
     expect(await getDb().select().from(events).where(and(eq(events.sessionId, demoSession.id)))).toHaveLength(0);
   });
 });
+
+describe("runTurn: session memory", () => {
+  const remember = (gist: string, claims: string[] = []) => ({ memory: { gist, claims } });
+
+  it("stores what a turn after the fifth remembers, and the next turn's Call 1 reads the gist instead of the exchange", async () => {
+    for (let turn = 1; turn <= 5; turn += 1) await play(`Câu hỏi ${turn} ạ?`, turn, turnSteps(remember("Bỏ qua: chưa có lượt nào cần ghi nhớ.")));
+    await play("Câu hỏi 6 ạ?", 6, turnSteps(remember("Hỏi câu 1; nhân vật trả lời ngắn.", ["Chị ở trọ gần chỗ làm"])));
+
+    const rows = await turnRows();
+    expect(rows.slice(1, 6).map((row) => row.decisionJson!.memory)).toEqual([undefined, undefined, undefined, undefined, undefined]);
+    expect(rows[6].decisionJson!.memory).toEqual({ turn: 1, gist: "Hỏi câu 1; nhân vật trả lời ngắn.", claims: ["Chị ở trọ gần chỗ làm"] });
+
+    const { calls } = await play("Câu hỏi 7 ạ?", 7, turnSteps());
+    const [analysis, persona] = calls.map(promptOf);
+    expect(analysis).toContain("<bo_nho>\n[lượt 1] Hỏi câu 1; nhân vật trả lời ngắn.\n</bo_nho>");
+    expect(analysis).not.toContain("[lượt 1] người hỏi");
+    expect(analysis).toContain("[lượt 2] người hỏi: Câu hỏi 2 ạ?");
+    expect(analysis).toContain("<luot_can_ghi_nho>2</luot_can_ghi_nho>");
+    expect(persona).toContain("<da_noi>\n- Chị ở trọ gần chỗ làm\n</da_noi>");
+    expect(persona).not.toContain("Câu hỏi 1 ạ?");
+  });
+});

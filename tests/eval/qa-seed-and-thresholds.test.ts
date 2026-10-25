@@ -38,7 +38,7 @@ describe("seeded probe states", () => {
   it("lets a follow-up item open the way it does live: the verdict confirms the hook, then the question picks it up", async () => {
     const basis = itemBasis(chiThu, "paid-app");
     const models = roleModels({
-      ANALYSIS: [{ structured: { prev_turn_verdict: DROPPED, question_type: "other", label: "confirm_grounded", grounded_turn_id: 1, introduced_span: null, hook_id: a("hook", "paid-app"), topic: topic(null) } }],
+      ANALYSIS: [{ structured: { prev_turn_verdict: DROPPED, question_type: "other", label: "confirm_grounded", grounded_turn_id: 1, introduced_span: null, hook_id: a("hook", "paid-app"), topic: topic(null), memory: { gist: "", claims: [] } } }],
     });
     const { plan } = await analyzeTurn({ scenario: chiThu, ...basis, question: "Lần đó chị định ghi kiểu gì ạ?" }, { scope: { scope: "eval" }, meta: {}, llmDeps: models.llmDeps });
     expect(plan.unlockedItemId).toBe("paid-app");

@@ -2,13 +2,18 @@ import { MAX_TURNS } from "@/config/limits";
 import type { Database } from "@/db/client";
 import { commitTurn, loadBranch, type CommitOutcome, type TurnClaimed } from "@/db/repo/turns";
 import type { TranscriptLine } from "@/engine/contexts";
-import type { TurnPlan } from "@/engine/plan-turn";
+import { decisionOf, type TurnPlan } from "@/engine/plan-turn";
 import { tokenize } from "@/engine/tokens";
-import type { EngineState, RawAnalysis } from "@/engine/types";
+import type { EngineState, MemoryEntry, RawAnalysis } from "@/engine/types";
 import type { Scenario } from "@/scenario/schema";
 import { recordEvent } from "./events";
 
-export type TurnBasis = { scenario: Scenario; state: EngineState; transcript: TranscriptLine[] };
+/** `memory` holds what each turn on the path remembered of an older exchange. */
+export type TurnBasis = { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; memory: MemoryEntry[] };
+
+/** The memory entries of stored turn rows, in turn order. Rows from before memory have none. */
+export const memoryOf = (rows: { decisionJson: { memory?: MemoryEntry } | null }[]): MemoryEntry[] =>
+  rows.flatMap((row) => (row.decisionJson?.memory ? [row.decisionJson.memory] : []));
 
 /** Everything one finished turn adds. */
 export type FinishedTurn = {
@@ -52,6 +57,7 @@ export function postgresTurnStore(db: Database, target: { sessionId: string; use
           selectedHook: last.hookSelected,
         },
         transcript: turns.map((turn) => ({ index: turn.index, learnerText: turn.learnerText, personaText: turn.personaText })),
+        memory: memoryOf(turns),
       };
     },
 
@@ -71,14 +77,7 @@ export function postgresTurnStore(db: Database, target: { sessionId: string; use
             personaText,
             personaTokens: tokenize(personaText),
             analysisJson: analysis,
-            decisionJson: {
-              analysis: plan.analysis,
-              corrections: plan.corrections,
-              rules: plan.rules,
-              unlockedItemId: plan.unlockedItemId,
-              opennessBefore: plan.opennessBefore,
-              opennessAfter: plan.opennessAfter,
-            },
+            decisionJson: decisionOf(plan),
             hookSelected: plan.hookToDrop,
             latencyMs,
           },

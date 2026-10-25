@@ -61,6 +61,10 @@ export function describeTrace({ session, scenario, turns }: SessionTrace): { tit
         { label: "Item mở", text: decision.unlockedItemId ?? "(không)" },
         { label: "Hook được chọn", text: turn.hookSelected ? `${turn.hookSelected} (${hookVerdict})` : "(không)" },
         { label: "Openness", text: `${decision.opennessBefore} → ${decision.opennessAfter}` },
+        // Rows written before memory, and turns that remembered nothing, have no entry.
+        decision.memory
+          ? { label: `Ghi nhớ lượt ${decision.memory.turn}`, items: [decision.memory.gist || "(gist trống)", ...decision.memory.claims.map((claim) => `chi tiết: ${claim}`)] }
+          : { label: "Ghi nhớ", text: "(không)" },
       );
     }
     lines.push({ label: "Persona", text: `${turn.personaText}${turn.flagged ? "  [GẮN CỜ: vi phạm do-not-assert]" : ""}` });

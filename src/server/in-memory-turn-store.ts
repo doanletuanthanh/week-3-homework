@@ -1,7 +1,7 @@
 import { MAX_TURNS } from "@/config/limits";
 import { applyVerdict } from "@/engine/apply-verdict";
 import type { TranscriptLine } from "@/engine/contexts";
-import { initialState, type EngineState, type Verdict } from "@/engine/types";
+import { initialState, type EngineState, type MemoryEntry, type Verdict } from "@/engine/types";
 import type { Scenario } from "@/scenario/schema";
 import type { FinishedTurn, TurnBasis, TurnStore } from "./turn-store";
 
@@ -43,7 +43,8 @@ export function inMemoryTurnStore(scenario: Scenario): InMemoryTurnStore {
     },
 
     async loadState(): Promise<TurnBasis> {
-      return { scenario, state, transcript: [...transcript] };
+      const memory = turns.flatMap((turn): MemoryEntry[] => (turn.plan.memory ? [turn.plan.memory] : []));
+      return { scenario, state, transcript: [...transcript], memory };
     },
 
     async commitTurn(turn) {

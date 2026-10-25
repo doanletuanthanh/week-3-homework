@@ -66,6 +66,22 @@ describe("il transcript-run", () => {
     expect(models.records.every((record) => record.scope === "eval")).toBe(true);
   });
 
+  it("prints each gist from turn 6 and the share of turns whose gist came back non-empty", async () => {
+    const gist = (text: string) => ({ structured: rawAnalysis({ memory: { gist: text, claims: text ? ["Ở trọ gần chỗ làm"] : [] } }) });
+    const models = roleModels({
+      ANALYSIS: [...repeat(5, gist("bỏ qua")), gist("Hỏi tiền nhà; chị nói gửi về mỗi tháng."), gist("")],
+      PERSONA: repeat(7, { text: "Dạ." }),
+    });
+    const { io, out } = capture();
+
+    expect(await runTranscriptRun([CHI_THU, "--turns", "7", "--yes"], io, models.llmDeps)).toBe(0);
+
+    expect(out).toContain("  Ghi nhớ lượt 1: Hỏi tiền nhà; chị nói gửi về mỗi tháng. · chi tiết: Ở trọ gần chỗ làm");
+    expect(out).toContain("  Ghi nhớ lượt 2: (trống)");
+    expect(out.filter((line) => line.startsWith("  Ghi nhớ"))).toHaveLength(2);
+    expect(out).toContain("Gist có nội dung: 1/2 (50%).");
+  });
+
   it("stops with exit 1 when a turn's call fails after its retries", async () => {
     const models = roleModels({
       ANALYSIS: [{ structured: rawAnalysis() }],

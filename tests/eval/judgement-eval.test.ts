@@ -165,6 +165,20 @@ describe("running a set through the production prompts", () => {
     expect(models.records.every((record) => record.scope === "eval")).toBe(true);
   });
 
+  it("shows a far-reference case's older exchanges as its hand-written gists, and the last five word for word", async () => {
+    const cases = parseTestSet(readFileSync("evalsets/label-classifier.jsonl", "utf8"), labelCaseSchema).filter((entry) => entry.id === "lc-far-01");
+    const models = roleModels({ ANALYSIS: [{ structured: rawAnalysis({ label: "confirm_grounded", grounded_turn_id: 2 }) }] });
+
+    const score = await runLabelSet(chiThu, cases, { scope: { scope: "eval" }, llmDeps: models.llmDeps });
+
+    expect(rateOf(score, "agreement").value).toBe(1);
+    const [prompt] = models.prompts("ANALYSIS");
+    expect(prompt).toContain("[lượt 2] Hỏi chia tiền trọ với ai;");
+    expect(prompt).not.toContain("[lượt 5] người hỏi");
+    expect(prompt).toContain("[lượt 6] người hỏi");
+    expect(prompt).toContain("<luot_can_ghi_nho>6</luot_can_ghi_nho>");
+  });
+
   it("judges each case with the turn judge and keeps the verdict code accepted", async () => {
     const cases = parseTestSet(
       [

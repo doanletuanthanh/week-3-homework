@@ -1,13 +1,15 @@
 import { HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
-import { ROUTE_BROAD_MAX } from "@/config/limits";
+import { MEMORY_LIMITS, ROUTE_BROAD_MAX } from "@/config/limits";
 import type { AnalysisContext, TranscriptLine, VerdictMaterial } from "@/engine/contexts";
 import { tokenize } from "@/engine/tokens";
 import { LABELS, type Label } from "@/engine/types";
 import { DATA_BLOCK_RULE, dataBlock } from "./data-block";
 
-/** One line per speaker and turn. Tokens are re-joined by single spaces, so no text can start a line of its own. */
+/** Learner or model text on one line: tokens re-joined by single spaces, so no text can start a line of its own. */
+export const oneLine = (text: string) => tokenize(text).join(" ");
+
+/** One line per speaker and turn. */
 export function renderTranscript(transcript: TranscriptLine[]): string {
-  const oneLine = (text: string) => tokenize(text).join(" ");
   return transcript
     .flatMap((turn) => [
       ...(turn.learnerText === null ? [] : [`[lượt ${turn.index}] người hỏi: ${oneLine(turn.learnerText)}`]),
@@ -33,9 +35,15 @@ export function renderPersonaFacts(material: VerdictMaterial): string {
   ].join("\n");
 }
 
-/** The per-turn blocks a verdict is judged against. */
+/** One line per older exchange, `[lượt N] gist`: model-written, so rendered like the transcript. */
+export const renderGists = (earlier: VerdictMaterial["memory"]["earlier"]) => earlier.map((entry) => `[lượt ${entry.turn}] ${oneLine(entry.gist)}`).join("\n");
+
+/** The per-turn blocks a verdict is judged against. Older exchanges come first, as their gists. */
 export function renderVerdictMaterial(material: VerdictMaterial): string {
   return [
+    ...(material.memory.earlier.length > 0
+      ? ["Tóm tắt các lượt cũ hơn, mỗi lượt một dòng:", dataBlock("bo_nho", renderGists(material.memory.earlier))]
+      : []),
     dataBlock("hoi_thoai", renderTranscript(material.transcript)),
     dataBlock(
       "dieu_da_mo",
@@ -80,11 +88,18 @@ export const ROUTING_RULES = [
   '"Cuối tuần anh hay làm gì?" → direct null; broad rỗng.',
 ].join("\n");
 
+/** Call 1 remembers the exchange about to leave the window, while it is still in it. */
+export const MEMORY_RULES = [
+  "Ghi nhớ (trường memory) lượt trong <luot_can_ghi_nho>; nếu là (không có) thì gist là chuỗi rỗng và claims là mảng rỗng.",
+  `- gist: một câu, tối đa 30 từ (${MEMORY_LIMITS.gistChars} ký tự): người hỏi hỏi gì, nhân vật trả lời ý gì; giữ nguyên các cụm đặc biệt nhân vật đã dùng.`,
+  `- claims: tối đa ${MEMORY_LIMITS.claimsPerTurn} chi tiết cụ thể nhân vật tự nói về mình ở lượt đó (con số, nơi chốn, người, thói quen, sự việc) mà không có trong <su_that_be_mat>, <dieu_da_mo> hay <dieu_can_tranh>; mỗi chi tiết tối đa ${MEMORY_LIMITS.claimChars} ký tự; không có thì mảng rỗng.`,
+].join("\n");
+
 const LABEL_RULES = [
   "Gán nhãn cho câu hỏi mới của người hỏi (trường label), chọn đúng một:",
   LABEL_DEFINITIONS,
   "Bằng chứng bắt buộc đi kèm nhãn:",
-  "- Với confirm_grounded hoặc boundary_probe: grounded_turn_id là số lượt của câu nhân vật mà câu hỏi dựa vào (số trong [lượt N] nhân vật). Không chỉ ra được lượt nào thì dùng nhãn open.",
+  "- Với confirm_grounded hoặc boundary_probe: grounded_turn_id là số lượt của câu nhân vật mà câu hỏi dựa vào (số trong [lượt N] nhân vật, hoặc [lượt N] của một dòng tóm tắt trong <bo_nho>). Không chỉ ra được lượt nào thì dùng nhãn open.",
   "- Với leading: introduced_span là [chỉ số token đầu, chỉ số token cuối] (tính cả hai đầu) của cụm người hỏi tự thêm, theo cách đánh số trong <cau_hoi_moi>. Không chỉ ra được cụm nào thì dùng nhãn open.",
   "- Các trường bằng chứng không dùng tới thì để null.",
   "Loại câu hỏi (trường question_type): open (câu hỏi mở), closed (chỉ trả lời có/không hoặc chọn một), hypothetical_future (hỏi về điều sẽ làm hoặc nếu... thì...), past_specific (hỏi về một lần cụ thể đã xảy ra), other.",
@@ -102,6 +117,7 @@ export function buildAnalysisMessages(context: AnalysisContext): BaseMessage[] {
     "Bạn là bộ phân tích của một buổi luyện phỏng vấn người dùng. Bạn không trả lời người hỏi. Bạn làm hai việc và trả về đúng một đối tượng JSON theo schema được yêu cầu.",
     DATA_BLOCK_RULE,
     VERDICT_RULES,
+    MEMORY_RULES,
     LABEL_RULES,
     "Nhân vật được phỏng vấn và những điều nhân vật sẵn sàng kể:",
     renderPersonaFacts(context),
@@ -111,6 +127,7 @@ export function buildAnalysisMessages(context: AnalysisContext): BaseMessage[] {
 
   const turn = [
     renderVerdictMaterial(context),
+    `<luot_can_ghi_nho>${context.memoryTurn ?? "(không có)"}</luot_can_ghi_nho>`,
     `Câu hỏi mới của người hỏi (lượt ${context.turnIndex}), mỗi token kèm chỉ số:`,
     dataBlock("cau_hoi_moi", context.question.tokens.map((token, index) => `${index}:${token}`).join(" ")),
   ].join("\n\n");

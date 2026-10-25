@@ -1,7 +1,7 @@
 import { alias, type AliasKind } from "@/engine/aliases";
 import type { TranscriptLine } from "@/engine/contexts";
 import { planTurn, type TurnPlan } from "@/engine/plan-turn";
-import { initialState, type EngineState, type RawAnalysis, type RawTopic } from "@/engine/types";
+import { initialState, type EngineState, type MemoryEntry, type RawAnalysis, type RawTopic } from "@/engine/types";
 import type { Scenario } from "@/scenario/schema";
 import { readChiThu } from "./sealed-strings";
 
@@ -30,15 +30,17 @@ export function rawAnalysis(overrides: Partial<RawAnalysis> = {}): RawAnalysis {
     introduced_span: null,
     hook_id: null,
     topic: topic(null),
+    memory: { gist: "", claims: [] },
     ...overrides,
   };
 }
 
-/** Plays turns through `planTurn` with hand-written Call 1 outputs, keeping state and transcript. */
+/** Plays turns through `planTurn` with hand-written Call 1 outputs, keeping state, transcript and memory as a store does. */
 export function engineSession(scenario: Scenario = chiThu) {
   let state: EngineState = initialState(scenario.openness_start);
   const transcript: TranscriptLine[] = [{ index: 0, learnerText: null, personaText: scenario.opening_line }];
   const plans: TurnPlan[] = [];
+  const memory: MemoryEntry[] = [];
 
   return {
     get state() {
@@ -46,9 +48,11 @@ export function engineSession(scenario: Scenario = chiThu) {
     },
     transcript,
     plans,
+    memory,
     turn(overrides: Partial<RawAnalysis> = {}, question = "Chị kể thêm cho em nghe được không ạ?"): TurnPlan {
-      const plan = planTurn({ scenario, state, analysis: rawAnalysis(overrides), transcript: [...transcript], question });
+      const plan = planTurn({ scenario, state, analysis: rawAnalysis(overrides), transcript: [...transcript], memory: [...memory], question });
       state = plan.stateAfter;
+      if (plan.memory) memory.push(plan.memory);
       transcript.push({ index: plan.turnIndex, learnerText: question, personaText: `Câu trả lời ở lượt ${plan.turnIndex}.` });
       plans.push(plan);
       return plan;

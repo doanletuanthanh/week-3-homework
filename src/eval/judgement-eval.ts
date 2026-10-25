@@ -27,10 +27,17 @@ import { mapPooled } from "./pool";
  */
 export const exchangeSchema = z.strictObject({ learner: z.string().min(1), persona: z.string().min(1) });
 
+/**
+ * A gist Call 1 would have stored for an older exchange: `turn` is its place in `transcript`,
+ * counted from 1. Hand-written, so a case can exercise the window without paying for gists.
+ */
+export const memoryEntrySchema = z.strictObject({ turn: z.number().int().min(1), gist: z.string().min(1), claims: z.array(z.string()).default([]) });
+
 /** `label-classifier`: the label the production classifier must give a new question. */
 export const labelCaseSchema = z.strictObject({
   id: z.string().min(1),
   transcript: z.array(exchangeSchema),
+  memory: z.array(memoryEntrySchema).optional(),
   question: z.string().min(1),
   expected: z.enum(LABELS),
   note: z.string().optional(),
@@ -375,13 +382,14 @@ export async function runLabelSet(scenario: Scenario, cases: LabelCase[], option
   const rows = await mapPooled(cases, options.concurrency ?? 1, async (entry) => {
     const transcript = toTranscript(scenario, entry.transcript);
     const state: EngineState = { ...initialState(scenario.openness_start), turnIndex: entry.transcript.length };
+    const memory = entry.memory ?? [];
     const reply = await callModel(
       "ANALYSIS",
-      buildAnalysisMessages(buildAnalysisContext(scenario, state, transcript, entry.question)),
+      buildAnalysisMessages(buildAnalysisContext(scenario, state, transcript, entry.question, memory)),
       { schema: analysisSchema, meta: { judgement_case: entry.id }, scope: options.scope },
       options.llmDeps,
     );
-    const { analysis } = planTurn({ scenario, state, analysis: reply.output, transcript, question: entry.question });
+    const { analysis } = planTurn({ scenario, state, analysis: reply.output, transcript, question: entry.question, memory });
     return { id: entry.id, expected: entry.expected, predicted: analysis.label };
   });
   return scoreLabelSet(rows);

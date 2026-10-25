@@ -4,9 +4,10 @@ import { applyVerdict } from "./apply-verdict";
 import { checkAnalysis } from "./check-analysis";
 import { buildPersonaContext, type PersonaContext, type TranscriptLine } from "./contexts";
 import { chooseHook, updateLedger } from "./hooks";
+import { acceptMemory, memoryTurnFor } from "./memory";
 import { nextOpenness } from "./openness";
 import { tokenize } from "./tokens";
-import type { CheckedAnalysis, Correction, EngineState, RawAnalysis, RuleRun, StoredAnalysis, Verdict } from "./types";
+import type { CheckedAnalysis, Correction, EngineState, MemoryEntry, RawAnalysis, RuleRun, StoredAnalysis, Verdict } from "./types";
 import { decideUnlock } from "./unlock";
 
 const NO_VERDICT: Verdict = { hook_dropped: false, disclosed_item_ids: [], violations: [] };
@@ -26,13 +27,30 @@ export type TurnPlan = {
   opennessAfter: number;
   /** Snapshot t. */
   stateAfter: EngineState;
+  /** What Call 1 remembered of the exchange leaving the window, as code accepted it. */
+  memory: MemoryEntry | null;
   personaContext: PersonaContext;
 };
 
 /** The part of a plan stored with the turn, for `trace`. Rows keep the analysis of the code that wrote them. */
 export type TurnDecision = Pick<TurnPlan, "corrections" | "rules" | "unlockedItemId" | "opennessBefore" | "opennessAfter"> & {
   analysis: StoredAnalysis;
+  /** Absent on rows written before memory, and when Call 1 remembered nothing. */
+  memory?: MemoryEntry;
 };
+
+/** The decision a turn row stores, from its plan. */
+export function decisionOf(plan: TurnPlan): TurnDecision {
+  return {
+    analysis: plan.analysis,
+    corrections: plan.corrections,
+    rules: plan.rules,
+    unlockedItemId: plan.unlockedItemId,
+    opennessBefore: plan.opennessBefore,
+    opennessAfter: plan.opennessAfter,
+    ...(plan.memory ? { memory: plan.memory } : {}),
+  };
+}
 
 /**
  * Everything code decides in one turn, between Call 1 and Call 2 (addendum §1 steps 2 to 4).
@@ -48,6 +66,8 @@ export function planTurn(input: {
   /** Turns 0 to t-1. */
   transcript: TranscriptLine[];
   question: string;
+  /** Memory entries stored on the branch's path up to t-1. */
+  memory?: MemoryEntry[];
   /** Replay only: the target item wins when several items could open. */
   priorityItemId?: string;
   /**
@@ -105,11 +125,13 @@ export function planTurn(input: {
     opennessBefore: previousState.openness,
     opennessAfter: stateAfter.openness,
     stateAfter,
+    memory: acceptMemory(input.analysis.memory, memoryTurnFor(turnIndex)),
     personaContext: buildPersonaContext(
       scenario,
       { stateAfter, justUnlockedItemId: unlockedItemId, tagItemId: checked.tag_item_id, hintItemIds: checked.hint_item_ids },
       transcript,
       question,
+      input.memory,
     ),
   };
 }

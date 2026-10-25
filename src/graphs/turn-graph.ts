@@ -12,7 +12,7 @@ import {
 } from "@/engine/contexts";
 import { planTurn, type TurnPlan } from "@/engine/plan-turn";
 import { isValidRange } from "@/engine/tokens";
-import type { EngineState, Label, RawAnalysis, Verdict } from "@/engine/types";
+import type { EngineState, Label, MemoryEntry, RawAnalysis, Verdict } from "@/engine/types";
 import { callModel, LlmCallError, type CallModelDeps, type CallScope } from "@/llm/call-model";
 import { buildAnalysisMessages } from "@/llm/prompts/analysis";
 import { buildPersonaMessages } from "@/llm/prompts/persona";
@@ -66,6 +66,8 @@ const TurnState = new StateSchema({
   state: z.custom<EngineState>(),
   /** Turns 0 to t-1. */
   transcript: z.custom<TranscriptLine[]>(),
+  /** Memory entries stored on the branch's path up to t-1. */
+  memory: z.custom<MemoryEntry[]>().optional(),
   question: z.string(),
   analysis: z.custom<RawAnalysis>().optional(),
   plan: z.custom<TurnPlan>().optional(),
@@ -75,13 +77,13 @@ const TurnState = new StateSchema({
 
 const optionsOf = (config: RunnableConfig) => config.configurable as TurnRunOptions;
 
-type TurnInput = { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; question: string };
+type TurnInput = { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; memory?: MemoryEntry[]; question: string };
 type AnalysisOptions = Pick<TurnRunOptions, "scope" | "meta" | "signal" | "llmDeps" | "onContext">;
 
 /** Call 1: analyses the new question and judges the previous persona turn. Sees no locked content. */
 async function callAnalysis(input: TurnInput, options: AnalysisOptions): Promise<RawAnalysis> {
   const { scope, meta, signal, llmDeps, onContext } = options;
-  const context = buildAnalysisContext(input.scenario, input.state, input.transcript, input.question);
+  const context = buildAnalysisContext(input.scenario, input.state, input.transcript, input.question, input.memory);
   onContext?.({ call: "ANALYSIS", context }, input.state);
   const reply = await callModel("ANALYSIS", buildAnalysisMessages(context), { schema: analysisSchema, meta, scope, signal }, llmDeps);
   return reply.output;
@@ -100,6 +102,7 @@ function decide(state: typeof TurnState.State, config: RunnableConfig) {
       state: state.state,
       analysis: state.analysis!,
       transcript: state.transcript,
+      memory: state.memory,
       question: state.question,
       priorityItemId,
       ignoreVerdict: judge !== undefined,
@@ -127,7 +130,7 @@ async function persona(state: typeof TurnState.State, config: RunnableConfig) {
  */
 async function judge(state: typeof TurnState.State, config: RunnableConfig) {
   const options = optionsOf(config);
-  const { stateAfter } = state.plan!;
+  const { stateAfter, memory } = state.plan!;
   options.onJudging?.();
   try {
     const judgement: TurnJudgement = await judgeReplayTurn(
@@ -135,6 +138,8 @@ async function judge(state: typeof TurnState.State, config: RunnableConfig) {
         scenario: state.scenario,
         state: stateAfter,
         transcript: [...state.transcript, { index: stateAfter.turnIndex, learnerText: state.question, personaText: state.personaText! }],
+        // What this turn's Call 1 just remembered is not stored yet, and the judge's window has moved past it.
+        memory: [...(state.memory ?? []), ...(memory ? [memory] : [])],
         labelQuestion: options.judge!.labelQuestion,
       },
       options,
@@ -174,7 +179,7 @@ export type TurnGraphResult = {
  * when Call 1 or Call 2 fails after its technical retries.
  */
 export async function runTurnGraph(
-  input: { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; question: string },
+  input: TurnInput,
   options: TurnRunOptions,
 ): Promise<TurnGraphResult> {
   // The signal is given to the model calls, not to the graph: a call that is cut off still
@@ -199,10 +204,10 @@ export async function analyzeTurn(input: TurnInput, options: AnalysisOptions): P
  * Returns the verdict with scenario ids; apply it with `applyVerdict`.
  */
 export async function judgeTurn(
-  input: { scenario: Scenario; state: EngineState; transcript: TranscriptLine[] },
+  input: { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; memory?: MemoryEntry[] },
   options: Pick<TurnRunOptions, "scope" | "meta" | "signal" | "llmDeps" | "onContext">,
 ): Promise<Verdict> {
-  const context = buildJudgeContext(input.scenario, input.state, input.transcript);
+  const context = buildJudgeContext(input.scenario, input.state, input.transcript, {}, input.memory);
   options.onContext?.({ call: "REPLAY_JUDGE", context }, input.state);
   const reply = await callModel(
     "REPLAY_JUDGE",
@@ -219,12 +224,12 @@ export async function judgeTurn(
  * `open`, as it does for Call 1.
  */
 export async function judgeReplayTurn(
-  input: { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; labelQuestion: boolean },
+  input: { scenario: Scenario; state: EngineState; transcript: TranscriptLine[]; memory?: MemoryEntry[]; labelQuestion: boolean },
   options: Pick<TurnRunOptions, "scope" | "meta" | "signal" | "llmDeps" | "onContext">,
 ): Promise<Extract<TurnJudgement, { ok: true }>> {
   if (!input.labelQuestion) return { ok: true, verdict: await judgeTurn(input, options), label: null };
 
-  const context = buildJudgeContext(input.scenario, input.state, input.transcript, { labelQuestion: true });
+  const context = buildJudgeContext(input.scenario, input.state, input.transcript, { labelQuestion: true }, input.memory);
   options.onContext?.({ call: "REPLAY_JUDGE", context }, input.state);
   const { output } = await callModel(
     "REPLAY_JUDGE",

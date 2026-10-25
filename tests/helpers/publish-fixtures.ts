@@ -24,6 +24,7 @@ const OPEN_QUESTION = {
     introduced_span: null,
     hook_id: null,
     topic: { direct: null, direct_span: null, broad: [] },
+    memory: { gist: "", claims: [] },
   },
 };
 

@@ -17,6 +17,7 @@ import {
 import { getSession, type SessionRow, type TurnRow } from "@/db/repo/sessions";
 import { releaseClaim } from "@/db/repo/turns";
 import { applyVerdict } from "@/engine/apply-verdict";
+import { decisionOf } from "@/engine/plan-turn";
 import { REPLAY_TURNS, decideReplay, type ReplayOutcome, type ReplayTurn } from "@/engine/replay-result";
 import type { BrowserTurn } from "@/engine/seal";
 import { tokenize } from "@/engine/tokens";
@@ -25,6 +26,7 @@ import { LlmCallError, type CallModelDeps } from "@/llm/call-model";
 import type { AppUser } from "./auth";
 import { recordEvent } from "./events";
 import { replayOutcomeOf, toReplayTurn } from "./replay-outcome";
+import { memoryOf } from "./turn-store";
 
 const subjectOf = (session: SessionRow) => ({ userId: session.userId, sessionId: session.id, isDemo: session.isDemo });
 
@@ -171,6 +173,8 @@ export async function runReplayTurn(
           selectedHook: turnsSoFar.at(-1)!.hookSelected,
         },
         transcript: turnsSoFar.map((turn) => ({ index: turn.index, learnerText: turn.learnerText, personaText: turn.personaText })),
+        // Main turns after the fork are not read, so the replay writes their gists again as its window moves.
+        memory: memoryOf(turnsSoFar),
         question: text,
       },
       {
@@ -246,14 +250,7 @@ async function finishReplayTurn(
         personaText,
         personaTokens: tokenize(personaText),
         analysisJson: analysis,
-        decisionJson: {
-          analysis: plan.analysis,
-          corrections: plan.corrections,
-          rules: plan.rules,
-          unlockedItemId: plan.unlockedItemId,
-          opennessBefore: plan.opennessBefore,
-          opennessAfter: plan.opennessAfter,
-        },
+        decisionJson: decisionOf(plan),
         verdictJson: judged?.applied ?? null,
         hookSelected: plan.hookToDrop,
         flagged: (judged?.applied.violations.length ?? 0) > 0,

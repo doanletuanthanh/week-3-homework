@@ -26,6 +26,8 @@ export type RawAnalysis = {
   introduced_span: number[] | null;
   hook_id: string | null;
   topic: RawTopic;
+  /** What to remember of the exchange the prompt named; untrusted until `acceptMemory` ran. */
+  memory: { gist: string; claims: string[] };
 };
 
 /**
@@ -55,6 +57,12 @@ export type CheckedAnalysis = {
 /** A checked analysis as a turn row keeps it: rows written before topic routing have no `tag_span` or `hint_item_ids`. */
 export type StoredAnalysis = Omit<CheckedAnalysis, "tag_span" | "hint_item_ids"> &
   Partial<Pick<CheckedAnalysis, "tag_span" | "hint_item_ids">>;
+
+/**
+ * What a turn's Call 1 wrote about an older exchange, as code accepted it: the gist of exchange
+ * `turn`, and the details the persona gave about itself in it. Stored with the turn that wrote it.
+ */
+export type MemoryEntry = { turn: number; gist: string; claims: string[] };
 
 /** One change code made to the model's output, kept for `trace`. */
 export type Correction = { field: string; from: unknown; to: unknown; reason: string };

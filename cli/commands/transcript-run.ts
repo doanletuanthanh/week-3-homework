@@ -3,6 +3,7 @@ import { z } from "zod";
 import { roleSpecFromEnv } from "@/config/env";
 import { MAX_TURNS } from "@/config/limits";
 import type { LlmCallRecord } from "@/db/repo/llm-calls";
+import { memoryTurnFor } from "@/engine/memory";
 import { tokenize } from "@/engine/tokens";
 import { runTurnGraph } from "@/graphs/turn-graph";
 import { LlmCallError, type CallModelDeps } from "@/llm/call-model";
@@ -88,6 +89,8 @@ export function runTranscriptRun(args: string[], io: CliIo, llmDeps: Partial<Cal
     };
     const store = inMemoryTurnStore(scenario);
     const replies: { words: number; sentences: number; list: boolean }[] = [];
+    // Turns asked for a gist, and those whose gist came back non-empty: an empty one silently costs the verbatim fallback.
+    const gists = { asked: 0, filled: 0 };
 
     for (let turn = 1; turn <= turns; turn += 1) {
       const question = questions[(turn - 1) % questions.length];
@@ -111,9 +114,15 @@ export function runTranscriptRun(args: string[], io: CliIo, llmDeps: Partial<Cal
       const ok = (role: Role) => calls.find((record) => record.role === role && record.ok);
       const reply = { words: tokenize(personaText).length, sentences: sentenceCount(personaText), list: isListReply(personaText) };
       replies.push(reply);
+      const asked = memoryTurnFor(turn);
+      if (asked !== null) {
+        gists.asked += 1;
+        if (plan.memory?.gist) gists.filled += 1;
+      }
       io.out(`Lượt ${turn} · nhãn ${plan.analysis.label} · loại ${plan.analysis.question_type} · mở: ${plan.unlockedItemId ?? "—"}`);
       io.out(`  Hỏi: ${question}`);
       io.out(`  Đáp: ${personaText}`);
+      if (asked !== null) io.out(`  Ghi nhớ lượt ${asked}: ${plan.memory?.gist || "(trống)"}${plan.memory?.claims.length ? ` · chi tiết: ${plan.memory.claims.join("; ")}` : ""}`);
       io.out(
         `  → ${reply.words} từ, ${reply.sentences} câu${reply.list ? ", dạng liệt kê" : ""} · ${callLine("Call 1", ok("ANALYSIS"))} · ${callLine("Call 2", ok("PERSONA"))} · ${usdOf(calls)}`,
       );
@@ -128,6 +137,7 @@ export function runTranscriptRun(args: string[], io: CliIo, llmDeps: Partial<Cal
       `Trung vị mỗi lượt: ${median(replies.map((reply) => reply.words))} từ, ${median(replies.map((reply) => reply.sentences))} câu; ${summary("ANALYSIS", "Call 1")}; ${summary("PERSONA", "Call 2")}.`,
     );
     io.out(`Câu trả lời dạng liệt kê: ${replies.filter((reply) => reply.list).length}/${replies.length}.`);
+    io.out(gists.asked === 0 ? "Gist: chưa lượt nào cần ghi nhớ." : `Gist có nội dung: ${gists.filled}/${gists.asked} (${Math.round((100 * gists.filled) / gists.asked)}%).`);
     return 0;
   });
 }

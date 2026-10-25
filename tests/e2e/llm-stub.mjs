@@ -57,6 +57,7 @@ const NEUTRAL_ANALYSIS = {
   introduced_span: null,
   hook_id: null,
   topic: { direct: null, direct_span: null, broad: [] },
+  memory: { gist: "", claims: [] },
 };
 
 const textOf = (content) => (typeof content === "string" ? content : (content ?? []).map((part) => part.text ?? "").join(""));

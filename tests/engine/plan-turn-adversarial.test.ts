@@ -61,6 +61,7 @@ function hostileAnalysis(random: () => number, turnIndex: number): RawAnalysis {
       direct_span: random() < 0.2 ? null : random() < 0.2 ? [pick(HOSTILE_NUMBERS)] : [turnRef(), turnRef()],
       broad: many("T"),
     },
+    memory: { gist: pick(HOSTILE_STRINGS), claims: Array.from({ length: Math.floor(random() * 4) }, () => pick(HOSTILE_STRINGS)) },
   };
 }
 
@@ -249,6 +250,7 @@ describe("planTurn with values a schema would refuse", () => {
     introduced_span: null,
     hook_id: null,
     topic: { direct: null, direct_span: null, broad: [] },
+    memory: { gist: "", claims: [] },
   };
 
   it.each([

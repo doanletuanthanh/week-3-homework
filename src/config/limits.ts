@@ -7,6 +7,15 @@ export const MAX_QUESTION_CHARS = 500;
 /** Topics one question may touch without asking about any of them specifically; each can only bring a hook. */
 export const ROUTE_BROAD_MAX = 3;
 
+/** Exchanges both turn calls see word for word; older ones reach them as memory. */
+export const CONTEXT_WINDOW_EXCHANGES = 5;
+
+/**
+ * What Call 1 may write about the exchange leaving the window, in characters and counts: one gist,
+ * and the details the persona gave about itself. Call 2 is handed the newest `claimsKept`.
+ */
+export const MEMORY_LIMITS = { gistChars: 200, claimChars: 120, claimsPerTurn: 2, claimsKept: 12 } as const;
+
 /** Longest notes canvas, in characters (PRD Màn 4). */
 export const MAX_CANVAS_CHARS = 5000;
 

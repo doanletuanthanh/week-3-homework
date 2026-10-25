@@ -172,6 +172,7 @@ describe("il trace", () => {
     expect(turn1).toContain("  Item mở: (không)");
     expect(turn1).toContain("  Hook được chọn: paid-app (đã thả)");
     expect(turn1).toContain("  Openness: 4 → 4");
+    expect(turn1).toContain("  Ghi nhớ: (không)");
     expect(turn1).toContain("  Persona: Có lần chị định ghi lại nhưng rồi cũng bỏ.");
 
     // Turn 2: the verdict for turn 1, the rule that held, the item opened.

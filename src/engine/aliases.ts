@@ -29,8 +29,11 @@ export function resolveAlias(scenario: Pick<Scenario, "items">, kind: AliasKind,
   return index === null ? null : scenario.items[index].id;
 }
 
-/** Call 1 output with every alias turned into a scenario id. Unknown references are dropped. */
-export type ResolvedAnalysis = Omit<RawAnalysis, "prev_turn_verdict" | "hook_id" | "topic"> & {
+/**
+ * Call 1 output with every alias turned into a scenario id. Unknown references are dropped.
+ * `memory` carries no ids and is left out: `planTurn` reads it from the raw output.
+ */
+export type ResolvedAnalysis = Omit<RawAnalysis, "prev_turn_verdict" | "hook_id" | "topic" | "memory"> & {
   /** `disclosed_item_ids` are item ids, `violations` are do-not-assert ids. */
   verdict: Verdict;
   hook_item_id: string | null;

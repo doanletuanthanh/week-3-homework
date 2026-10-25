@@ -5,7 +5,7 @@ import type { EngineState, RawAnalysis, Verdict } from "@/engine/types";
 import { assertIsolated } from "@/eval/isolation";
 import { runTurnGraph, type TurnGraphResult, type TurnRunOptions } from "@/graphs/turn-graph";
 import { LlmCallError } from "@/llm/call-model";
-import { NO_VERDICT, a, chiThu, rawAnalysis, topic } from "../helpers/engine-fixtures";
+import { NO_VERDICT, a, chiThu, engineSession, rawAnalysis, topic } from "../helpers/engine-fixtures";
 import { roleModels } from "../helpers/eval-models";
 import { QUESTIONS, playedSession } from "../helpers/reveal-fixtures";
 import type { ScriptedStep } from "../helpers/scripted-model";
@@ -272,5 +272,30 @@ describe("isolation on a replay branch (PRD §12.2 item 3)", () => {
     await expect(
       replay([{ question }], { judge: { labelQuestion: true }, onContext: (subject, state) => assertIsolated(chiThu, state, subject) }).then(({ models }) => models.prompts("REPLAY_JUDGE")[0]),
     ).resolves.toContain(term);
+  });
+});
+
+describe("memory on a replay turn", () => {
+  it("shows Call 1 the stored gists, and the judge the gist this turn's Call 1 just wrote", async () => {
+    const session = engineSession();
+    for (let turn = 1; turn <= 7; turn += 1) session.turn({ memory: { gist: `Tóm tắt lượt ${turn - 5}.`, claims: [] } });
+    const models = roleModels({
+      ANALYSIS: [{ structured: rawAnalysis({ memory: { gist: "Tóm tắt lượt 3.", claims: [] } }) }],
+      PERSONA: [{ text: "Dạ." }],
+      REPLAY_JUDGE: [judged()],
+    });
+    const { plan } = await runTurnGraph(
+      { scenario: chiThu, state: session.state, transcript: [...session.transcript], memory: [...session.memory], question: "Chị kể thêm ạ?" },
+      { scope: { scope: "session" }, meta: {}, llmDeps: models.llmDeps, judge: { labelQuestion: false } },
+    );
+
+    expect(plan.memory).toEqual({ turn: 3, gist: "Tóm tắt lượt 3.", claims: [] });
+    const [analysis] = models.prompts("ANALYSIS");
+    expect(analysis).toContain("[lượt 2] Tóm tắt lượt 2.");
+    expect(analysis).toContain("[lượt 3] người hỏi");
+    const [judge] = models.prompts("REPLAY_JUDGE");
+    expect(judge).toContain("[lượt 3] Tóm tắt lượt 3.");
+    expect(judge).not.toContain("[lượt 3] người hỏi");
+    expect(judge).toContain("[lượt 8] nhân vật: Dạ.");
   });
 });

@@ -1,5 +1,6 @@
 import type { BaseMessage } from "@langchain/core/messages";
 import type { AnalysisContext, JudgeContext, PersonaContext } from "@/engine/contexts";
+import { NO_MEMORY } from "@/engine/memory";
 import type { EngineState } from "@/engine/types";
 import { buildAnalysisMessages } from "@/llm/prompts/analysis";
 import { buildPersonaMessages } from "@/llm/prompts/persona";
@@ -27,18 +28,21 @@ export function sealedParts(item: ScenarioItem, prompt: string): string[] {
 const text = (messages: BaseMessage[]) => messages.map((message) => message.text).join("\n");
 
 /**
- * The prompt of a call with the conversation taken out. What the learner and the persona said is
- * theirs, and a simulated learner may well type a word that happens to be a secret term; the
- * rule is about what the engine itself hands to the model.
+ * The prompt of a call with the conversation and its memory taken out. What the learner and the
+ * persona said is theirs, and a simulated learner may well type a word that happens to be a
+ * secret term; memory is Call 1's summary of that same conversation, written by a call whose own
+ * context passed this scan. The rule is about what the engine itself hands to the model.
  */
 function engineProvidedPrompt(subject: CallContext): string {
   switch (subject.call) {
     case "ANALYSIS":
-      return text(buildAnalysisMessages({ ...subject.context, transcript: [], question: { text: "", tokens: [] } }));
+      return text(buildAnalysisMessages({ ...subject.context, transcript: [], memory: NO_MEMORY, question: { text: "", tokens: [] } }));
     case "PERSONA":
-      return text(buildPersonaMessages({ ...subject.context, transcript: [], question: "" }));
+      return text(buildPersonaMessages({ ...subject.context, transcript: [], memory: NO_MEMORY, question: "" }));
     case "REPLAY_JUDGE":
-      return text(buildTurnJudgeMessages({ ...subject.context, transcript: [], question: subject.context.question && { text: "", tokens: [] } }));
+      return text(
+        buildTurnJudgeMessages({ ...subject.context, transcript: [], memory: NO_MEMORY, question: subject.context.question && { text: "", tokens: [] } }),
+      );
   }
 }
 
@@ -54,7 +58,9 @@ export function isolationViolations(scenario: Scenario, state: EngineState, subj
   const found = scenario.items.filter((item) => !unlocked.has(item.id)).flatMap((item) => sealedParts(item, prompt));
 
   if (subject.call === "PERSONA") {
-    const constraints = scenario.items.filter((item) => prompt.includes(item.do_not_assert.text));
+    // Memory stays in for this count: a constraint the persona reads in its notes is still one it was given.
+    const withMemory = text(buildPersonaMessages({ ...subject.context, transcript: [], question: "" }));
+    const constraints = scenario.items.filter((item) => withMemory.includes(item.do_not_assert.text));
     if (constraints.length > 1) found.push(`do-not-assert of ${constraints.length} items`);
     for (const item of constraints) {
       if (unlocked.has(item.id)) found.push(`do-not-assert of open item ${item.id}`);

@@ -1,8 +1,9 @@
 import type { Scenario } from "@/scenario/schema";
 import { alias } from "./aliases";
+import { memoryTurnFor, splitContext, type SessionMemory } from "./memory";
 import { opennessLevel, type OpennessLevel } from "./openness";
 import { tokenize } from "./tokens";
-import type { EngineState } from "./types";
+import type { EngineState, MemoryEntry } from "./types";
 
 /**
  * The isolation boundary. Each builder takes the whole scenario and returns only what one call
@@ -19,7 +20,10 @@ type PersonaIdentity = { displayName: string; identity: string };
 export type VerdictMaterial = {
   persona: PersonaIdentity;
   surfaceFacts: string[];
+  /** The window: recent exchanges, and older ones that have no gist, word for word. */
   transcript: TranscriptLine[];
+  /** Gists of the older exchanges; written by Call 1, so conversation-derived like the transcript. */
+  memory: SessionMemory;
   /** The persona turn being judged. */
   judgedTurn: number;
   /** Open items, with whether a verdict already confirmed the persona told them. */
@@ -36,6 +40,8 @@ export type AnalysisContext = VerdictMaterial & {
   /** Public topic tags of every item. */
   topicTags: { alias: string; tag: string }[];
   turnIndex: number;
+  /** The exchange this call writes memory for, the oldest of its window; null before there is one. */
+  memoryTurn: number | null;
   question: { text: string; tokens: string[] };
 };
 
@@ -47,8 +53,12 @@ export type JudgeContext = VerdictMaterial & {
   question: { text: string; tokens: string[] } | null;
 };
 
-/** `state` is the stored snapshot of the turn being judged, before its verdict. */
-function verdictMaterial(scenario: Scenario, state: EngineState, transcript: TranscriptLine[]): VerdictMaterial {
+/**
+ * `state` is the stored snapshot of the turn being judged, before its verdict. `memory` holds the
+ * entries stored on the branch's path; without them the whole transcript is shown.
+ */
+function verdictMaterial(scenario: Scenario, state: EngineState, transcript: TranscriptLine[], memory: MemoryEntry[]): VerdictMaterial {
+  const split = splitContext(transcript, memory);
   const unlocked = new Set(state.unlocked.map((entry) => entry.itemId));
   const told = new Set(state.disclosed.map((entry) => entry.itemId));
   const hook = scenario.items.find((item) => item.id === state.selectedHook && !unlocked.has(item.id));
@@ -56,7 +66,8 @@ function verdictMaterial(scenario: Scenario, state: EngineState, transcript: Tra
   return {
     persona: { displayName: scenario.persona.display_name, identity: scenario.persona.identity },
     surfaceFacts: scenario.surface_facts,
-    transcript,
+    transcript: split.window,
+    memory: split.memory,
     judgedTurn: state.turnIndex,
     unlockedItems: scenario.items
       .filter((item) => unlocked.has(item.id))
@@ -81,11 +92,13 @@ export function buildAnalysisContext(
   state: EngineState,
   transcript: TranscriptLine[],
   question: string,
+  memory: MemoryEntry[] = [],
 ): AnalysisContext {
   return {
-    ...verdictMaterial(scenario, state, transcript),
+    ...verdictMaterial(scenario, state, transcript, memory),
     topicTags: scenario.items.map((item) => ({ alias: alias(scenario, "tag", item.id), tag: item.topic_tag })),
     turnIndex: state.turnIndex + 1,
+    memoryTurn: memoryTurnFor(state.turnIndex + 1),
     question: { text: question, tokens: tokenize(question) },
   };
 }
@@ -99,9 +112,10 @@ export function buildJudgeContext(
   state: EngineState,
   transcript: TranscriptLine[],
   options: { labelQuestion?: boolean } = {},
+  memory: MemoryEntry[] = [],
 ): JudgeContext {
   const asked = options.labelQuestion ? (transcript.at(-1)?.learnerText ?? null) : null;
-  return { ...verdictMaterial(scenario, state, transcript), question: asked === null ? null : { text: asked, tokens: tokenize(asked) } };
+  return { ...verdictMaterial(scenario, state, transcript, memory), question: asked === null ? null : { text: asked, tokens: tokenize(asked) } };
 }
 
 export type PersonaItemMode = "tell_now" | "tell_when_fitting" | "already_told";
@@ -109,7 +123,10 @@ export type PersonaItemMode = "tell_now" | "tell_when_fitting" | "already_told";
 export type PersonaContext = {
   persona: PersonaIdentity & { voiceNotes: string };
   surfaceFacts: string[];
+  /** The window, as chat history. */
   transcript: TranscriptLine[];
+  /** Gists of older exchanges and the details the persona gave about itself; data, not directions. */
+  memory: SessionMemory;
   opennessLevel: OpennessLevel;
   /** Open items only. */
   items: { content: string; mode: PersonaItemMode }[];
@@ -130,7 +147,9 @@ export function buildPersonaContext(
   decision: { stateAfter: EngineState; justUnlockedItemId: string | null; tagItemId: string | null; hintItemIds: string[] },
   transcript: TranscriptLine[],
   question: string,
+  memory: MemoryEntry[] = [],
 ): PersonaContext {
+  const split = splitContext(transcript, memory);
   const { stateAfter, justUnlockedItemId, tagItemId, hintItemIds } = decision;
   const unlocked = new Set(stateAfter.unlocked.map((entry) => entry.itemId));
   const told = new Set(stateAfter.disclosed.map((entry) => entry.itemId));
@@ -144,7 +163,8 @@ export function buildPersonaContext(
       voiceNotes: scenario.persona.voice_notes,
     },
     surfaceFacts: scenario.surface_facts,
-    transcript,
+    transcript: split.window,
+    memory: split.memory,
     opennessLevel: opennessLevel(stateAfter.openness),
     items: scenario.items
       .filter((item) => unlocked.has(item.id))
