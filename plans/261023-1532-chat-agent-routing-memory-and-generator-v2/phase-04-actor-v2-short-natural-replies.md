@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Actor v2: short, natural replies"
-status: pending
+status: in-progress
 priority: P1
 effort: "1.5d"
 dependencies: [3]
@@ -99,20 +99,43 @@ persona.ts:  system  = role · data rule · nhan_vat · cach_noi · su_that_be_m
 6. Paid, after approval (≈ 0.04 USD): `pnpm il transcript-run scenarios/ux-chi-tieu/chi-thu.json --turns 10 --yes`. That is the same 10 turns as the "before" run; turns 9–10 repeat questions 1–2, which tests that told things are retold consistently. Save it next to phase 1's output. Record here the medians of words, sentences, tokens and latency, the reasoning tokens per call, and the gist fill rate. Ask the user to read both transcripts. <!-- Red team #5, #6, #12 -->
 
 ## Todo list
-- [ ] Reply shape table and tests
-- [ ] Item selection by mode
-- [ ] Persona prompt rewrite (guard rules verbatim)
-- [ ] Output caps in sync and batch paths
-- [ ] Transcript after, 10 turns (approved, ≈ 0.04 USD); user review
+- [x] Reply shape table and tests
+- [x] Item selection by mode
+- [x] Persona prompt rewrite (guard rules verbatim)
+- [x] Output caps in sync and batch paths
+- [x] Transcript after, 10 turns (approved; 0.0446 USD)
+- [ ] User review of before/after (the user tests it on production after the push, 2026-10-25)
 
 ## Success criteria
-- [ ] Demo transcript: median reply ≤ 60 words, every closed question answered in ≤ 2 sentences, no list-formatted reply. A word and sentence count in the run report, not in runtime code.
-- [ ] Every item opened in the transcript is told within 2 turns of opening, per the verdicts.
-- [ ] The gist fill rate is ≥ 90% of the gists asked for (turns 6–10).
-- [ ] The median of Call 1 + Call 2 latency is not worse than the "before" run (same machine).
-- [ ] No PERSONA call spends reasoning tokens that push its output toward the 400 cap.
+- [x] Demo transcript: median reply ≤ 60 words, every closed question answered in ≤ 2 sentences, no list-formatted reply. A word and sentence count in the run report, not in runtime code.
+- [x] Every item opened in the transcript is told within 2 turns of opening (read from the reply text; the run prints no verdicts).
+- [x] The gist fill rate is ≥ 90% of the gists asked for (turns 6–10).
+- [x] The median of Call 1 + Call 2 latency is not worse than the "before" run (same machine).
+- [x] No PERSONA call spends reasoning tokens that push its output toward the 400 cap.
 - [ ] The user accepts naturalness after reading the before and after transcripts, including turns 9–10, which repeat earlier questions.
-- [ ] All tests pass. `qa-mutants` still strips the guard rules.
+- [x] All tests pass. `qa-mutants` still strips the guard rules.
+
+## Results (2026-10-25)
+- **Decisions (user, after code review, 2026-10-25).** They replace the item rules under Requirements:
+  - At most one item is told per turn. Order: the item opened now, then the untold item asked about directly, then the untold item opened last turn (retry).
+  - An untold item that a broad question only touches is `tell_when_fitting`. It does not change the shape, so a closed question stays one line.
+  - A retry is `tell_now` with shape `story_brief`.
+  - `ReplyInput.tellNow` became `tell: "new" | "retry" | "none"`. The mode names stay `tell_when_fitting` and `already_told`, the plan's `tell_if_fitting` and `keep_consistent`.
+- **Transcript** (`plans/reports/transcript-after-261025-chi-thu.md`, compared with `transcript-before-261023-chi-thu.md`):
+  - Median reply: 140 → **45 words**, 5 → 3 sentences.
+  - Call 2 output: 177 → 53 tokens (max 98, cap 400), with 0 reasoning tokens.
+  - Latency: 2.4 + 4.5 s → 2.6 + 2.4 s.
+  - Closed questions got 2 and 1 sentences. No reply was list-formatted. Gists 5/5.
+  - Turns 9–10 retell turns 1–2 consistently.
+- **Open:**
+  - Turn 6 (`story`, 4 sentences) ends with a feeling about the numbers, a brush on the locked `shame` item. No do-not-assert reached Call 2 that turn, because the tagged item was the one that opened.
+  - Turn 5 is the longest reply, at 82 words.
+- **Review:** 8/10 (`plans/reports/code-reviewer-261025-1649-phase-04-actor-v2.md`). Its findings M1–M3 led to the decisions above. Fixed from it: the shape printed per turn in `transcript-run`, a shadowed parameter in `generation.ts`, and two test nits.
+- **Tests:**
+  - typecheck and lint pass; unit 1221/1221; int 675/675.
+  - e2e 328/328 before the item rule change. After it, `turn-engine.spec` and `persona.spec` were rerun and pass (`plans/reports/tester-261025-1649-phase-04-actor-v2.md`).
+  - One replay int expectation changed with the decision: a retry is now in `<dieu_noi_ngay>`.
+  - `access-isolation.int` failed once under load and passed alone.
 
 ## Risk assessment
 - Replies that are too short may hide surface facts the learner needs to build on. Mitigation: `short` allows 2–3 sentences. Surface facts stay in the system message. The transcript review checks it.

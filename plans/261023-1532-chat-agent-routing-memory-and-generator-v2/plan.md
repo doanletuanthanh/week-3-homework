@@ -83,7 +83,7 @@ Drivers: Call 2 output drops from ~269 (eval figure) to ~90 tokens. Both inputs 
 | 1 | [Routing test set, batch judgement runs and baseline](./phase-01-start.md) | Done: wrong-route baseline 16.1% (9/56). Before-transcript: median 140 words a reply, persona drifts into locked items, ~7 s a turn | — | 1.5d |
 | 2 | [Director v2: topic routing with abstention and evidence](./phase-02-director-v2-topic-routing.md) | Done: wrong-route 16.1% → 1.8% (1/56) on unchanged tags, 0/56 after one tag rewrite; missed 0%; labels 100% | 1 | 2d |
 | 3 | [Session memory and bounded context](./phase-03-session-memory-and-bounded-context.md) | Done: prompt at turn 30 −46% (Call 1), −53% (Call 2); labels 100% (24/24) with window + memory | 2 | 2d |
-| 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | Pending | 3 | 1.5d |
+| 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | In progress: median reply 140 → 45 words, Call 2 latency 4.5 → 2.4 s, every measured gate passes; user review of before/after pending, on production | 3 | 1.5d |
 | 5 | [Scenario generator v2](./phase-05-scenario-generator-v2.md) | Pending | 2 | 2d |
 | 6 | [Measure, tier and ship](./phase-06-measure-tier-and-ship.md) | Pending | 3, 4, 5 | 1.5d |
 
@@ -93,9 +93,9 @@ Phase 5 touches the generation path (`src/graphs/generation-graph.ts`, `src/llm/
 
 Before each run, print the estimate and the plan's spend so far (`pnpm il cost-report`, scope `eval`/`generation` since 2026-10-23). If spend + estimate > 0.5 USD, stop and ask. Judgement sets run through Gemini Batch (half price) once phase 1 adds `--batch`.
 
-**Spent so far: ≈ 0.240 USD** (phase 1 ≈ 0.105, phase 2 0.1053, phase 3 0.0303). Phase 1's first two runs wrote no `llm_call` rows because the DB was unreachable, so this running total is kept here by hand. Every later run is recorded in `llm_call`.
+**Spent so far: ≈ 0.285 USD** (phase 1 ≈ 0.105, phase 2 0.1053, phase 3 0.0303, phase 4 0.0446). Phase 1's first two runs wrote no `llm_call` rows because the DB was unreachable, so this running total is kept here by hand. Every later run is recorded in `llm_call`.
 
-Remaining budget: ≈ 0.26 USD for the core runs of phases 4–6 (≈ 0.22 planned). The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
+Remaining budget: ≈ 0.215 USD for the core runs of phases 5–6 (≈ 0.18 planned). The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
 
 Rule: run no paid CLI command while the configured DB is unreachable. The call is paid first, and then the `llm_call` write crashes the run.
 
@@ -107,7 +107,7 @@ Rule: run no paid CLI command while the configured DB is unreachable. The call i
 | 2 | `topic-route` (56 lines pooled) + `label-classifier`, new prompt, unchanged tags, Flash, batch | 0.09 → **0.0864 spent** |
 | 2 | `topic-route` lines touched by curated tag edits (chị Hạnh's 18), Flash, batch | 0.01 → **0.0189 spent** |
 | 3 | `label-classifier` with window + memory, batch | 0.03 → **0.0303 spent** |
-| 4 | `transcript-run --turns 10` (after) | 0.04 |
+| 4 | `transcript-run --turns 10` (after) | 0.04 → **0.0446 spent** |
 | 5 | 2 real custom topics end to end | 0.07 |
 | 6 | Lite trial: `topic-route` × 3 runs, `label-classifier`, `guide-check`, batch | 0.11 |
 | | **Core total** | **≈ 0.46** |
