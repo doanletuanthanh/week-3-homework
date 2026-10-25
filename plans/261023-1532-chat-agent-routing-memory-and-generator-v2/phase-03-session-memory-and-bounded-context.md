@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "Session memory and bounded context"
-status: pending
+status: completed
 priority: P1
 effort: "2d"
 dependencies: [2]
@@ -98,21 +98,45 @@ Ghi nhớ (trường memory) lượt trong <luot_can_ghi_nho>; nếu là (không
 8. Paid, after approval: `label-classifier` (far-reference lines included) on Flash, batch, ≈ 0.03 USD. Record against the phase 1 and phase 2 numbers. `turn-verdict` is not re-run: its cases are one exchange long (`evalsets/turn-verdict.jsonl:1-3`), so the window never applies, and unit tests cover the judge context. <!-- Red team #7 -->
 
 ## Todo list
-- [ ] `memory.ts` and tests
-- [ ] Schema, prompt rule, `planTurn` acceptance
-- [ ] Builders with the default `[]`
-- [ ] Postgres, in-memory and replay stores
-- [ ] Isolation exemption and do-not-assert count
-- [ ] Prompt budget test
-- [ ] Re-measure (approved, ≈ 0.03 USD) recorded
+- [x] `memory.ts` and tests
+- [x] Schema, prompt rule, `planTurn` acceptance
+- [x] Builders with the default `[]`
+- [x] Postgres, in-memory and replay stores
+- [x] Isolation exemption and do-not-assert count
+- [x] Prompt budget test
+- [x] Re-measure (approved; 0.0303 USD) recorded
 
 ## Success criteria
-- [ ] Prompts are bounded after turn 5, as asserted by `prompt-budget.test.ts`.
-- [ ] Far-reference `label-classifier` lines are no worse than the phase 1 baseline, and the whole set stays ≥ 94.4% with 0 leading false positives.
-- [ ] Turn-judge context tests pass with memory present (window + `<bo_nho>`).
-- [ ] Every existing isolation test passes. The new memory cases pass.
+- [x] Prompts are bounded after turn 5, as asserted by `prompt-budget.test.ts`.
+- [x] Far-reference `label-classifier` lines are no worse than the phase 1 baseline, and the whole set stays ≥ 94.4% with 0 leading false positives.
+- [x] Turn-judge context tests pass with memory present (window + `<bo_nho>`).
+- [x] Every existing isolation test passes. The new memory cases pass.
 
-## Risk assessment
+## Results (2026-10-24 code, 2026-10-25 re-measure)
+- Implemented as specified. With no stored entries, `splitContext` returns the whole transcript, opening line included, so callers that pass no memory, and sessions from before the deploy, read exactly as before. Turn 0 is dropped only once memory exists.
+- `decisionOf(plan)` builds `decision_json` for both the main and the replay store. `memory` is written only when Call 1 left something.
+- The replay judge also gets the entry this turn's Call 1 just wrote. The judge's window has already moved past that exchange, and the entry is not stored yet.
+- Prompt size, scripted 30 turns (about 530 characters per exchange, about 95 per gist):
+
+  | Call | Turn 30, before | Turn 30, after | Growth per turn after turn 6 |
+  |---|---|---|---|
+  | Call 1 | 22.8k chars | 12.3k chars | about 100 chars |
+  | Call 2 | 18.3k chars | 8.6k chars | about 100 chars |
+
+- `prompt-budget.test.ts` uses a full gist and two full claims every turn. It checks growth per turn from turn 8, because Call 2's notes header arrives once, at turn 7. It checks the total from turn 6. The same session with the whole transcript breaks the bound, so the test can fail.
+- Code review (`plans/reports/code-reviewer-261024-1210-phase-3-session-memory.md`):
+  - H1 is applied. The claims rule now also leaves out what is in `<dieu_can_tranh>`, so a do-not-assert the persona broke is not carried forward into `<da_noi>`.
+  - M1 is applied. `grounded_turn_id` may now point at a `[lượt N]` gist line in `<bo_nho>`. Without that, far references would be pushed to `open`.
+  - The code-side drop for H1 (drop the claims of an exchange whose verdict has violations) is still open for the user to decide.
+- Gates:
+  - `pnpm typecheck` and `pnpm lint` pass.
+  - `pnpm test` passes 1205/1205.
+  - `pnpm test:int` passes 675/675. One QA-agent int test timed out once, while a parallel unit run was going. It passed 3/3 when run alone and in the full rerun.
+  - `pnpm test:e2e` passes 328/328.
+- `evalsets/label-classifier.jsonl`: the 6 `lc-far-*` lines carry hand-written gists for exchanges 1–5, so at turn 11 only exchanges 6–10 are word for word.
+- **Labels with window + memory** (Flash, batch, 2026-10-25, 0.0303 USD): 100% (24/24) agreement, 0/18 leading false positives. All 6 far-reference lines agree, the same as phase 2's full-transcript run. W stays 5.
+
+
 - A learner who refers far back ("hồi nãy chị nói…", 8 turns ago) may get `open` instead of `confirm_grounded`, because only the gist is visible. Mitigation: gists keep the persona's own phrases. Hooks carry their own turn. The far-reference lines measure it. If it fails, raise W to 6–8; the cost is ~130 tokens per extra exchange.
 - A gist may misstate what was said, and the persona then repeats the error. Mitigation: gists cover only exchanges older than 5 turns; claims are capped; the persona's guard rules still forbid inventing.
 - A learner can push instructions into a gist through their question. Mitigation: gists are data blocks, one line, ≤ 200 chars, under the same data rule as the transcript.
