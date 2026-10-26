@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Measure, tier and ship"
-status: pending
+status: done
 priority: P1
 effort: "1.5d"
 dependencies: [3, 4, 5]
@@ -55,18 +55,60 @@ Decide the Director's model from measurements, and replace the plan's cost estim
 7. Journal; phase and plan status updates.
 
 ## Todo list
-- [ ] Lite trial (approved, ≈ 0.11 USD) and the user's decision
-- [ ] Measured cost replaces the estimates
-- [ ] Curated tags imported (by the user); co-lan lean eval (approved, ≈ 0.04 USD)
-- [ ] Docs updated
-- [ ] All five checks pass
-- [ ] Journal, statuses, cross-plan unblock asked
+- [x] Lite trial (approved; stopped after run 1, 0.0307 USD): Lite fails, Flash stays
+- [x] Measured cost replaces the estimates
+- [x] Curated tags imported (chi-hanh v3, on the user's approval); co-lan lean eval (approved; 0.0468 USD)
+- [x] Docs updated
+- [x] All five checks pass
+- [x] Journal, statuses, cross-plan unblock asked
 
 ## Success criteria
-- [ ] The decision on the Director's model is recorded with its numbers. Either the switch is approved, or Flash stays.
-- [ ] `docs/operations.md` § Cost carries measured per-turn tokens and session cost.
-- [ ] co-lan's lean eval result is recorded next to its calibration baseline (`no_leaks` 6/6 failed).
-- [ ] The five checks pass. Paid spend for the whole plan is ≤ 0.5 USD, itemised.
+- [x] The decision on the Director's model is recorded with its numbers. Either the switch is approved, or Flash stays.
+- [x] `docs/operations.md` § Cost carries measured per-turn tokens and session cost.
+- [x] co-lan's lean eval result is recorded next to its calibration baseline (`no_leaks` 6/6 failed).
+- [x] The five checks pass. Paid spend for the whole plan is ≤ 0.5 USD, itemised.
+
+## Results (2026-10-26)
+- **Spend before the runs**: ≈ 0.343 USD. `cost-report` read the DB first (it was up).
+- **Lite trial**: `LLM_ANALYSIS=google:gemini-3.5-flash-lite:low`, batch, `topic-route` run 1 of 3. Cost 0.0307 USD, 56 calls, 0 reasoning tokens.
+
+  | | Flash (phase 2) | Lite, run 1 | Gate |
+  |---|---|---|---|
+  | Wrong-direct | 1/56 (0/56 after the tag edit) | **7/56 (12.5%)** | ≤ 1 line |
+  | Missed-direct | 0/36 | 1/36 (2.8%) | ≤ 20% |
+  | General questions that open nothing | 19/20 | 13/20 | — |
+
+  - Six of the seven errors are general questions that Lite routed to one topic (`broad` → an item), on all three personas. The seventh is co-lan's `why-no-deposit` going to no topic.
+  - Lite has to pass all three runs, and run 1 already fails, so runs 2–3, `label-classifier` and `guide-check` were not run. That saved ≈ 0.08 USD.
+  - **Decision: ANALYSIS stays on 3.8 Flash.** `.env.example` is unchanged.
+- **Measured cost** (17-turn production session on Flash, 2026-10-25; also in `docs/operations.md` § Cost):
+  - Call 1 input went from 2938 to 4018 tokens (turn 1 to 17), with 93–178 output tokens.
+  - Call 2 input went from 1062 to 2112 tokens, with 15–107 output tokens.
+  - Both calls cost 0.0034 USD at turn 1 and 0.0053 USD at turn 17. An 8-turn interview costs 0.031 USD; 30 turns are ≈ 0.15 USD, extrapolated.
+  - No cache hits.
+  - Input still grows after turn 5, by the gists and claims of older exchanges, against the plan's estimate that it would stop growing.
+- **Curated import**: `chi-hanh.json` (the only scenario whose tags changed in this plan) was imported to the configured DB as version 3, a draft. It shows as unapproved in the admin console until its own lean eval and approval.
+- **co-lan lean eval** (run `81e79f44`, batch): 0.0468 USD, 41 calls.
+
+  | | Calibration 2026-10-15 | Now |
+  |---|---|---|
+  | `no_leaks` | failed 6/6 | **passed** |
+  | `floor_unlocks` | 0 failed | passed |
+  | Every threshold | 0/6 runs | passed |
+
+  - This is one run, not a rate. It is consistent with Call 2 now hearing only the item a turn is about.
+  - Note from the run: a paraphrase of `why-no-deposit`'s question did not open it, because its prerequisite was still locked. That is correct behaviour.
+- **Docs**:
+  - `docs/operations.md` § Cost now carries the measured session and generation numbers. The generator line was written in phase 5.
+  - The judgement-eval flags, the `topic-route` kind and `transcript-run` were already documented, and so was the `README.md` commands table. A grep for stale statements found none.
+  - Stale in the user's presentation script `docs/loi-thoai-thuyet-trinh-interviewlab.md` (not edited):
+    - line 127 and Q&A line 332: Call 1 may now name no topic, and must quote the words that show the topic.
+    - line 137: Call 1 sees only the last 5 exchanges word for word, plus gists of older ones.
+    - line 139: Call 2 gets at most one item to tell, plus a reply-length direction, not every open item.
+    - line 273: a failed check now repairs only the broken part, and a routing check follows.
+- **Spend after the runs**: ≈ 0.421 USD of 0.5.
+- **Checks** (`plans/reports/tester-261026-1802-phase-06-final-checks.md`): typecheck and lint pass; unit 1245/1245; int 675/675; e2e 329/329. The e2e server log has "destination stream closed early" lines during passing tests. They already appeared in phase 5 and come from streams the browser closes; not a failure.
+- **Journal**: `plans/journals/261026-chat-agent-phases-04-06-replies-generator-ship.md`.
 
 ## Risk assessment
 - Lite passes the sets but routes worse on real learner phrasing. Mitigation: the switch is an env change, so rollback means setting `LLM_ANALYSIS` back. `llm_call` and `pnpm il trace` show routing per turn.

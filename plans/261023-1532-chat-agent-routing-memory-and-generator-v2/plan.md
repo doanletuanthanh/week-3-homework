@@ -1,13 +1,13 @@
 ---
 title: "Chat agent routing, session memory and generator v2"
 description: "Rebuild the two calls of a turn as a Director (topic routing that may abstain and must quote evidence, plus session memory) and an Actor (short natural replies from only what the turn is about), and make scenario generation repair only what failed and check its own topic tags."
-status: in-progress
+status: completed
 priority: P1
 effort: "~10.5d"
 branch: main
 tags: [refactor, critical, llm-cost, langgraph, chat, generator]
 blockedBy: []
-blocks: [261014-2139-lean-eval-token-cuts-and-admin-dashboard]
+blocks: []
 created: 2026-10-23
 ---
 
@@ -66,15 +66,20 @@ Rejected: one tool-calling agent per turn that unlocks items itself (the model w
 
 **Rollback:** revert the deploy, with no data step. New keys in `decision_json` are ignored by old code. Rows written before the change read in new code as "no memory, no hints" (verbatim fallback). A Director model switch is undone by setting `LLM_ANALYSIS` back.
 
-## Cost model (estimate from the 2026-10-14 token counts; phase 6 replaces it with measured numbers)
+## Cost model (measured, phase 6)
 
-| | Today | Director on Flash | Director on Lite |
+| | Before (2026-10-14 estimate) | Estimate for this plan | Measured |
 |---|---|---|---|
-| 8-turn session | ≈ 0.036 USD | ≈ −10% | ≈ −40% |
-| 30-turn session | ≈ 0.197 USD | ≈ −28% | ≈ −53% |
-| Generator retry | ≈ 0.021 USD | ≈ −80% (patch only the bad items) | — |
+| 8-turn interview | ≈ 0.036 USD | ≈ −10% | **0.031 USD** (−15%) |
+| 30-turn interview | ≈ 0.197 USD | ≈ −28% | **≈ 0.15 USD** (−24%, extrapolated from 17 turns) |
+| Generator retry | ≈ 0.021 USD | ≈ −80% | a targeted repair cost 0.008 USD (−62%) |
+| Routing check per generated scenario | — | ≈ 0.002–0.006 USD | 0.0013–0.0015 USD |
 
-Drivers: Call 2 output drops from ~269 (eval figure) to ~90 tokens. Both inputs stop growing after turn 5 (window plus ~15 tokens of gist per older exchange). Memory is written only for exchanges leaving the window, so sessions of ≤ 5 turns pay nothing for it. Call 1 output grows by ~20 tokens (topic) and ~70 tokens (memory, after turn 5). The reveal (≈ 0.03 USD) is unchanged. The new routing check adds ≈ 0.002–0.006 USD per generated scenario.
+- Measured on a 17-turn production session on Flash (2026-10-25). The Director stays on Flash: Lite failed routing.
+- Call 2 output is 15–107 tokens.
+- Input keeps growing by ≈ 65–110 tokens a turn after turn 5 (gists and claims of older exchanges), unlike the estimate.
+- No call hit Gemini's cache.
+- The reveal (≈ 0.03 USD) is not included.
 
 ## Phases
 
@@ -85,7 +90,7 @@ Drivers: Call 2 output drops from ~269 (eval figure) to ~90 tokens. Both inputs 
 | 3 | [Session memory and bounded context](./phase-03-session-memory-and-bounded-context.md) | Done: prompt at turn 30 −46% (Call 1), −53% (Call 2); labels 100% (24/24) with window + memory | 2 | 2d |
 | 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | Done: median reply 140 → 45 words, Call 2 latency 4.5 → 2.4 s; naturalness accepted by the user on production | 3 | 1.5d |
 | 5 | [Scenario generator v2](./phase-05-scenario-generator-v2.md) | Done: targeted repair and routing check; leave-request topic 75 s / 0.046 → 38 s / 0.0185 USD; a repair writes 10% of a full scenario but bills 35% (reasoning) | 2 | 2d |
-| 6 | [Measure, tier and ship](./phase-06-measure-tier-and-ship.md) | Pending | 3, 4, 5 | 1.5d |
+| 6 | [Measure, tier and ship](./phase-06-measure-tier-and-ship.md) | Done: Lite fails routing (7/56 wrong), so ANALYSIS stays on Flash; 8 turns cost 0.031 USD measured; co-lan passes `no_leaks` (calibration: 0/6) | 3, 4, 5 | 1.5d |
 
 Phase 5 touches the generation path (`src/graphs/generation-graph.ts`, `src/llm/prompts/scenario-generator.ts`, a new route-check prompt, the `AttemptReport` type, and the admin attempt page). It reuses phase 2's `ROUTING_RULES`, so it can run in parallel with phases 3–4, with one exception: phases 2, 3 and 5 all edit `tests/e2e/llm-stub.mjs`, so its edits must land one at a time.
 
@@ -93,9 +98,9 @@ Phase 5 touches the generation path (`src/graphs/generation-graph.ts`, `src/llm/
 
 Before each run, print the estimate and the plan's spend so far (`pnpm il cost-report`, scope `eval`/`generation` since 2026-10-23). If spend + estimate > 0.5 USD, stop and ask. Judgement sets run through Gemini Batch (half price) once phase 1 adds `--batch`.
 
-**Spent so far: ≈ 0.343 USD** (phase 1 ≈ 0.105, phase 2 0.1053, phase 3 0.0303, phase 4 0.0446, phase 5 0.0577). Phase 1's first two runs wrote no `llm_call` rows because the DB was unreachable, and phase 5's run used no database, so this running total is kept here by hand.
+**Spent: ≈ 0.421 USD of 0.5** (phase 1 ≈ 0.105, phase 2 0.1053, phase 3 0.0303, phase 4 0.0446, phase 5 0.0577, phase 6 0.0775). Phase 1's first two runs wrote no `llm_call` rows because the DB was unreachable, and phase 5's run used no database, so this running total is kept here by hand.
 
-Remaining budget: ≈ 0.157 USD for the core runs of phase 6 (≈ 0.11–0.15 planned). The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
+Remaining: ≈ 0.079 USD. The before-transcript cost 0.052 against 0.04 planned, because the replies were long; phase 4's after-run should cost less.
 
 Rule: run no paid CLI command while the configured DB is unreachable. The call is paid first, and then the `llm_call` write crashes the run.
 
@@ -109,13 +114,13 @@ Rule: run no paid CLI command while the configured DB is unreachable. The call i
 | 3 | `label-classifier` with window + memory, batch | 0.03 → **0.0303 spent** |
 | 4 | `transcript-run --turns 10` (after) | 0.04 → **0.0446 spent** |
 | 5 | 2 real custom topics end to end | 0.07 → **0.0577 spent** |
-| 6 | Lite trial: `topic-route` × 3 runs, `label-classifier`, `guide-check`, batch | 0.11 |
+| 6 | Lite trial: `topic-route` × 3 runs, `label-classifier`, `guide-check`, batch | 0.11 → **0.0307 spent** (stopped after run 1 failed) |
 | | **Core total** | **≈ 0.46** |
-| 6 | Lean eval co-lan after the curated tag import, batch (only if the running total allows) | 0.04 |
+| 6 | Lean eval co-lan after the curated tag import, batch (only if the running total allows) | 0.04 → **0.0468 spent** |
 
 ## Cross-plan relations
 
-- `261014-2139-lean-eval-token-cuts-and-admin-dashboard` (in progress, phase 4 partial). Its open gate rule waits on clean personas that stop failing `no_leaks`. This plan changes the persona behaviour that those failures come from, so that plan is `blockedBy` this one. The judge's tolerance for `topic` brushes caused by overlapping item content stays that plan's decision.
+- `261014-2139-lean-eval-token-cuts-and-admin-dashboard` (in progress, phase 4 partial). Its open gate rule waits on clean personas that stop failing `no_leaks`. This plan changes the persona behaviour that those failures come from, so that plan was `blockedBy` this one, until 2026-10-26 (user decision after co-lan passed `no_leaks`). The judge's tolerance for `topic` brushes caused by overlapping item content stays that plan's decision.
 - `261003-1818-interviewlab-bootstrap-s1-and-custom-topics` (in progress). Its invariants are kept. Its open question 7 (the persona invents detail) and 8 (nothing checks generated personas) are narrowed by phases 4 and 5. There is no blocking either way.
 - `261010-1200-library-topic-layer-and-app-topics`. Shares only the curated scenario files, whose tags phase 2 may edit. There is no blocking.
 
