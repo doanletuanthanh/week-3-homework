@@ -142,7 +142,20 @@ A change takes effect on the next request. The defaults are placeholders for a s
                    AND day = (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date), 0) AS spent_usd;
   ```
 
-- **Custom topics.** A separate daily budget. An attempt reserves `generation_reserve_usd` before it starts and gives back what it did not spend. When the budget cannot hold another reserve, new attempts are refused and sessions are not affected.
+- **What a session costs** (measured on a 17-turn production session on Flash, 2026-10-25; the interview only, without the reveal):
+
+  | | Turn 1 | Turn 8 | Turn 17 |
+  |---|---|---|---|
+  | Call 1 (ANALYSIS) input / output tokens | 2938 / 93 | 3379 / 122 | 4018 / 132 |
+  | Call 2 (PERSONA) input / output tokens | 1062 / 15 | 1530 / 24 | 2112 / 64 |
+  | Both calls | 0.0034 USD | 0.0042 USD | 0.0053 USD |
+
+  - An 8-turn interview costs about 0.031 USD, and the 17 turns cost 0.076 USD.
+  - 30 turns come to about 0.15 USD, extrapolated from turns 10–17.
+  - Input still grows by about 65–110 tokens a turn after turn 5. Only the last five exchanges are kept word for word, but every older exchange adds a gist and up to 12 claims are kept.
+  - No call was served from Gemini's cache.
+  - Call 2 output stays under 110 tokens (cap 400).
+- **Custom topics.** A separate daily budget. An attempt reserves `generation_reserve_usd` before it starts and gives back what it did not spend. When the budget cannot hold another reserve, new attempts are refused and sessions are not affected. Measured on 2026-10-26: 0.019 USD and 38 s for an attempt that passed on its first try, and 0.039 USD and 75 s for one that needed a targeted repair and a tag repair. A routing check costs about 0.0015 USD.
 - **Evaluation.** A lean run measured 0.039–0.055 USD per persona in batch mode (calibration included) and 0.083–0.092 USD with `--fast`, on the curated personas; an unchanged version costs 0. A calibration of all 7 personas cost about 3.85 USD (`plans/reports/calibration-261015-lean-eval.md`). `pnpm il cost-report [--days n] [--run <id>]` prints spend by scope, role, day, session and eval run, from `llm_call`, without calling a model.
 - **Tracing.** The LangSmith free plan holds 5,000 traces a month and a session is up to about 70.
 
