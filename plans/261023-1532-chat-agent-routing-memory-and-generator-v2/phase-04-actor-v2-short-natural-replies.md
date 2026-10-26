@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Actor v2: short, natural replies"
-status: in-progress
+status: done
 priority: P1
 effort: "1.5d"
 dependencies: [3]
@@ -104,7 +104,7 @@ persona.ts:  system  = role · data rule · nhan_vat · cach_noi · su_that_be_m
 - [x] Persona prompt rewrite (guard rules verbatim)
 - [x] Output caps in sync and batch paths
 - [x] Transcript after, 10 turns (approved; 0.0446 USD)
-- [ ] User review of before/after (the user tests it on production after the push, 2026-10-25)
+- [x] User review of before/after (accepted on production, 2026-10-26)
 
 ## Success criteria
 - [x] Demo transcript: median reply ≤ 60 words, every closed question answered in ≤ 2 sentences, no list-formatted reply. A word and sentence count in the run report, not in runtime code.
@@ -112,7 +112,7 @@ persona.ts:  system  = role · data rule · nhan_vat · cach_noi · su_that_be_m
 - [x] The gist fill rate is ≥ 90% of the gists asked for (turns 6–10).
 - [x] The median of Call 1 + Call 2 latency is not worse than the "before" run (same machine).
 - [x] No PERSONA call spends reasoning tokens that push its output toward the 400 cap.
-- [ ] The user accepts naturalness after reading the before and after transcripts, including turns 9–10, which repeat earlier questions.
+- [x] The user accepts naturalness after reading the before and after transcripts, including turns 9–10, which repeat earlier questions. Accepted after playing chị Thu on production (2026-10-26).
 - [x] All tests pass. `qa-mutants` still strips the guard rules.
 
 ## Results (2026-10-25)

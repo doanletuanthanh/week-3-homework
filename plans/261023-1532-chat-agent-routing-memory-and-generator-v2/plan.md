@@ -83,7 +83,7 @@ Drivers: Call 2 output drops from ~269 (eval figure) to ~90 tokens. Both inputs 
 | 1 | [Routing test set, batch judgement runs and baseline](./phase-01-start.md) | Done: wrong-route baseline 16.1% (9/56). Before-transcript: median 140 words a reply, persona drifts into locked items, ~7 s a turn | — | 1.5d |
 | 2 | [Director v2: topic routing with abstention and evidence](./phase-02-director-v2-topic-routing.md) | Done: wrong-route 16.1% → 1.8% (1/56) on unchanged tags, 0/56 after one tag rewrite; missed 0%; labels 100% | 1 | 2d |
 | 3 | [Session memory and bounded context](./phase-03-session-memory-and-bounded-context.md) | Done: prompt at turn 30 −46% (Call 1), −53% (Call 2); labels 100% (24/24) with window + memory | 2 | 2d |
-| 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | In progress: median reply 140 → 45 words, Call 2 latency 4.5 → 2.4 s, every measured gate passes; user review of before/after pending, on production | 3 | 1.5d |
+| 4 | [Actor v2: short, natural replies](./phase-04-actor-v2-short-natural-replies.md) | Done: median reply 140 → 45 words, Call 2 latency 4.5 → 2.4 s; naturalness accepted by the user on production | 3 | 1.5d |
 | 5 | [Scenario generator v2](./phase-05-scenario-generator-v2.md) | Done: targeted repair and routing check; leave-request topic 75 s / 0.046 → 38 s / 0.0185 USD; a repair writes 10% of a full scenario but bills 35% (reasoning) | 2 | 2d |
 | 6 | [Measure, tier and ship](./phase-06-measure-tier-and-ship.md) | Pending | 3, 4, 5 | 1.5d |
 
