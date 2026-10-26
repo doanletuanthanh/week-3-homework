@@ -24,7 +24,7 @@ Approved 2026-10-03. Product requirements were `_bmad-output/planning-artifacts/
 ## Deviations from the PRD
 
 - **A custom-scenario attempt has the PRD's 10 minutes as up to three runs of at most 270 s each** (Vercel Hobby cap per function), each going on from what the one before stored. The p95 ≤ 2 minute target is unchanged.
-- **The reduced evaluation of a generated scenario (FR-54) is dropped**: a custom scenario is only lightly checked (`validate` and an output safety check) and is not played before the learner gets it.
+- **The reduced evaluation of a generated scenario (FR-54) is dropped**: a custom scenario is only lightly checked (`validate`, a routing check of its topic tags and an output safety check) and is not played before the learner gets it.
 - **No separate worker process.** Turns, reveal and the lean eval run in request/`after()`; the CLI runs the same eval job on the developer's machine. Priority of live turns over batch work (FR-37) is kept by an optional separate API key for generation and eval roles.
 - **The 46-episode full evaluation and its two-admin adjudication are replaced** by the persona QA agent (lean eval) and one admin ruling per leak flag, with a version approval tied to the run. The prompt-only baseline is gone.
 - **There is an admin console** (`/admin`), where the PRD had only the operator CLI in this slice.

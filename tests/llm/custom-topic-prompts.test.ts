@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildModerationMessages, clampModeration } from "@/llm/prompts/moderation";
 import { buildOutputSafetyMessages, safetyFields } from "@/llm/prompts/output-safety";
-import { DRAFT_ID, buildGeneratorMessages, toScenarioFile } from "@/llm/prompts/scenario-generator";
+import { DRAFT_ID, REPAIR_MODE, applyRepair, buildGeneratorMessages, buildRepairMessages, repairMode, toScenarioFile } from "@/llm/prompts/scenario-generator";
+import type { Violation } from "@/scenario/validate";
 import { validateScenario } from "@/scenario/validate";
 import { generatedFrom } from "../helpers/custom-fixtures";
 import { chiThu } from "../helpers/engine-fixtures";
@@ -133,6 +134,80 @@ describe("buildGeneratorMessages", () => {
     expect(prompt).toContain("<ban_truoc>");
     expect(prompt).toContain("<vi_pham>\n- items: Cần 8–12 item, đang có 3.");
     expect(prompt).toContain("- research_goal: phải là một câu hỏi");
+  });
+});
+
+describe("buildGeneratorMessages: the rules for tags, items and voice", () => {
+  const prompt = text(buildGeneratorMessages({ topicText: "x", focus: "general", constraints: [] }));
+  it("asks for tags that answer apart, items that do not overlap, a brief voice and questions on their tag", () => {
+    expect(prompt).toContain("không có câu hỏi nào hợp với hai nhãn cùng lúc");
+    expect(prompt).toContain("kể một điều không được làm lộ một điều khác");
+    expect(prompt).toContain("một người trả lời ngắn gọn và chỉ nói đúng điều được hỏi");
+    expect(prompt).toContain("nhắm đúng vào khía cạnh của topic_tag");
+  });
+});
+
+const violation = (path: string, code: Violation["code"] = "secret_term_leak"): Violation => ({ path, code, message: "m" });
+
+describe("repairMode: a data table of which violations need a whole new scenario", () => {
+  it("rewrites everything only for the shape codes", () => {
+    expect(Object.entries(REPAIR_MODE).filter(([, mode]) => mode === "full").map(([code]) => code)).toEqual(["schema", "item_count", "surface_fact_count", "path_missing"]);
+  });
+
+  it("is full as soon as one violation is", () => {
+    expect(repairMode([violation("items[1].topic_tag", "topic_tag_duplicate")])).toBe("targeted");
+    expect(repairMode([violation("items[1].topic_tag", "topic_tag_duplicate"), violation("items", "path_missing")])).toBe("full");
+  });
+});
+
+describe("applyRepair: only what was violated changes", () => {
+  const generated = generatedFrom();
+  const violations = [violation("items[2].hook_line"), violation("surface_facts[1]"), violation("persona.voice_notes", "model_directed_text")];
+  const repair = {
+    items: [
+      { ...generated.items[2], id: "made-up", hook_line: "Câu mới.", index: 2 },
+      { ...generated.items[3], content: "Không được hỏi tới.", index: 3 },
+      { ...generated.items[0], index: 40 },
+    ],
+    fields: [
+      { path: "surface_facts[1]", text: "Sự thật mới." },
+      { path: "persona.voice_notes", text: "Nói ngắn." },
+      { path: "research_goal", text: "Không được hỏi tới?" },
+      { path: "persona", text: "không phải chuỗi" },
+    ],
+  };
+
+  it("applies the violated item and fields, and names everything else as ignored", () => {
+    const { scenario, ignored } = applyRepair(generated, violations, repair);
+    expect(scenario.items[2].hook_line).toBe("Câu mới.");
+    expect(scenario.surface_facts[1]).toBe("Sự thật mới.");
+    expect(scenario.persona.voice_notes).toBe("Nói ngắn.");
+    expect(scenario.items[3]).toEqual(generated.items[3]);
+    expect(scenario.research_goal).toBe(generated.research_goal);
+    expect(ignored).toEqual(["items[3]", "items[40]", "research_goal", "persona"]);
+    // The input is not changed.
+    expect(generated.items[2].hook_line).toBe(chiThu.items[2].hook_line);
+  });
+
+  it("keeps the item's id, so prerequisites of other items still map by the same rules", () => {
+    const { scenario } = applyRepair(generated, violations, repair);
+    expect(scenario.items[2].id).toBe(generated.items[2].id);
+    const before = (toScenarioFile(generated) as { items: { prerequisite_id?: string }[] }).items;
+    const after = (toScenarioFile(scenario) as { items: { prerequisite_id?: string }[] }).items;
+    expect(after.map((item) => item.prerequisite_id)).toEqual(before.map((item) => item.prerequisite_id));
+  });
+
+  it("asks for the violated parts only, with the scenario and the violations as data", () => {
+    const prompt = text(buildRepairMessages({ topicText: "chủ đề riêng", focus: "trust", constraints: ["adult_persona_only"] }, generated, violations));
+    expect(prompt).toContain("<kich_ban>");
+    expect(prompt).toContain("<vi_pham>\n- items[2].hook_line: m");
+    expect(prompt).toContain("Không trả lại phần nào không có vi phạm");
+    expect(prompt).toContain("nhân vật phải là người lớn");
+    // An item written again keeps to the scenario's focus.
+    expect(prompt).toContain("Ít nhất 4 điều thuộc đường trust");
+    // A repair needs no topic: the scenario is what it works on.
+    expect(prompt).not.toContain("chủ đề riêng");
+    expect(prompt).not.toContain("người soạn kịch bản nhân vật");
   });
 });
 

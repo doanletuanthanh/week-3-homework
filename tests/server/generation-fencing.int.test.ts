@@ -73,7 +73,8 @@ describe("a run that was cut off is followed by another that goes on from what i
     const second = dbModels();
     expect(await runGeneration(db(), attemptId, { llmDeps: second.llmDeps })).toBe("passed");
 
-    expect(second.calls.map((call) => call.role)).toEqual(["SAFETY"]);
+    // From the stored draft: the routing check runs again, nothing is generated.
+    expect(second.calls.map((call) => call.role)).toEqual(["ANALYSIS", "SAFETY"]);
     expect(await attemptRow(attemptId)).toMatchObject({ outcome: "passed", runAttempt: 2, draft: null, runToken: null });
     expect(await generatedScenarios()).toHaveLength(1);
     expect((await sessionsOf(learner.id))[0]).toMatchObject({ id: sessionId, status: "interviewing" });
@@ -85,13 +86,14 @@ describe("a run that was cut off is followed by another that goes on from what i
   });
 
   it("counts what earlier runs spent against the same reservation", async () => {
-    // One generator call of the test models costs 0.0004 USD; so does one safety call.
-    await setBudget(1, 0.0007);
+    // One generator call of the test models costs 0.0004 USD; so does a routing check and a safety call.
+    // The first run spends 0.0008 (generator, routing check) before its safety call hangs.
+    await setBudget(1, 0.0015);
     const { attemptId } = await running();
     const first = dbModels({ override: { SAFETY: () => ({ hang: true }) } });
     expect(await runGeneration(db(), attemptId, { llmDeps: first.llmDeps, runLimitMs: 300 })).toBe("released");
 
-    // The second run starts at 0.0004 already spent: its safety call takes the attempt to its reservation.
+    // The second run starts at 0.0008 already spent and checks routing again: its safety call takes the attempt to its reservation.
     const second = dbModels({ safety: { violations: [{ field: "opening_line", kind: "policy", reason: "r" }] } });
     const outcome = await runGeneration(db(), attemptId, { llmDeps: second.llmDeps });
     // The call that reached the limit was the last one, so its verdict stands; what matters is the total.
@@ -108,7 +110,7 @@ describe("a run that was cut off is followed by another that goes on from what i
 
     const models = dbModels();
     expect(await runGeneration(db(), attemptId, { llmDeps: models.llmDeps })).toBe("passed");
-    expect(models.calls.map((call) => call.role)).toEqual(["SCENARIO_GENERATOR", "SAFETY"]);
+    expect(models.calls.map((call) => call.role)).toEqual(["SCENARIO_GENERATOR", "ANALYSIS", "SAFETY"]);
     expect((await attemptRow(attemptId)).runAttempt).toBe(2);
   });
 
@@ -129,7 +131,7 @@ describe("a run that was cut off is followed by another that goes on from what i
 
     const next = dbModels();
     expect(await runGeneration(db(), attemptId, { llmDeps: next.llmDeps })).toBe("passed");
-    expect(next.calls.map((call) => call.role)).toEqual(["SAFETY"]);
+    expect(next.calls.map((call) => call.role)).toEqual(["ANALYSIS", "SAFETY"]);
   });
 
   it("gives up after three runs: the attempt is closed as a system error and counts for nothing", async () => {

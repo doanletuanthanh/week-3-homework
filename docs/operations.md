@@ -156,7 +156,7 @@ A change takes effect on the next request. The defaults are placeholders for a s
 | Give a learner's free scenario back | `pnpm il custom refund <learner id>` |
 | Pause or reopen the whole path | `pnpm il config set custom_path_enabled false\|true` |
 
-A generated scenario is only lightly checked: `validate` and an output safety check. It is not played before the learner gets it. The report button on its result screen and `custom takedown` are the controls after the fact.
+A generated scenario is only lightly checked: `validate` (a failure is repaired, at most twice), a routing check of its topic tags, and an output safety check. It is not played before the learner gets it. The attempt page under `/admin/custom-topics` lists each repair and any tags the routing check could still not tell apart; such a scenario still passes. The report button on its result screen and `custom takedown` are the controls after the fact.
 
 ## Do not lose evaluation data
 

@@ -12,7 +12,8 @@ export default async function AdminCustomTopicPage({ params }: { params: Promise
   const found = await getCustomAttempt(getDb(), user, attemptId);
   if (!found) notFound();
   const { attempt, email } = found;
-  const { violations = [], unsafe = [], error } = attempt.report;
+  const { violations = [], unsafe = [], error, repairs = [], routeCheck } = attempt.report;
+  const itemNames = (indexes: number[]) => indexes.map((index) => `items[${index}]`).join(", ");
 
   return (
     <>
@@ -80,6 +81,30 @@ export default async function AdminCustomTopicPage({ params }: { params: Promise
             ))}
             {error && <li>{error}</li>}
           </ul>
+        </section>
+      )}
+      {repairs.length > 0 && (
+        <section className="card adm-panel">
+          <h2 className="headline-sm">Các lần sửa</h2>
+          <ul className="adm-list">
+            {repairs.map((repair, index) => (
+              <li key={`r${index}`}>
+                {repair.mode === "full" ? "Viết lại cả kịch bản" : "Sửa đúng phần lỗi"}: {repair.violations.join("; ")}
+                {repair.ignored && repair.ignored.length > 0 && ` · bỏ qua phần không được yêu cầu: ${repair.ignored.join(", ")}`}
+                {repair.dropped && ` · bản sửa không được giữ vì vi phạm: ${repair.dropped.join("; ")}`}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {routeCheck && (
+        <section className="card adm-panel">
+          <h2 className="headline-sm">Kiểm tra định tuyến</h2>
+          <p className="body-sm">
+            {routeCheck.confusable.length === 0
+              ? `Mọi nhãn phân biệt được${routeCheck.repaired ? " sau một lần sửa" : ""}.`
+              : `Còn dễ nhầm: ${itemNames(routeCheck.confusable)}${routeCheck.repaired ? " (đã thử sửa một lần)" : ""}. Kịch bản vẫn được dùng; nhân vật khó mở hơn ở các mục này.`}
+          </p>
         </section>
       )}
     </>

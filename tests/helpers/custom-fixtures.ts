@@ -106,6 +106,17 @@ export function respondingModels(respond: (role: Role, prompt: string) => Reply 
   };
 }
 
+/** The first words of a repair's system message, and of the routing check's. */
+export const REPAIR_MARKER = "Bạn là người sửa kịch bản nhân vật";
+export const ROUTE_CHECK_MARKER = "Bạn là người kiểm tra định tuyến chủ đề";
+
+/** The routing check's reply: every `Qn` line of its prompt, routed as `routes` says, or to `Tn`. */
+function routeReply(prompt: string, routes: PipelineScript["routes"], callIndex: number) {
+  const count = [...prompt.matchAll(/^Q(\d+): /gm)].length;
+  const chosen = typeof routes === "function" ? routes(count) : callIndex === 0 ? routes : undefined;
+  return { routes: Array.from({ length: count }, (_, index) => ({ question: `Q${index + 1}`, direct: chosen ? (chosen[index] ?? null) : `T${index + 1}`, broad: [] })) };
+}
+
 export const ALLOW = { decision: "allow", reason_code: null, constraints: [], focus: "general" };
 export const SAFE = { violations: [] };
 
@@ -113,6 +124,13 @@ export type PipelineScript = {
   moderation?: unknown;
   /** One reply per generator try, in order; the last one is repeated. */
   generated?: unknown[];
+  /** One reply per repair (targeted or of tags), in order; the last one is repeated. Default: nothing to change. */
+  repairs?: unknown[];
+  /**
+   * Where the first routing check sends each sample question, by position (a `T` alias or null);
+   * a function answers every check. Default: each question to its own tag.
+   */
+  routes?: (string | null)[] | ((questionCount: number) => (string | null)[]);
   safety?: unknown;
   /** Replaces the reply of one role. */
   override?: Partial<Record<Role, (prompt: string) => Reply | Promise<Reply>>>;
@@ -126,7 +144,10 @@ export type PipelineScript = {
  */
 export function pipelineModels(script: PipelineScript = {}, options: { recordCall?: CallModelDeps["recordCall"] } = {}) {
   const generated = script.generated ?? [generatedFrom()];
+  const repairs = script.repairs ?? [{ items: [], fields: [] }];
   let generatorTry = 0;
+  let repairTry = 0;
+  let routeTry = 0;
 
   return respondingModels((role, prompt) => {
     const custom = script.override?.[role];
@@ -135,10 +156,12 @@ export function pipelineModels(script: PipelineScript = {}, options: { recordCal
       case "MODERATION":
         return { structured: script.moderation ?? ALLOW };
       case "SCENARIO_GENERATOR":
+        if (prompt.includes(REPAIR_MARKER)) return { structured: repairs[Math.min(repairTry++, repairs.length - 1)] };
         return { structured: generated[Math.min(generatorTry++, generated.length - 1)] };
       case "SAFETY":
         return { structured: script.safety ?? SAFE };
       case "ANALYSIS":
+        if (prompt.includes(ROUTE_CHECK_MARKER)) return { structured: routeReply(prompt, script.routes, routeTry++) };
         return { structured: rawAnalysis() };
       case "PERSONA":
         return { text: "Chị cũng không rõ nữa em." };

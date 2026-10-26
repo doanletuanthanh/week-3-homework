@@ -250,8 +250,8 @@ describe("the canary: the learner's own words about what to practise reach the m
     }
     const carrying = models.calls.filter((call) => JSON.stringify([call.prompt, call.metadata, call.tags]).includes(CANARY));
     expect(carrying.map((call) => call.role)).toEqual(["MODERATION"]);
-    // 1 moderation + 2 generation + 3 turns of 2 calls + 3 reveal calls.
-    expect(models.calls).toHaveLength(12);
+    // 1 moderation + 3 generation (scenario, routing check, safety) + 3 turns of 2 calls + 3 reveal calls.
+    expect(models.calls).toHaveLength(13);
 
     // Stored: the one column, and nowhere else.
     const stored = {

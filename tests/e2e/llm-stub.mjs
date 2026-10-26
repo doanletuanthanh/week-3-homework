@@ -32,6 +32,8 @@
 //   [stub:minor]             moderation allows it with the constraint adult_persona_only
 //   [stub:fail-moderation]   the moderation call gets HTTP 500
 //   [stub:invalid]           the generator returns three items, on every try
+//   [stub:invalid-once]      the generator gives two items the same tag; the targeted repair fixes it
+//   [stub:confusable]        one tag cannot be told apart by the routing check until its tag repair
 //   [stub:unsafe]            the generator names a real company, and the safety check objects to it
 //   [stub:fail-gen]          the generator gets HTTP 500
 //   [stub:slow-gen]          the generator waits before answering, so a test can watch the wait
@@ -155,6 +157,8 @@ const CUSTOM_ROLES = [
   ["moderation", "người kiểm duyệt chủ đề"],
   ["generator", "người soạn kịch bản nhân vật"],
   ["safety", "người kiểm an toàn nội dung"],
+  ["repair", "người sửa kịch bản nhân vật"],
+  ["route-check", "người kiểm tra định tuyến chủ đề"],
 ];
 
 /** Which call of the custom-topic path this is, or null for any other call. */
@@ -165,9 +169,12 @@ function customRole(text) {
 const BASE_SCENARIO = JSON.parse(readFileSync(new URL("../../scenarios/ux-chi-tieu/chi-thu.json", import.meta.url), "utf8"));
 const REAL_COMPANY_CLAIM = "Chị làm kế toán ở Vinamilk, công ty này hay nợ lương nhân viên.";
 
-/** A scenario as the generator returns it: chị Thu's content under another name. */
-function generatedScenario(prompt) {
-  const items = BASE_SCENARIO.items.map((item) => ({
+/** What the routing check marks as a tag it cannot tell apart; the tag repair takes it off. */
+const CONFUSABLE_MARK = " (stub-confusable)";
+
+/** chị Thu's items as the generator returns them. */
+function generatedItems() {
+  return BASE_SCENARIO.items.map((item) => ({
     id: item.id,
     content: item.content,
     secret_terms: item.secret_terms,
@@ -180,6 +187,13 @@ function generatedScenario(prompt) {
     weight: item.weight,
     sample_question: item.sample_question,
   }));
+}
+
+/** A scenario as the generator returns it: chị Thu's content under another name. */
+function generatedScenario(prompt) {
+  const items = generatedItems();
+  if (prompt.includes("[stub:invalid-once]")) items[1] = { ...items[1], topic_tag: items[0].topic_tag };
+  if (prompt.includes("[stub:confusable]")) items[2] = { ...items[2], topic_tag: items[2].topic_tag + CONFUSABLE_MARK };
   const facts = BASE_SCENARIO.surface_facts;
   return {
     persona: { ...BASE_SCENARIO.persona, avatar_key: undefined, display_name: "chị Mai", name: "Chị Mai, 27 tuổi", tagline: "Nhân viên văn phòng ở một công ty nhỏ" },
@@ -201,10 +215,41 @@ function moderationReply(prompt) {
   return { decision: "allow", reason_code: null, constraints: [], focus };
 }
 
+/** The lines of one data block of a prompt. */
+function blockLines(prompt, tag) {
+  const start = prompt.lastIndexOf(`<${tag}>\n`);
+  if (start < 0) return [];
+  return prompt.slice(start + tag.length + 3, prompt.indexOf(`\n</${tag}>`, start)).split("\n");
+}
+
+/** Every question to its own tag, except a question whose tag carries the confusable mark. */
+function routeCheckReply(prompt) {
+  const tags = blockLines(prompt, "chu_de");
+  return {
+    routes: blockLines(prompt, "cau_hoi_mau").map((line, index) => ({
+      question: `Q${index + 1}`,
+      direct: tags[index]?.includes(CONFUSABLE_MARK.trim()) ? null : `T${index + 1}`,
+      broad: [],
+    })),
+  };
+}
+
+/** A tag repair takes the mark off each tag it is given; a targeted repair puts back chị Thu's item for each violated one. */
+function repairReply(prompt) {
+  if (prompt.includes("<can_sua>")) {
+    const items = blockLines(prompt, "can_sua").map((line) => JSON.parse(line));
+    return { items: items.map((item) => ({ index: item.index, topic_tag: item.topic_tag.replace(CONFUSABLE_MARK, ""), sample_question: item.sample_question })) };
+  }
+  const indexes = [...new Set(blockLines(prompt, "vi_pham").flatMap((line) => /^- items\[(\d+)\]/.exec(line)?.[1] ?? []).map(Number))];
+  return { items: indexes.map((index) => ({ ...generatedItems()[index], index })), fields: [] };
+}
+
 /** The reply of a custom-topic call, as JSON text. */
 function customReply(role, prompt) {
   if (role === "moderation") return moderationReply(prompt);
   if (role === "generator") return generatedScenario(prompt);
+  if (role === "route-check") return routeCheckReply(prompt);
+  if (role === "repair") return repairReply(prompt);
   return { violations: prompt.includes("Vinamilk") ? [{ field: "surface_facts[0]", kind: "real_org_or_brand", reason: "stub" }] : [] };
 }
 

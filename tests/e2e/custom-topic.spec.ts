@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { signInAndAccept, signInAsNewLearner, uniqueEmail } from "./helpers/auth";
+import { ensureAccount, signIn, signInAndAccept, signInAsNewLearner, uniqueEmail } from "./helpers/auth";
 import { ask } from "./helpers/chat";
 import { db } from "./helpers/db";
 import { postEnd } from "./helpers/interview";
@@ -317,6 +317,31 @@ test.describe("Màn 11 and after: a topic that passes", () => {
     expect((await page.request.get(`/api/custom-topics/${attempt.id}`)).status()).toBe(200);
     await otherContext.close();
   });
+
+  test("a topic that needed repairs still passes, and the operator sees each repair and the routing check", async ({ page, context, browser }) => {
+    const { userId } = await openForm(page, context, "ct-repaired");
+    // Two items share a tag (a targeted repair), and one tag cannot be routed apart (a tag repair).
+    await startAttempt(page, `${TOPIC} [stub:invalid-once] [stub:confusable]`);
+    await expect(page).toHaveURL(/\/prep\/custom-/u, { timeout: 60_000 });
+
+    const [attempt] = await db.attemptsOf(userId);
+    expect(attempt.outcome).toBe("passed");
+    expect(attempt.report.repairs?.map((repair) => repair.mode)).toEqual(["targeted", "targeted"]);
+    expect(attempt.report.routeCheck).toEqual({ confusable: [], repaired: true });
+    const roles = (await db.generationCallsOf(attempt.id)).map((call) => call.role);
+    expect(roles.filter((role) => role !== "MODERATION")).toEqual(["SCENARIO_GENERATOR", "SCENARIO_GENERATOR", "ANALYSIS", "SCENARIO_GENERATOR", "ANALYSIS", "SAFETY"]);
+
+    const adminContext = await browser.newContext();
+    const admin = await adminContext.newPage();
+    await ensureAccount("admin-e2e@example.com");
+    await signIn(adminContext, "admin-e2e@example.com");
+    await admin.goto(`/admin/custom-topics/${attempt.id}`);
+    const repairs = admin.locator("section").filter({ has: admin.getByRole("heading", { name: "Các lần sửa" }) });
+    await expect(repairs.getByRole("listitem")).toHaveCount(2);
+    await expect(repairs.getByRole("listitem").first()).toContainText("Sửa đúng phần lỗi: items[1].topic_tag:");
+    await expect(admin.locator("section").filter({ has: admin.getByRole("heading", { name: "Kiểm tra định tuyến" }) })).toContainText("Mọi nhãn phân biệt được sau một lần sửa.");
+    await adminContext.close();
+  });
 });
 
 test.describe("Màn 11: a topic that does not pass", () => {
@@ -440,7 +465,7 @@ test.describe("a function that is cut off: the attempt goes on from what was sto
     await expect.poll(async () => (await db.attemptsOf(userId))[0].outcome, { timeout: 30_000 }).toBe("passed");
 
     const calls = (await db.generationCallsOf(attempt.id)).slice(callsBefore).map((call) => call.role);
-    expect(calls).toEqual(["SAFETY"]);
+    expect(calls).toEqual(["ANALYSIS", "SAFETY"]);
     expect((await db.attemptsOf(userId))[0]).toMatchObject({ runAttempt: 2, draft: null });
     await page.reload();
     await expect(page.locator(`.srows a[href="/sessions/${sessionId}"]`)).toContainText("Chị Mai");

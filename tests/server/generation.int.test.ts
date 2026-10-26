@@ -44,7 +44,7 @@ describe("runGeneration: an attempt that passes", () => {
     const row = await attemptRow(attemptId);
     expect(row).toMatchObject({ outcome: "passed", failureCode: null, step: "validating", runToken: null, runAttempt: 1, draft: null });
     expect(row.finishedAt).not.toBeNull();
-    expect(row.report).toEqual({});
+    expect(row.report).toEqual({ routeCheck: { confusable: [], repaired: false } });
 
     const [scenario] = await generatedScenarios();
     expect(scenario).toMatchObject({ id: row.scenarioId, personaId: `custom-${attemptId}`, topicId: row.topicId, version: 1, status: "published", origin: "generated", displayName: "chị Thu" });
@@ -69,8 +69,8 @@ describe("runGeneration: an attempt that passes", () => {
     const { attemptId, sessionId } = await attempt(learner);
     const calls = await generationCalls(attemptId);
 
-    // Two calls prepare a scenario: no simulated interview is played.
-    expect(calls.map((call) => call.role).sort()).toEqual(["SAFETY", "SCENARIO_GENERATOR"]);
+    // Three calls prepare a scenario (writing, the routing check, safety): no simulated interview is played.
+    expect(calls.map((call) => call.role).sort()).toEqual(["ANALYSIS", "SAFETY", "SCENARIO_GENERATOR"]);
     expect(new Set(calls.map((call) => call.scope))).toEqual(new Set(["generation"]));
     expect(new Set(calls.map((call) => call.sessionId))).toEqual(new Set([sessionId]));
     const sum = calls.reduce((total, call) => total + call.costUsd, 0);
@@ -146,7 +146,7 @@ describe("runGeneration: an attempt that does not pass", () => {
     const { attemptId } = await attempt(learner, { safety: { violations: [{ field: "opening_line", kind: "policy", reason: "không ổn" }] } });
     const row = await attemptRow(attemptId);
     for (const item of generatedFrom().items) expect(JSON.stringify(row)).not.toContain(item.content);
-    expect(row.report).toEqual({ unsafe: [{ field: "opening_line", kind: "policy", reason: "không ổn" }] });
+    expect(row.report).toEqual({ routeCheck: { confusable: [], repaired: false }, unsafe: [{ field: "opening_line", kind: "policy", reason: "không ổn" }] });
   });
 
   it("shows in the list under the typed topic, with no number and the state of the attempt", async () => {

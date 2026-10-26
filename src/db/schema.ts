@@ -358,6 +358,17 @@ export type AttemptReport = {
   unsafe?: { field: string; kind: string; reason: string }[];
   /** What stopped an attempt that ended as a system error. */
   error?: string;
+  /**
+   * The repairs of the run that finished the attempt, in order: what each was asked to fix, what
+   * of its reply was left out, and, for a repair that was not kept, the violations that made it so.
+   */
+  repairs?: { mode: "targeted" | "full"; violations: string[]; ignored?: string[]; dropped?: string[] }[];
+  /**
+   * The routing check of the scenario that passed: items (by position) whose tag its sample
+   * question could not be routed to apart from the others, and whether a repair was tried. A
+   * scenario with confusable items still passes.
+   */
+  routeCheck?: { confusable: number[]; repaired: boolean };
 };
 
 /**
