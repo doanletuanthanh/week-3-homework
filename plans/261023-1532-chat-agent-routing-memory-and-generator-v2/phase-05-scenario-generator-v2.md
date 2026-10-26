@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Scenario generator v2"
-status: pending
+status: done
 priority: P2
 effort: "2d"
 dependencies: [2]
@@ -96,17 +96,42 @@ moderate ─► generate ─► validate ─┬─ ok ────────�
 6. Paid, after approval: 2 real topics end to end (≈ 0.07 USD). Use one that needed two tries in phase 9 ("quy trình xin nghỉ phép và duyệt nghỉ phép ở công ty nhỏ") and one new one. Record cost, time, repairs and routing check results here.
 
 ## Todo list
-- [ ] Generator rules
-- [ ] Repair mode table and targeted repair
-- [ ] Routing check prompt and scoring
-- [ ] Graph wiring, report keys, resume behaviour
-- [ ] Stub markers and e2e
-- [ ] 2 real topics (approved, ≈ 0.07 USD)
+- [x] Generator rules
+- [x] Repair mode table and targeted repair
+- [x] Routing check prompt and scoring
+- [x] Graph wiring, report keys, resume behaviour
+- [x] Stub markers and e2e
+- [x] 2 real topics (approved; 0.0577 USD)
 
 ## Success criteria
-- [ ] A targeted repair's output tokens are ≤ 25% of a full generation's, measured in the real run, or shown on the scripted model by token counts.
-- [ ] Every passed scenario has `report.routeCheck`. The 2 real topics pass, with their cost and time recorded.
-- [ ] All tests pass. `ATTEMPT_STEPS` and `FAILURE_CODES` are unchanged.
+- [~] A targeted repair's output tokens are ≤ 25% of a full generation's, measured in the real run, or shown on the scripted model by token counts. Written output: 280 against 2872 tokens (10%). Billed output, reasoning included: 1245 against 3556 (35%), because the repair spent 965 tokens reasoning. Its cost was 54% of a full generation and its time 31% (11 s against 37 s). See Results.
+- [x] Every passed scenario has `report.routeCheck`. The 2 real topics pass, with their cost and time recorded.
+- [x] All tests pass. `ATTEMPT_STEPS` and `FAILURE_CODES` are unchanged.
+
+## Results (2026-10-26)
+- **Real run**: moderation and the generation graph, Flash, no database. The rows were not written to `llm_call`, so the spend is recorded here.
+
+  | Topic | Time | Cost | Calls | Repairs | Routing check |
+  |---|---|---|---|---|---|
+  | quy trình xin nghỉ phép và duyệt nghỉ phép ở công ty nhỏ | 38 s | 0.0185 USD | generate, check, safety | none | clean on the first check (9 tags) |
+  | cách người đi làm chọn và đổi gói cước điện thoại | 75 s | 0.0392 USD | generate, targeted repair, check, tag repair, check, safety | 1 targeted (2 secret-term leaks: `research_goal`, `items[7].do_not_assert`), 1 tag repair (items 0, 2, 5) | 3 confusable, then clean after the repair |
+
+  - Leave-request topic: in phase 9 it took 2 tries, 75 s and 0.046 USD. Now it took 1 try, 38 s and 0.0185 USD.
+  - The targeted repair replaced a second full generation. A full generation took 37 s, 3556 output tokens and 0.0147 USD. The repair took 11 s, 1245 output tokens (965 of them reasoning) and 0.0080 USD.
+  - Reasoning dominates both repairs: the tag repair spent 1426 of its 1619 output tokens on it. Lowering the repair's effort is the next lever. It is a role setting, so it is left for phase 6.
+  - A routing check costs 0.0013–0.0015 USD and takes 3 s.
+- **Code review**: 8.5/10 (`plans/reports/code-reviewer-261026-1617-phase-05-generator-v2.md`). Fixed:
+  - Both repairs now carry the focus rule, so a rewritten item keeps to the scenario's focus.
+  - A tag repair that breaks `validate` is recorded with `dropped`, and the admin page says it was not kept.
+  - Left open (low): repairs are per run, not per attempt, so a resumed attempt can repair its tags again and its report shows only the last run's repairs. The admin page names confusable items by position.
+- **Deviations from Requirements**:
+  - The tag repair has its own small schema (`src/llm/prompts/route-check.ts`). A resumed draft is a stored `Scenario`, not the generator's reply.
+  - A tag repair that breaks `validate` is dropped, and the scenario that passed is kept.
+  - Repair entries may carry `ignored` and `dropped`.
+- **Tests** (`plans/reports/tester-261026-1617-phase-05-generator-v2.md`):
+  - typecheck and lint pass; unit 1245/1245; int 675/675.
+  - e2e 328/329: `responsive.spec` failed once on `ERR_NETWORK_CHANGED` and passed 12/12 alone.
+  - After the review fixes: unit, the three generation int files (54/54) and `custom-topic.spec` (18/18) were run again.
 
 ## Risk assessment
 - A targeted repair can fix one rule and break another, for example a new tag that leaks a secret term. Mitigation: full `validate` after every repair, under the shared loop cap.
