@@ -195,6 +195,31 @@ test.describe("security headers", () => {
   });
 });
 
+test.describe("the brand icon", () => {
+  test("pages link the header's mark as the tab and home-screen icon, and /favicon.ico serves the same image", async ({ page }) => {
+    for (const path of ["/", "/library"]) {
+      await page.goto(path);
+      // One icon link each: no default favicon beside the brand one.
+      await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /^\/icon(\?|$)/u);
+      await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", /^\/apple-icon(\?|$)/u);
+    }
+    const tabHref = await page.locator('link[rel="icon"]').getAttribute("href");
+    const homeScreenHref = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
+
+    const [tab, homeScreen, favicon] = await Promise.all([tabHref!, homeScreenHref!, "/favicon.ico"].map((href) => page.request.get(href)));
+    for (const response of [tab, homeScreen, favicon]) {
+      expect(response.status(), response.url()).toBe(200);
+      expect(response.headers()["content-type"], response.url()).toBe("image/png");
+      expect(response.headers()["x-content-type-options"], response.url()).toBe("nosniff");
+      // No session work for an image: the proxy, which also sets the policy, did not run.
+      expect(response.headers()["content-security-policy"], response.url()).toBeUndefined();
+    }
+    expect(await favicon.body()).toEqual(await tab.body());
+    // The proxy skips those two paths alone: a page that only starts like them keeps its session and policy.
+    expect((await page.request.get("/icons")).headers()["content-security-policy"]).toContain("default-src 'self'");
+  });
+});
+
 test.describe("the method page (FR-62)", () => {
   test("/phuong-phap is not found, and nothing links to it", async ({ page, context }) => {
     const response = await page.goto("/phuong-phap");

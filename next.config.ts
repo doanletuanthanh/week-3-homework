@@ -16,6 +16,8 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   headers: async () => [{ source: "/:path*", headers: SECURITY_HEADERS }],
+  // Browsers and old bookmarks still ask for `/favicon.ico`: they get the brand icon (`src/app/icon.tsx`), not a 404 page.
+  rewrites: async () => [{ source: "/favicon.ico", destination: "/icon" }],
 };
 
 export default nextConfig;

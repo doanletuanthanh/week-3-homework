@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/server/actions";
 import { getUser } from "@/server/auth";
 import { failIfAsked } from "@/server/test-faults";
+import { BrandGlyph } from "./brand-mark";
 import { HeaderLink, HeaderMenu } from "./header-menu";
 import { GridIcon, HistoryIcon, MenuIcon, NoteIcon, PulseIcon, ShieldIcon, SignOutIcon, UserIcon } from "./icons";
 
@@ -9,20 +10,7 @@ function Logo() {
   return (
     <>
       <span className="logo-mark">
-        <svg
-          width="17"
-          height="17"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M9 9.5 12 4l3 5.5z" fill="currentColor" />
-          <path d="M2.5 11.5h19" />
-          <path d="M5.5 14h13l-3.5 6.5h-6z" />
-        </svg>
+        <BrandGlyph size={17} />
       </span>
       <span className="logo-word">InterviewLab</span>
     </>
