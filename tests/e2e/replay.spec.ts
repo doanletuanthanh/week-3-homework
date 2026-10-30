@@ -36,6 +36,20 @@ const download = (page: Page) => page.getByRole("button", { name: "Tải về" }
 const status = async (sessionId: string) => (await db.session(sessionId)).status;
 /** The screen's own error line. (Next.js keeps an empty alert region of its own on every page.) */
 const errorLine = (within: Page | Locator) => within.locator(".ferr");
+const toldList = (page: Page) => page.getByRole("region", { name: /^Bạn đã khai thác được \d+ điều$/ });
+const hintsList = (page: Page) => page.getByRole("region", { name: "Gợi ý cho lần luyện sau" });
+const TARGET_TOPIC = `Thử hỏi về: ${TARGET.topicTag}`;
+
+/** A hint for the target: its topic and, only once asked for, its sample question. Never its text. */
+async function expectTargetHint(within: Locator) {
+  await expect(within.locator(".hint-topic")).toHaveText(TARGET_TOPIC);
+  await expect(within.locator(".q")).toHaveCount(0);
+  const ask = within.getByRole("button", { name: "Xem câu hỏi gợi ý" });
+  await expect(ask).toHaveAttribute("aria-expanded", "false");
+  await ask.click();
+  await expect(within.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+  await expect(within).not.toContainText(TARGET.content);
+}
 
 /** A learner on Màn 6 with the replay of `paid-app` on offer (the hook was dropped at turn 2). */
 async function primaryOffer(page: Page, context: BrowserContext, label: string) {
@@ -165,9 +179,9 @@ test.describe("Màn 7: a primary replay", () => {
     await expect(page.getByText("1 Mở khi luyện lại")).toBeVisible();
     await expect(page.getByText("8 Bỏ lỡ")).toBeVisible();
     await expect(page.locator(".recog")).toHaveText("Nhận biết: 2 điều quan trọng trong ghi chú của bạn.");
-    await expect(page.getByRole("region", { name: "Đã kể" }).getByRole("listitem")).toHaveCount(2);
-    await expect(page.getByRole("region", { name: "Đã kể" })).not.toContainText(TARGET.content);
-    await expect(page.getByRole("region", { name: "Bỏ lỡ" })).not.toContainText(TARGET.content);
+    await expect(toldList(page).locator("li")).toHaveCount(2);
+    await expect(toldList(page)).not.toContainText(TARGET.content);
+    await expect(hintsList(page)).not.toContainText(TARGET.topicTag);
 
     // The note about the target is marked now, with its fixed sentence and the one the replay adds.
     const noted = page.getByRole("region", { name: "Ghi chú của bạn" }).locator(".cv-line[data-kind]").filter({ hasText: "đang trả phí cho app mà không dùng" });
@@ -193,7 +207,8 @@ test.describe("Màn 7: a primary replay", () => {
     await drawer.getByRole("button", { name: "Đóng transcript" }).click();
     await expect(drawer).toBeHidden();
     // The main transcript is still the six turns of the interview.
-    await page.getByRole("region", { name: "Đã kể" }).getByRole("button", { name: "Lượt 1" }).click();
+    await toldList(page).locator("summary").click();
+    await toldList(page).getByRole("button", { name: "Lượt 1" }).click();
     await expect(transcriptDrawer(page).locator("li.turn")).toHaveCount(7);
     await expect(transcriptDrawer(page)).not.toContainText("Hồi đó chị ghi vào đâu ạ?");
     await page.keyboard.press("Escape");
@@ -205,7 +220,7 @@ test.describe("Màn 7: a primary replay", () => {
     expect((await db.llmCallsOf(sessionId)).length).toBe(callsBefore);
   });
 
-  test("three turns without the target: 'Đang kiểm tra…', a turn the judge could not check, then what was held and a question for it", async ({ page, context }) => {
+  test("three turns without the target: 'Đang kiểm tra…', a turn the judge could not check, then a hint for what was held, never its text", async ({ page, context }) => {
     const { sessionId } = await primaryOffer(page, context, "replay-fail");
     await startReplay(page, 3);
 
@@ -228,10 +243,9 @@ test.describe("Màn 7: a primary replay", () => {
     const held = result(page);
     await expect(held).toHaveAttribute("data-result", "fail");
     await expect(held.locator(".eyebrow")).toHaveText("Điều chị Thu đã giữ lại");
-    await expect(held.locator(".headline-md")).toHaveText(TARGET.content);
-    await expect(held.locator(".ctx-k")).toHaveText("Một câu đã mở được nó");
-    await expect(held.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
-    await expect(page.locator(".rbar .pill")).toHaveText("Đã mở niêm phong");
+    await expectTargetHint(held);
+    expect(await page.content()).not.toContain(TARGET.content);
+    await expect(page.locator(".rbar .pill")).toHaveText("Vẫn giữ lại");
     await expect(page.locator(".rbar .seg i.on")).toHaveCount(3);
     await expect(composer(page)).toHaveCount(0);
     expect(await status(sessionId)).toBe("done");
@@ -241,9 +255,11 @@ test.describe("Màn 7: a primary replay", () => {
     await page.reload();
     const card = replayCard(page);
     await expect(card.locator(".rr")).toHaveAttribute("data-result", "fail");
-    await expect(card.locator(".headline-md")).toHaveText(TARGET.content);
-    await expect(card.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
-    await expect(page.getByText("1 Đã mở niêm phong")).toBeVisible();
+    await expectTargetHint(card);
+    await expect(page.getByText("1 Vẫn giữ lại")).toBeVisible();
+    // The card speaks of the target; the hints for next time are the other items.
+    await expect(hintsList(page)).not.toContainText(TARGET.topicTag);
+    expect(await page.content()).not.toContain(TARGET.content);
     // The target was not opened in the replay: its note keeps the sentence of the main interview alone.
     await expect(page.locator(".cv-replay")).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Ghi chú của bạn" }).locator("mark").filter({ hasText: "đang trả phí" })).toHaveCount(1);
@@ -251,7 +267,7 @@ test.describe("Màn 7: a primary replay", () => {
     await expect(replayDrawer(page).locator(".k")).toHaveText(["Lượt 03", "Lượt 04", "Lượt 05"]);
   });
 
-  test("partial: another item was opened and told, and the target is shown with its question", async ({ page, context }) => {
+  test("partial: another item was opened and told, and the target is a hint", async ({ page, context }) => {
     const { sessionId } = await primaryOffer(page, context, "replay-partial");
     await startReplay(page, 3);
     await askReplay(page, `Chị đã thử ghi chi tiêu bằng những cách nào rồi ạ? ${analysis({ topic: directTopic("T1") })} ${toldVerdict("I1")}`, 3, 1);
@@ -262,19 +278,18 @@ test.describe("Màn 7: a primary replay", () => {
     const shown = result(page);
     await expect(shown).toHaveAttribute("data-result", "partial");
     await expect(shown.locator(".rr-other")).toHaveText(`Bạn mở được một điều khác: ${TRIED_METHODS}`);
-    await expect(shown.locator(".headline-md")).toHaveText(TARGET.content);
-    await expect(shown.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expectTargetHint(shown);
     expect((await db.replayOf(sessionId)).result).toBe("partial");
   });
 
-  test("Dừng asks first, then ends the replay and shows what was held", async ({ page, context }) => {
+  test("Dừng asks first, then ends the replay and shows a hint for what was held", async ({ page, context }) => {
     const { sessionId } = await primaryOffer(page, context, "replay-stop");
     await startReplay(page, 3);
     await askReplay(page, "Hồi đó chị ghi vào đâu ạ?", 3, 1);
 
     await stopButton(page).click();
     await expect(stopDialog(page)).toBeVisible();
-    await expect(stopDialog(page)).toContainText("Điều bị giữ sẽ được mở ra.");
+    await expect(stopDialog(page)).toContainText("Bạn sẽ không hỏi tiếp được ở lần luyện lại này.");
     // "Hỏi tiếp" changes nothing.
     await stopDialog(page).getByRole("button", { name: "Hỏi tiếp" }).click();
     await expect(stopDialog(page)).toBeHidden();
@@ -286,8 +301,7 @@ test.describe("Màn 7: a primary replay", () => {
     await stopDialog(page).getByRole("button", { name: "Dừng" }).click();
     const held = result(page);
     await expect(held).toHaveAttribute("data-result", "stopped");
-    await expect(held.locator(".headline-md")).toHaveText(TARGET.content);
-    await expect(held.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expectTargetHint(held);
     await expect(stopDialog(page)).toBeHidden();
     await expect(composer(page)).toHaveCount(0);
     // It does not leave the screen by itself.
@@ -347,10 +361,10 @@ test.describe("Màn 7: a primary replay", () => {
 });
 
 test.describe("Màn 6: starting and skipping the replay", () => {
-  test("'Bỏ qua, cho tôi xem luôn' asks first, then shows everything with no replay played", async ({ page, context }) => {
+  test("'Bỏ qua, xem kết quả luôn' asks first, then shows the result with a hint for what was held, no replay played", async ({ page, context }) => {
     const { sessionId } = await primaryOffer(page, context, "replay-skip");
 
-    await replayOffer(page).getByRole("button", { name: "Bỏ qua, cho tôi xem luôn" }).click();
+    await replayOffer(page).getByRole("button", { name: "Bỏ qua, xem kết quả luôn" }).click();
     await expect(skipDialog(page)).toBeVisible();
     await expect(skipDialog(page)).toContainText("Bạn sẽ không thử lại được khoảnh khắc này.");
     await skipDialog(page).getByRole("button", { name: "Ở lại" }).click();
@@ -358,18 +372,18 @@ test.describe("Màn 6: starting and skipping the replay", () => {
     expect(await status(sessionId)).toBe("revealed");
     expect(await page.content()).not.toContain(TARGET.content);
 
-    await replayOffer(page).getByRole("button", { name: "Bỏ qua, cho tôi xem luôn" }).click();
-    await skipDialog(page).getByRole("button", { name: "Cho tôi xem luôn" }).click();
+    await replayOffer(page).getByRole("button", { name: "Bỏ qua, xem kết quả luôn" }).click();
+    await skipDialog(page).getByRole("button", { name: "Xem kết quả luôn" }).click();
 
     const card = replayCard(page);
     await expect(card.locator(".rr")).toHaveAttribute("data-result", "skipped");
     await expect(card.locator(".rr > .eyebrow")).toHaveText("Đã bỏ qua lần luyện lại từ lượt 3");
-    await expect(card.locator(".headline-md")).toHaveText(TARGET.content);
-    await expect(card.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expectTargetHint(card);
+    expect(await page.content()).not.toContain(TARGET.content);
     // No turn was played, so there is none to read.
     await expect(card.getByRole("button", { name: /lượt luyện lại/ })).toHaveCount(0);
     await expect(replayOffer(page)).toHaveCount(0);
-    await expect(page.getByText("1 Đã mở niêm phong")).toBeVisible();
+    await expect(page.getByText("1 Vẫn giữ lại")).toBeVisible();
     await expect(download(page)).toBeEnabled();
 
     expect(await status(sessionId)).toBe("done");
@@ -388,8 +402,8 @@ test.describe("Màn 6: starting and skipping the replay", () => {
     await expect(replayOffer(page).getByRole("button", { name: "Quay lại lượt 3" })).toBeEnabled();
     expect(await status(sessionId)).toBe("revealed");
 
-    await replayOffer(page).getByRole("button", { name: "Bỏ qua, cho tôi xem luôn" }).click();
-    await skipDialog(page).getByRole("button", { name: "Cho tôi xem luôn" }).click();
+    await replayOffer(page).getByRole("button", { name: "Bỏ qua, xem kết quả luôn" }).click();
+    await skipDialog(page).getByRole("button", { name: "Xem kết quả luôn" }).click();
     await expect(skipDialog(page)).toBeHidden();
     await expect(errorLine(replayOffer(page))).toHaveText("Không kết nối được. Thử lại.");
     expect(await status(sessionId)).toBe("revealed");
@@ -452,8 +466,7 @@ test.describe("Màn 7: the replay of a leading question", () => {
     const shown = result(page);
     await expect(shown).toHaveAttribute("data-result", "fail");
     await expect(shown.locator(".headline-sm")).toHaveText("Lượt 2 vẫn thêm ý của bạn: “tại chị lười”.");
-    await expect(shown.locator(".ctx-k")).toHaveText("Câu hỏi mẫu");
-    await expect(shown.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expectTargetHint(shown);
   });
 
   test("a leading label the judge does not confirm is not held against the learner, and Dừng says how many questions were grounded", async ({ page, context }) => {
@@ -468,7 +481,7 @@ test.describe("Màn 7: the replay of a leading question", () => {
     const shown = result(page);
     await expect(shown).toHaveAttribute("data-result", "stopped");
     await expect(shown.locator(".headline-sm")).toHaveText("Có 1 câu bám vào lời chị Thu trước khi bạn dừng.");
-    await expect(shown.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expectTargetHint(shown);
     expect(await db.replayOf(sessionId)).toMatchObject({ result: "stopped" });
   });
 
@@ -482,7 +495,7 @@ test.describe("Màn 7: the replay of a leading question", () => {
     expect(await db.replayOf(sessionId)).toMatchObject({ result: "success" });
   });
 
-  test("three questions that rest on nothing the persona said: the plain line, with a sample question", async ({ page, context }) => {
+  test("three questions that rest on nothing the persona said: the plain line, with a hint", async ({ page, context }) => {
     await fallbackOffer(page, context, "replay-fallback-none");
     await startReplay(page, 1);
     // A leading label the judge cannot point at words for is not confirmed.
@@ -493,7 +506,7 @@ test.describe("Màn 7: the replay of a leading question", () => {
     const shown = result(page);
     await expect(shown).toHaveAttribute("data-result", "fail");
     await expect(shown.locator(".headline-sm")).toHaveText("Lần này chưa có câu nào bám vào lời chị Thu.");
-    await expect(shown.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expectTargetHint(shown);
   });
 });
 
@@ -565,10 +578,13 @@ test.describe("the replay routes", () => {
     expect(await status(sessionId)).toBe("replaying");
     expect(await db.turnsOfBranch((await db.replayOf(sessionId)).id)).toHaveLength(1);
 
-    // The stop is the answer that ends the replay: it carries what was held, and from then on so does everything.
+    // The stop is the answer that ends the replay: it carries a hint for what was held, never its text, and neither does anything after it.
     const stopped = await (await post("replay", { action: "stop" })).json();
-    expect(stopped).toEqual({ outcome: { level: "primary", result: "stopped", target: { content: TARGET.content, sampleQuestion: TARGET.sampleQuestion }, otherItem: null } });
-    expect(await (await page.request.get(`/api/sessions/${sessionId}/reveal`)).text()).toContain(TARGET.content);
+    expect(stopped).toEqual({
+      outcome: { level: "primary", result: "stopped", hint: { topic: TARGET.topicTag, path: "follow_up", sampleQuestion: TARGET.sampleQuestion, hook: null, trustTurns: [] }, otherItem: null },
+    });
+    expect(await (await page.request.get(`/api/sessions/${sessionId}/reveal`)).text()).not.toContain(TARGET.content);
+    expect(await (await page.request.get(`/sessions/${sessionId}`)).text()).not.toContain(TARGET.content);
     const replayTurns = await (await page.request.get(`/api/sessions/${sessionId}/transcript?branch=replay`)).json();
     expect(replayTurns.turns).toEqual([{ index: 3, learnerText: expect.stringContaining("Chị hay định ghi lại lắm ạ?"), personaText: "Chị trả lời câu thứ 3 (trong khối dữ liệu).", leading: null }]);
     expect(await (await post("replay", { action: "start" })).json()).toEqual({ error: "not_offered" });

@@ -20,9 +20,9 @@ export function toReplayTurn(row: TurnRow): ReplayTurn {
 }
 
 /**
- * What the learner is shown about a replay that has ended; null while it runs. It holds the
- * target's content, so callers hand it to a browser only as the answer that ends the replay, or
- * for a session that is `done`. Built from stored rows: no model is called.
+ * What the learner is shown about a replay that has ended; null while it runs. It names the
+ * target, by its text or as a hint, so callers hand it to a browser only as the answer that ends
+ * the replay, or for a session that is `done`. Built from stored rows: no model is called.
  */
 export function replayOutcomeOf(scenario: Scenario, replay: LoadedReplay): ReplayOutcome | null {
   const { branch } = replay;

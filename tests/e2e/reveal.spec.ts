@@ -25,9 +25,19 @@ const TARGET = {
   topicTag: "những lần định ghi lại chi tiêu",
 };
 const MONEY_HOME = "Mỗi tháng chị gửi ba mẹ 3 triệu và coi đó là khoản không được đụng tới, nên chị chưa bao giờ ghi nó vào chi tiêu.";
+// Two missed items of the scenario, by the start of their text: neither may reach the page.
+const SHAME = "Chị bỏ không phải vì lười mà vì xấu hổ";
+const INSTALLMENT = "Chị đang trả góp một chiếc điện thoại";
 const TAKEAWAY_EMPTY = "Buổi này không có câu dẫn dắt hay hook bị bỏ qua nào được ghi nhận.";
 
 const section = (page: Page, name: string) => page.getByRole("region", { name });
+const hintsList = (page: Page) => section(page, "Gợi ý cho lần luyện sau");
+/** The told list, folded under its count: opened before its items are read. */
+async function openTold(page: Page, count: number) {
+  const told = section(page, `Bạn đã khai thác được ${count} điều`);
+  await told.locator("summary").click();
+  return told;
+}
 const replayOffer = (page: Page) => page.locator(".replay-offer");
 const download = (page: Page) => page.getByRole("button", { name: "Tải về" });
 
@@ -153,19 +163,35 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     // 2. The replay offer, with the card that says nothing about what it holds.
     await expect(replayOffer(page).getByRole("heading")).toHaveText("Bạn nghe được, nhưng chưa hỏi tiếp.");
     await expect(replayOffer(page).getByRole("button", { name: "Quay lại lượt 3" })).toBeVisible();
-    await expect(replayOffer(page).getByText("Bỏ qua, cho tôi xem luôn")).toBeVisible();
-    await expect(replayOffer(page).locator(".held-card")).toHaveText("Giữ lại để bạn thửMột điều chị Thu chưa kể. Mở ra sau khi bạn luyện lại hoặc bỏ qua.");
+    await expect(replayOffer(page).getByText("Bỏ qua, xem kết quả luôn")).toBeVisible();
+    await expect(replayOffer(page).locator(".held-card")).toHaveText("Giữ lại để bạn thửMột điều chị Thu chưa kể. Luyện lại để thử mở nó.");
 
-    // 3 and 4. Told, then missed. The held item is in neither.
-    const told = section(page, "Đã kể");
-    await expect(told.locator(".pill")).toHaveText("2");
+    // 3 to 7, in this order: the takeaway, the hints for next time, what was told, the notes, the next step.
+    const headings = await page.locator(".reveal-col h2").allTextContents();
+    const order = ["Thói quen hỏi của bạn", "Gợi ý cho lần luyện sau", "Bạn đã khai thác được 2 điều", "Ghi chú của bạn"].map((name) =>
+      headings.findIndex((text) => text.startsWith(name)),
+    );
+    expect(order.every((at, position) => at >= 0 && (position === 0 || at > order[position - 1])), headings.join(" | ")).toBe(true);
+    await expect(page.locator(".reveal-col > section").last()).toHaveClass(/next-step/);
+
+    // 4. Hints: the three heaviest missed items, each a topic to ask about and how, and one line for the rest. The held item is not one.
+    const hints = hintsList(page);
+    await expect(hints.getByRole("listitem")).toHaveCount(3);
+    await expect(hints.locator(".hint-topic")).toHaveText([
+      "Thử hỏi về: cảm giác khi xem lại số đã chi",
+      "Thử hỏi về: vay mượn và nợ",
+      "Thử hỏi về: so sánh với người xung quanh",
+    ]);
+    await expect(hints.locator(".hints-more")).toHaveText("Còn 5 điều khác chị Thu chưa kể. Luyện lại từ đầu để tìm ra.");
+
+    // 5. What was told, folded under its count until opened.
+    const told = section(page, "Bạn đã khai thác được 2 điều");
+    await expect(told.getByText(MONEY_HOME)).toBeHidden();
+    await told.locator("summary").click();
     await expect(told.getByRole("listitem")).toHaveCount(2);
     await expect(told.getByText(MONEY_HOME)).toBeVisible();
-    const missed = section(page, "Bỏ lỡ");
-    await expect(missed.locator(".pill-amber")).toHaveText("8");
-    await expect(missed.getByRole("listitem")).toHaveCount(8);
 
-    // 5. The notes, each judged stretch with its label in words and its fixed sentence.
+    // 6. The notes, each judged stretch with its label in words and its fixed sentence.
     const review = section(page, "Ghi chú của bạn");
     await expect(review.getByRole("list", { name: "Chú giải" }).getByRole("listitem")).toHaveText(["Đã kể", "Chưa xác nhận", "Chưa từng lộ ra", "Chưa từng được nói"]);
     const marked = review.locator(".cv-line[data-kind]");
@@ -181,7 +207,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await expect(review.locator(".cv-plain").filter({ hasText: "đang trả phí cho app mà không dùng" })).toBeVisible();
     await expect(review.locator("mark").filter({ hasText: "đang trả phí" })).toHaveCount(0);
 
-    // 6. The takeaway: praise first, the comments, the habit card. It cannot be downloaded yet.
+    // 3. The takeaway: praise first, the comments, the habit card. It cannot be downloaded yet.
     const takeaway = section(page, "Thói quen hỏi của bạn — đọc lại trước buổi thật");
     await expect(takeaway.locator(".praise")).toContainText("Nhận xét của stub cho ô praise.");
     await expect(takeaway.locator(".cmt")).toHaveCount(2);
@@ -199,9 +225,10 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await expect(page.getByText("Bạn đã luyện mọi persona của vai trò này.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Bước tiếp theo" }).getByRole("link", { name: "Vào thư viện" })).toHaveAttribute("href", "/library");
 
-    // Nothing of the held item is anywhere in the page, the hidden print sheet included.
+    // Nothing of the held item is anywhere in the page, the hidden print sheet included, and no missed item's text.
     const html = await page.content();
     for (const sealed of Object.values(TARGET)) expect(html).not.toContain(sealed);
+    for (const missedItem of [SHAME, INSTALLMENT]) expect(html).not.toContain(missedItem);
 
     const session = await db.session(sessionId);
     expect(session).toMatchObject({ status: "revealed", guess: 7 });
@@ -215,35 +242,42 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     expect(events[0].props).toMatchObject({ guess: 7, told: 2, recognized: 2, total: 11, revealed_count: 4, replay_level: "primary" });
   });
 
-  test("a missed item opens to its sample question, the hook the persona dropped and the question asked right after", async ({ page, context }) => {
+  test("a hint says how to ask and shows the hook the persona dropped and the question asked right after; its sample question only once asked for", async ({ page, context }) => {
     await endedInterview(page, context, "reveal-missed", PRIMARY_QUESTIONS, PRIMARY_NOTES);
     await guess(page, 3);
     await expectResult(page, 3, 2);
 
-    const missed = section(page, "Bỏ lỡ");
+    const hints = hintsList(page);
     // `shame`: its hook was dropped at turn 3 and turn 4 asked about something else.
-    const shame = missed.getByRole("listitem").filter({ hasText: "Chị bỏ không phải vì lười mà vì xấu hổ" });
-    const toggle = shame.getByRole("button", { expanded: false });
+    const shame = hints.getByRole("listitem").filter({ hasText: "Thử hỏi về: cảm giác khi xem lại số đã chi" });
     await expect(shame.locator(".pill")).toHaveText("Hỏi tiếp chi tiết");
-    await expect(shame.getByText("Câu hỏi mẫu")).toHaveCount(0);
-    await toggle.focus();
-    await page.keyboard.press("Enter");
-
-    await expect(shame.getByText("“Chị nói thấy sao sao, lúc đó chị thấy thế nào ạ?”")).toBeVisible();
+    await expect(shame.getByText("Chị Thu sẽ gợi mở trước. Hỏi tiếp ngay vào câu đó.")).toBeVisible();
+    await expect(shame.locator(".who-p")).toHaveText("Chị Thu đã gợi");
     await expect(shame.locator(".bubble-p")).toHaveText("Chị trả lời câu thứ 3 (trong khối dữ liệu).");
+    await expect(shame.locator(".who-me")).toHaveText("Bạn hỏi ngay sau");
     await expect(shame.locator(".bubble-me")).toContainText("Chắc tại chị lười nên mới bỏ đúng không ạ?");
     await expect(shame.getByRole("button", { name: "Lượt 3" })).toBeVisible();
     await expect(shame.getByRole("button", { name: "Lượt 4" })).toBeVisible();
 
-    // A trust item: the fixed line, with the turns that cost trust.
-    const trust = missed.getByRole("listitem").filter({ hasText: "Chị đang trả góp một chiếc điện thoại" });
-    await expect(trust.locator(".pill")).toHaveText("Tạo tin tưởng");
-    await trust.getByRole("button").first().click();
-    await expect(trust.locator(".exp > p")).toHaveText("Chị Thu chưa đủ tin để kể. Lượt 4 làm chị Thu dè dặt hơn.");
+    // The sample question is on the screen only once it is asked for, from the keyboard too.
+    const sample = shame.getByText("“Chị nói thấy sao sao, lúc đó chị thấy thế nào ạ?”");
+    const ask = shame.getByRole("button", { name: "Xem câu hỏi gợi ý" });
+    await expect(sample).toHaveCount(0);
+    await expect(ask).toHaveAttribute("aria-expanded", "false");
+    await ask.focus();
+    await page.keyboard.press("Enter");
+    await expect(ask).toHaveAttribute("aria-expanded", "true");
+    await expect(sample).toBeVisible();
 
-    // Every path has its fixed label.
-    await expect(missed.locator(".pill-neutral").filter({ hasText: "Hỏi thẳng" })).toHaveCount(2);
-    await expect(missed.locator(".pill-neutral").filter({ hasText: "Kéo về một lần cụ thể" })).toHaveCount(1);
+    // A trust item: how trust is earned, with the turns that cost it.
+    const trust = hints.getByRole("listitem").filter({ hasText: "Thử hỏi về: vay mượn và nợ" });
+    await expect(trust.locator(".pill")).toHaveText("Tạo tin tưởng");
+    await expect(trust.getByText("Chị Thu chỉ kể khi đủ tin bạn. Tránh câu phán xét hay dẫn dắt.")).toBeVisible();
+    await expect(trust.getByText("làm chị Thu dè dặt hơn.")).toHaveText("Lượt 4 làm chị Thu dè dặt hơn.");
+
+    // Every hint has its path's fixed label, and no hint carries its item's text.
+    await expect(hints.locator(".pill-neutral")).toHaveText(["Hỏi tiếp chi tiết", "Tạo tin tưởng", "Tạo tin tưởng"]);
+    for (const missedItem of [SHAME, INSTALLMENT]) await expect(hints).not.toContainText(missedItem);
   });
 
   test("the transcript drawer opens at the turn, highlights it for two seconds, and marks only confirmed leading turns", async ({ page, context }) => {
@@ -251,7 +285,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await guess(page, 3);
     await expectResult(page, 3, 2);
 
-    const link = section(page, "Đã kể").getByRole("button", { name: "Lượt 3" });
+    const link = (await openTold(page, 2)).getByRole("button", { name: "Lượt 3" });
     await link.focus();
     await page.keyboard.press("Enter");
     const drawer = transcriptDrawer(page);
@@ -317,7 +351,8 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
       }
       const body = JSON.parse(reveal.text);
       expect(body).toMatchObject({ ready: true, reveal: { mode: "offer", held: 1, recognized: { state: "count", value: 1 }, replay: { level: "primary", target: null } } });
-      expect(Object.keys(body.reveal).sort()).toEqual(["guess", "held", "missed", "missedItems", "mode", "notes", "recognized", "replay", "takeaway", "told", "toldItems", "total"]);
+      expect(Object.keys(body.reveal).sort()).toEqual(["guess", "held", "hints", "missed", "mode", "notes", "recognized", "replay", "takeaway", "told", "toldItems", "total"]);
+      for (const missedItem of [SHAME, INSTALLMENT]) expect(reveal.text).not.toContain(missedItem);
       // The page itself, as the server sends it, with the props of its client components.
       const html = await (await page.request.get(`/sessions/${sessionId}`)).text();
       for (const text of sealed) expect(html).not.toContain(text);
@@ -329,12 +364,12 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     const turns = JSON.parse((await get("transcript")).text).turns as { index: number; leading: unknown }[];
     expect(turns.filter((turn) => turn.leading !== null).map((turn) => turn.index)).toEqual([4]);
 
-    // Once the session is done, what was held is sent.
+    // Once the session is done, what was held is sent, but not the target's text: no replay opened it.
     await db.setSessionStatus(sessionId, "done");
     const open = await get("reveal");
-    expect(open.text).toContain(TARGET.content);
-    expect(open.text).toContain(TARGET.sampleQuestion);
-    expect(JSON.parse(open.text)).toMatchObject({ reveal: { mode: "done", recognized: { state: "count", value: 2 } } });
+    expect(open.text).not.toContain(TARGET.content);
+    for (const missedItem of [SHAME, INSTALLMENT]) expect(open.text).not.toContain(missedItem);
+    expect(JSON.parse(open.text)).toMatchObject({ reveal: { mode: "done", recognized: { state: "count", value: 2 }, replay: { level: "primary", target: null } } });
 
     // Another learner gets "not found" from every route of this session.
     const other = await browser.newContext();
@@ -370,7 +405,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await page.goto("/");
     await page.goto(`/sessions/${sessionId}`);
     await expectResult(page, 2, 2);
-    await section(page, "Đã kể").getByRole("button", { name: "Lượt 1" }).click();
+    await (await openTold(page, 2)).getByRole("button", { name: "Lượt 1" }).click();
     await expect(transcriptDrawer(page).locator('[data-turn="1"]')).toBeVisible();
     await page.request.get(`/api/sessions/${sessionId}/reveal`);
 
@@ -387,7 +422,9 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await expect(replayOffer(page).getByRole("button", { name: "Quay lại lượt 1" })).toBeVisible();
     await expect(replayOffer(page).locator(".held-card")).toHaveCount(0);
     await expect(page.getByText("Giữ lại", { exact: false })).toHaveCount(0);
-    await expect(section(page, "Bỏ lỡ").locator(".pill-amber")).toHaveText("11");
+    await expect(hintsList(page).getByRole("listitem")).toHaveCount(3);
+    await expect(hintsList(page).locator(".hints-more")).toHaveText("Còn 8 điều khác chị Thu chưa kể. Luyện lại từ đầu để tìm ra.");
+    await expect(page.getByRole("region", { name: /khai thác được/ })).toHaveCount(0);
 
     // The one comment cites the replayed turn: it is held back, and the empty line would be untrue.
     const takeaway = section(page, "Thói quen hỏi của bạn — đọc lại trước buổi thật");
@@ -437,16 +474,18 @@ test.describe("Màn 6: computing, empty and degraded states", () => {
     expect(await revealCallsOf(sessionId)).toHaveLength(3);
   });
 
-  test("no replay moment: the session is done, the sample question stands in, and the takeaway can be downloaded", async ({ page, context }) => {
+  test("no replay moment: the session is done, the heaviest locked item leads the hints, and the takeaway can be downloaded", async ({ page, context }) => {
     const { sessionId } = await endedInterview(page, context, "reveal-none", PLAIN_QUESTIONS, "làm kế toán, đi xe máy");
     await guess(page, 0);
     await expectResult(page, 0, 0);
 
     expect((await db.session(sessionId)).status).toBe("done");
-    await expect(page.locator(".replay-offer")).toHaveCount(0);
-    const block = page.locator(".no-replay");
-    await expect(block.getByText("Buổi này không có lượt để luyện lại")).toBeVisible();
-    await expect(block.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    await expect(page.locator(".replay-offer, .replay-card")).toHaveCount(0);
+    const first = hintsList(page).getByRole("listitem").first();
+    await expect(first.locator(".hint-topic")).toHaveText(`Thử hỏi về: ${TARGET.topicTag}`);
+    await first.getByRole("button", { name: "Xem câu hỏi gợi ý" }).click();
+    await expect(first.locator(".q")).toHaveText(`“${TARGET.sampleQuestion}”`);
+    expect(await page.content()).not.toContain(TARGET.content);
     await expect(page.locator(".recog")).toHaveText("Nhận biết: chưa có điều quan trọng nào trong ghi chú của bạn.");
     await expect(section(page, "Ghi chú của bạn").locator(".cv-plain")).toHaveText("làm kế toán, đi xe máy");
     await expect(page.getByText(TAKEAWAY_EMPTY).first()).toBeVisible();
@@ -604,10 +643,10 @@ test.describe("Màn 5 and 6 at 360px", () => {
     await expectResult(page, 3, 2);
     await expectNoHorizontalScroll(page);
 
-    await section(page, "Bỏ lỡ").getByRole("listitem").filter({ hasText: "xấu hổ" }).getByRole("button").first().click();
+    await hintsList(page).getByRole("listitem").first().getByRole("button", { name: "Xem câu hỏi gợi ý" }).click();
     await expectNoHorizontalScroll(page);
 
-    await section(page, "Đã kể").getByRole("button", { name: "Lượt 1" }).click();
+    await (await openTold(page, 2)).getByRole("button", { name: "Lượt 1" }).click();
     const drawer = transcriptDrawer(page);
     await expect(drawer).toBeVisible();
     const size = (await drawer.boundingBox())!;

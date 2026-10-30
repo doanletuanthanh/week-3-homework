@@ -168,7 +168,7 @@ describe("Màn 6 in done mode: how the replay ended", () => {
     if (rendered.screen !== "reveal") throw new Error(`expected the reveal screen, got ${rendered.screen}`);
     return rendered;
   };
-  const targetNote = (rendered: ReturnType<typeof done>) => rendered.reveal.notes!.find((segment) => segment.match?.itemContent === target.content)!;
+  const targetNote = (rendered: ReturnType<typeof done>) => rendered.reveal.notes!.find((segment) => segment.text === "đang trả phí cho một app mà không dùng?")!;
 
   it("success: the target is in the outcome, its note says the replay opened it, and it is not moved into what was told", () => {
     const rendered = done("success", [NEUTRAL, OPENING]);
@@ -180,7 +180,7 @@ describe("Màn 6 in done mode: how the replay ended", () => {
     // The numbers of the main interview are what they were.
     expect(rendered.reveal).toMatchObject({ mode: "done", told: 2, held: 1, missed: 8, recognized: { state: "count", value: 2 } });
     expect(rendered.reveal.toldItems.map((item) => item.content)).not.toContain(target.content);
-    expect(rendered.reveal.missedItems.map((item) => item.content)).not.toContain(target.content);
+    expect(rendered.reveal.hints.map((hint) => hint.topic)).not.toContain(target.topic_tag);
     // No other note is said to have been opened in the replay.
     expect(rendered.reveal.notes!.filter((segment) => segment.match?.openedInReplay)).toHaveLength(1);
   });
@@ -189,17 +189,24 @@ describe("Màn 6 in done mode: how the replay ended", () => {
     ["fail", [NEUTRAL, NEUTRAL, NEUTRAL]],
     ["stopped", [NEUTRAL]],
     ["skipped", []],
-  ] as [ReplayResultKind, TurnSpec[]][])("%s: the target is shown, and its note keeps the sentence of the main interview alone", (result, specs) => {
+  ] as [ReplayResultKind, TurnSpec[]][])("%s: the target is a hint, never its text, and its note keeps the label of the main interview alone", (result, specs) => {
     const rendered = done(result, specs);
-    expect(rendered.replay).toMatchObject({ outcome: { level: "primary", result, target: { content: target.content }, otherItem: null }, turnCount: specs.length });
-    expect(targetNote(rendered).match).toMatchObject({ kind: "unconfirmed", openedInReplay: false });
+    expect(rendered.replay).toMatchObject({
+      outcome: { level: "primary", result, hint: { topic: target.topic_tag, path: target.path, sampleQuestion: target.sample_question }, otherItem: null },
+      turnCount: specs.length,
+    });
+    expect(targetNote(rendered).match).toEqual({ kind: "unconfirmed", itemContent: null, turn: 2, openedInReplay: false });
+    // Only the replay's result speaks of the target: it is not one of the hints under it.
+    expect(rendered.reveal.hints.map((hint) => hint.topic)).not.toContain(target.topic_tag);
+    expect(JSON.stringify(rendered)).not.toContain(target.content);
   });
 
   it("partial: names the other item, and the target's note is not marked as opened", () => {
     const other = chiThu.items.find((item) => item.id === "tried-methods")!;
     const rendered = done("partial", [{ ...NEUTRAL, unlocked: other.id, verdict: told(other.id) }, NEUTRAL, NEUTRAL]);
-    expect(rendered.replay).toMatchObject({ outcome: { result: "partial", otherItem: other.content } });
-    expect(targetNote(rendered).match).toMatchObject({ openedInReplay: false });
+    expect(rendered.replay).toMatchObject({ outcome: { result: "partial", otherItem: other.content, hint: { topic: target.topic_tag } } });
+    expect(targetNote(rendered).match).toMatchObject({ itemContent: null, openedInReplay: false });
+    expect(JSON.stringify(rendered)).not.toContain(target.content);
   });
 
   it("an opened target whose judge failed is not a told one", () => {
@@ -211,13 +218,13 @@ describe("Màn 6 in done mode: how the replay ended", () => {
     const branch = { forkAfterTurn: 3, targetItemId: null, fallbackLevel: "fallback1" as const };
     const grounded: TurnSpec = { ...NEUTRAL, label: "confirm_grounded" };
     expect(done("success", [grounded, NEUTRAL, grounded], branch).replay).toEqual({
-      outcome: { level: "fallback1", result: "success", leadingTurn: 4, grounded: 2, stillLeading: null, sampleQuestion: null },
+      outcome: { level: "fallback1", result: "success", leadingTurn: 4, grounded: 2, stillLeading: null, hint: null },
       turnCount: 3,
     });
 
     const leading: TurnSpec = { question: "Chắc tại chị lười nên mới bỏ đúng không ạ?", reply: "Cũng không hẳn em.", label: "leading", span: [1, 3], judgeLabel: "leading" };
     expect(done("fail", [NEUTRAL, leading, NEUTRAL], branch).replay).toMatchObject({
-      outcome: { result: "fail", stillLeading: { turn: 5, words: "tại chị lười" }, sampleQuestion: target.sample_question },
+      outcome: { result: "fail", stillLeading: { turn: 5, words: "tại chị lười" }, hint: { topic: target.topic_tag, sampleQuestion: target.sample_question } },
     });
     expect(done("fail", [NEUTRAL, { ...leading, judgeLabel: "open" }, NEUTRAL], branch).replay).toMatchObject({ outcome: { stillLeading: null } });
   });
@@ -248,17 +255,19 @@ describe("Màn 6: the offer to play the persona again from the start", () => {
 });
 
 describe("ReplayResult: the fixed line of a leading-question replay that failed", () => {
-  const base = { level: "fallback1" as const, result: "fail" as const, leadingTurn: 1, sampleQuestion: "Câu hỏi mẫu ạ?" };
-  const html = (outcome: ReplayOutcome) => renderToStaticMarkup(createElement(ReplayResult, { outcome, persona: { displayName: "chị Thu", displayNameCapitalized: "Chị Thu" } }));
+  const hint = { topic: "chủ đề mẫu", path: "follow_up" as const, sampleQuestion: "Câu hỏi mẫu ạ?", hook: null, trustTurns: [] };
+  const base = { level: "fallback1" as const, result: "fail" as const, leadingTurn: 1, hint };
+  const persona = { displayName: "chị Thu", displayNameCapitalized: "Chị Thu" };
+  const html = (outcome: ReplayOutcome, resultCard?: boolean) => renderToStaticMarkup(createElement(ReplayResult, { outcome, persona, resultCard }));
 
   it("quotes the question that was still leading", () => {
     expect(html({ ...base, grounded: 1, stillLeading: { turn: 2, words: "tại chị lười" } })).toContain("Lượt 2 vẫn thêm ý của bạn: “tại chị lười”.");
   });
 
   it("success: three questions without leading, and how many were grounded", () => {
-    const shown = html({ ...base, result: "success", grounded: 2, stillLeading: null, sampleQuestion: null });
+    const shown = html({ ...base, result: "success", grounded: 2, stillLeading: null, hint: null });
     expect(shown).toContain("Ba câu không dẫn dắt, có 2 câu bám vào lời chị Thu.");
-    expect(shown).not.toContain("Câu hỏi mẫu");
+    expect(shown).not.toContain("Thử hỏi về");
   });
 
   it("a confirmed leading question is quoted on a stop too, before anything else", () => {
@@ -269,7 +278,7 @@ describe("ReplayResult: the fixed line of a leading-question replay that failed"
     const shown = html({ ...base, result: "stopped", grounded: 2, stillLeading: null });
     expect(shown).toContain("Có 2 câu bám vào lời chị Thu trước khi bạn dừng.");
     expect(shown).not.toContain("chưa có câu nào bám vào");
-    expect(shown).toContain("Câu hỏi mẫu ạ?");
+    expect(shown).toContain("Thử hỏi về: chủ đề mẫu");
   });
 
   it("everything else: no question rested on the persona's words", () => {
@@ -277,20 +286,36 @@ describe("ReplayResult: the fixed line of a leading-question replay that failed"
       const shown = html({ ...base, result, grounded: 0, stillLeading: null });
       expect(shown).toContain("Lần này chưa có câu nào bám vào lời chị Thu.");
       expect(shown).not.toContain("trước khi bạn dừng");
-      expect(shown).toContain("Câu hỏi mẫu ạ?");
+      expect(shown).toContain("Thử hỏi về: chủ đề mẫu");
     }
+  });
+
+  it("shows the hint with its question folded: the question appears only once asked for", () => {
+    const shown = html({ ...base, grounded: 0, stillLeading: null });
+    expect(shown).toContain('aria-expanded="false"');
+    expect(shown).toContain("Xem câu hỏi gợi ý");
+    expect(shown).not.toContain("Câu hỏi mẫu ạ?");
+  });
+
+  it("leaves the hint to the hints for next time when it is the result card of Màn 6", () => {
+    const shown = html({ ...base, grounded: 0, stillLeading: null }, true);
+    expect(shown).toContain("Lần này chưa có câu nào bám vào lời chị Thu.");
+    expect(shown).not.toContain("Thử hỏi về");
   });
 
   it("says nothing about the questions of a replay that was skipped", () => {
     const skipped = html({ ...base, result: "skipped", grounded: 0, stillLeading: null });
     expect(skipped).not.toContain("chưa có câu nào");
-    expect(skipped).toContain("Câu hỏi mẫu ạ?");
+    expect(skipped).toContain("Thử hỏi về: chủ đề mẫu");
   });
 
   it("renders an item's text as text, never as markup", () => {
-    const hostile = html({ level: "primary", result: "fail", target: { content: "<img src=x onerror=alert(1)>", sampleQuestion: "<b>hỏi</b>" }, otherItem: null });
-    expect(hostile).not.toContain("<img");
-    expect(hostile).not.toContain("<b>");
+    const held = html({ level: "primary", result: "partial", hint: { ...hint, topic: "<img src=x onerror=alert(1)>" }, otherItem: "<b>khác</b>" });
+    expect(held).not.toContain("<img");
+    expect(held).not.toContain("<b>");
+    const opened = html({ level: "primary", result: "success", target: { content: "<img src=x onerror=alert(1)>", sampleQuestion: "<b>hỏi</b>" }, otherItem: null }, true);
+    expect(opened).not.toContain("<img");
+    expect(opened).not.toContain("<b>");
   });
 });
 
@@ -302,7 +327,7 @@ describe("replayOutcomeOf", () => {
 });
 
 describe("toBrowserReveal: the note about a target the replay opened", () => {
-  const notes = (status: string, replaySucceeded: boolean | undefined) => toBrowserReveal({ status, guess: 4, canvasText: NOTES, reveal, replaySucceeded })?.notes ?? [];
+  const notes = (status: string, replaySucceeded: boolean | undefined) => toBrowserReveal({ status, guess: 4, canvasText: NOTES, reveal, replaySucceeded, scenarioItems: chiThu.items })?.notes ?? [];
   const opened = (status: string, replaySucceeded: boolean | undefined) => notes(status, replaySucceeded).filter((segment) => segment.match?.openedInReplay);
 
   it("is marked only for a done session whose replay succeeded", () => {

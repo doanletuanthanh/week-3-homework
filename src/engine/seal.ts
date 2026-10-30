@@ -1,14 +1,19 @@
-import type { UnlockPath } from "@/scenario/schema";
+import type { ScenarioItem, UnlockPath } from "@/scenario/schema";
 import { recognizedCount } from "./reveal-compute";
-import type { CanvasMatchKind, DiagnosisKey, RevealClaim, RevealJson, SlotType } from "./reveal-types";
+import type { CanvasMatchKind, DiagnosisKey, RevealClaim, RevealItem, RevealJson, SlotType } from "./reveal-types";
 import { tokenOffsets } from "./tokens";
 
 /**
  * The only way reveal data reaches a browser. Default deny: a session that is `done` gets
- * everything; one that is `revealed` or `replaying` gets everything except what would tell the
- * learner the replay target (PRD Màn 6, sealing rules); any other status gets nothing. Pages and
- * route handlers send what these functions return, never the stored `reveal_json`.
+ * everything but the text of the items the learner never heard; one that is `revealed` or
+ * `replaying` gets that less whatever would tell the learner the replay target (PRD Màn 6,
+ * sealing rules); any other status gets nothing. An item the persona did not tell goes out as a
+ * hint, what to ask about and how, so playing the persona again still has something to find.
+ * Pages and route handlers send what these functions return, never the stored `reveal_json`.
  */
+
+/** Untold items offered as hints for next time; the rest are only counted. */
+export const MAX_HINTS = 3;
 
 export type BrowserClaim = {
   id: string;
@@ -23,11 +28,28 @@ export type BrowserClaim = {
   suggestedQuestion: string | null;
 };
 
+/**
+ * An item the persona did not tell, as a hint for playing the persona again: what to ask about
+ * and how that is asked, never what the item is.
+ */
+export type BrowserHint = {
+  /** The item's public label (`topic_tag`). */
+  topic: string;
+  path: UnlockPath;
+  /** Shown only once "Xem câu hỏi gợi ý" is pressed. */
+  sampleQuestion: string;
+  /** The turn in which the persona hinted at the item, and the question asked right after. */
+  hook: RevealItem["hook"];
+  /** Trust items: the questions that made the persona more guarded. */
+  trustTurns: number[];
+};
+
 export type NoteSegment = {
   text: string;
   /** Set for a stretch that was matched; plain text has none. */
   match: {
     kind: CanvasMatchKind;
+    /** The matched item's text, once the learner heard it: told in the interview, or in a replay that opened it. */
     itemContent: string | null;
     turn: number | null;
     /** The note is about the replay target, and the replay opened it (FR-48a, the added sentence). */
@@ -53,18 +75,16 @@ export type BrowserReveal = {
         /** The turn the replay starts at. */
         returnTurn: number;
         diagnosis: { key: DiagnosisKey; turn: number };
-        /** The target item, once the session is `done`. */
+        /** The target item, once the replay opened it: the learner heard it. */
         target: { content: string; sampleQuestion: string } | null;
       }
-    | { level: "none"; sampleQuestion: string | null };
+    | { level: "none" };
   toldItems: { content: string; turn: number }[];
-  missedItems: {
-    content: string;
-    path: UnlockPath;
-    sampleQuestion: string;
-    hook: { turn: number; personaText: string; next: { turn: number; learnerText: string } | null } | null;
-    trustTurns: number[];
-  }[];
+  /**
+   * Up to `MAX_HINTS` missed items, the heaviest first, as hints. The replay target is never one:
+   * it is held while the replay is ahead, and the replay's own result speaks of it after.
+   */
+  hints: BrowserHint[];
   /** The frozen notes cut into plain and matched stretches; null when the notes are empty. */
   notes: NoteSegment[] | null;
   takeaway: {
@@ -119,13 +139,15 @@ function notesOf(canvasText: string, reveal: RevealJson, heldItemId: string | nu
     if (start === undefined || end === undefined || start < cursor) continue;
     if (start > cursor) segments.push({ text: canvasText.slice(cursor, start), match: null });
     const item = match.itemId === null ? undefined : itemOf.get(match.itemId);
+    const openedInReplay = match.itemId !== null && match.itemId === openedItemId;
     segments.push({
       text: canvasText.slice(start, end),
       match: {
         kind: match.kind,
-        itemContent: item?.content ?? null,
+        // A note that matched an untold item keeps its label, not the item's text.
+        itemContent: match.kind === "told" || openedInReplay ? (item?.content ?? null) : null,
         turn: match.kind === "told" ? (item?.toldTurn ?? null) : (item?.hook?.turn ?? null),
-        openedInReplay: match.itemId !== null && match.itemId === openedItemId,
+        openedInReplay,
       },
     });
     cursor = end;
@@ -137,6 +159,7 @@ function notesOf(canvasText: string, reveal: RevealJson, heldItemId: string | nu
 /**
  * What a browser may see of a session's reveal; null when it may see none of it yet.
  * `replaySucceeded` says the replay opened its target; it is read for a `done` session only.
+ * `scenarioItems` are the items of the session's own scenario version: a hint's topic and weight.
  */
 export function toBrowserReveal(input: {
   status: string;
@@ -144,6 +167,7 @@ export function toBrowserReveal(input: {
   canvasText: string;
   reveal: RevealJson | null;
   replaySucceeded?: boolean;
+  scenarioItems: readonly Pick<ScenarioItem, "id" | "topic_tag" | "weight">[];
 }): BrowserReveal | null {
   const { status, guess, canvasText, reveal } = input;
   const access = accessOf(status);
@@ -173,7 +197,18 @@ export function toBrowserReveal(input: {
   const withheld = reveal.claims.some((claim) => claim.shown && !visible(claim));
 
   const missed = reveal.items.filter((item) => item.state === "missed");
-  const sampleItem = reveal.items.find((item) => item.id === reveal.sampleItemId);
+  const opened = open && input.replaySucceeded === true ? held : null;
+  const revealItemOf = new Map(reveal.items.map((item) => [item.id, item]));
+  // Stable sort: equal weights keep scenario order.
+  const hints = [...input.scenarioItems]
+    .sort((a, b) => b.weight - a.weight)
+    .flatMap((meta): BrowserHint[] => {
+      const item = revealItemOf.get(meta.id);
+      if (item?.state !== "missed") return [];
+      const trustTurns = item.trustTurns.filter((turn) => !hidden.includes(turn));
+      return [{ topic: meta.topic_tag, path: item.path, sampleQuestion: item.sampleQuestion, hook: item.hook, trustTurns }];
+    })
+    .slice(0, MAX_HINTS);
 
   return {
     mode: open ? "done" : "offer",
@@ -185,22 +220,16 @@ export function toBrowserReveal(input: {
     recognized: recognizedOf(reveal, open ? undefined : held?.id),
     replay:
       replay.level === "none"
-        ? { level: "none", sampleQuestion: sampleItem?.sampleQuestion ?? null }
+        ? { level: "none" }
         : {
             level: replay.level,
             returnTurn: replay.forkAfterTurn + 1,
             diagnosis: { key: reveal.diagnosisKey!, turn: replay.level === "primary" ? replay.forkAfterTurn : replay.leadingTurn },
-            target: open && held ? { content: held.content, sampleQuestion: held.sampleQuestion } : null,
+            target: opened ? { content: opened.content, sampleQuestion: opened.sampleQuestion } : null,
           },
     toldItems: reveal.items.filter((item) => item.state === "told").map((item) => ({ content: item.content, turn: item.toldTurn! })),
-    missedItems: missed.map((item) => ({
-      content: item.content,
-      path: item.path,
-      sampleQuestion: item.sampleQuestion,
-      hook: item.hook,
-      trustTurns: item.trustTurns.filter((turn) => !hidden.includes(turn)),
-    })),
-    notes: notesOf(canvasText, reveal, open ? null : (held?.id ?? null), open && input.replaySucceeded ? (held?.id ?? null) : null),
+    hints,
+    notes: notesOf(canvasText, reveal, open ? null : (held?.id ?? null), opened?.id ?? null),
     takeaway: {
       praise: praise ? toClaim(praise) : null,
       comments,

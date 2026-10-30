@@ -138,18 +138,31 @@ describe("describeReplay: what the learner is shown", () => {
   const describePrimary = (result: "success" | "partial" | "fail" | "stopped" | "skipped", turns: ReplayTurn[]) =>
     describeReplay({ scenario: chiThu, level: "primary", result, forkAfterTurn: 2, targetItemId: TARGET, turns, openItemIds: new Set(["money-home"]) });
 
-  it.each(["success", "fail", "stopped", "skipped"] as const)("primary %s: the target's content and its sample question, and no other item", (result) => {
-    expect(describePrimary(result, [turn(3)])).toEqual({
+  it("primary success: the target's content and its sample question, and no other item", () => {
+    expect(describePrimary("success", [turn(3)])).toEqual({
       level: "primary",
-      result,
+      result: "success",
       target: { content: itemOf(TARGET).content, sampleQuestion: itemOf(TARGET).sample_question },
       otherItem: null,
     });
   });
 
-  it("primary partial: names the other item the learner opened", () => {
+  it.each(["fail", "stopped", "skipped"] as const)("primary %s: the target as a hint, never its text", (result) => {
+    const shown = describePrimary(result, [turn(3)]);
+    expect(shown).toEqual({
+      level: "primary",
+      result,
+      hint: { topic: itemOf(TARGET).topic_tag, path: itemOf(TARGET).path, sampleQuestion: itemOf(TARGET).sample_question, hook: null, trustTurns: [] },
+      otherItem: null,
+    });
+    expect(JSON.stringify(shown)).not.toContain(itemOf(TARGET).content);
+  });
+
+  it("primary partial: names the other item the learner opened, and the target only as a hint", () => {
     const turns = [turn(3, { unlockedItemId: "tried-methods", disclosedItemIds: ["tried-methods"] }), turn(4), turn(5)];
-    expect(describePrimary("partial", turns)).toMatchObject({ result: "partial", otherItem: itemOf("tried-methods").content, target: { content: itemOf(TARGET).content } });
+    const shown = describePrimary("partial", turns);
+    expect(shown).toMatchObject({ result: "partial", otherItem: itemOf("tried-methods").content, hint: { topic: itemOf(TARGET).topic_tag } });
+    expect(JSON.stringify(shown)).not.toContain(itemOf(TARGET).content);
   });
 
   it("refuses a primary replay that has no target", () => {
@@ -162,14 +175,14 @@ describe("describeReplay: what the learner is shown", () => {
   const describeFallback = (result: "success" | "fail" | "stopped" | "skipped", turns: ReplayTurn[], open: string[] = []) =>
     describeReplay({ scenario: chiThu, level: "fallback1", result, forkAfterTurn: 0, targetItemId: null, turns, openItemIds: new Set(open) });
 
-  it("fallback 1 success: how many of the three questions rested on the persona's words, and no sample question", () => {
+  it("fallback 1 success: how many of the three questions rested on the persona's words, and no hint", () => {
     expect(describeFallback("success", labelled("confirm_grounded", "open", "boundary_probe"))).toEqual({
       level: "fallback1",
       result: "success",
       leadingTurn: 1,
       grounded: 2,
       stillLeading: null,
-      sampleQuestion: null,
+      hint: null,
     });
   });
 
@@ -191,12 +204,14 @@ describe("describeReplay: what the learner is shown", () => {
     expect(describeFallback("fail", [turn(1, { judgeLabel: "leading" }), turn(2), turn(3)])).toMatchObject({ stillLeading: null });
   });
 
-  it("fallback 1 fail, stop and skip: the sample question of the most important item still locked", () => {
+  it("fallback 1 fail, stop and skip: the most important item still locked, as a hint", () => {
+    const hintFor = (id: string) => ({ topic: itemOf(id).topic_tag, sampleQuestion: itemOf(id).sample_question });
     // paid-app, shame and installment share the highest weight: scenario order decides.
-    expect(describeFallback("fail", labelled("open", "open", "open"))).toMatchObject({ sampleQuestion: itemOf("paid-app").sample_question });
-    expect(describeFallback("stopped", [], ["paid-app"])).toMatchObject({ sampleQuestion: itemOf("shame").sample_question, grounded: 0 });
-    expect(describeFallback("skipped", [], ["paid-app", "shame"])).toMatchObject({ sampleQuestion: itemOf("installment").sample_question });
-    expect(describeFallback("fail", [], chiThu.items.map((item) => item.id))).toMatchObject({ sampleQuestion: null });
+    expect(describeFallback("fail", labelled("open", "open", "open"))).toMatchObject({ hint: hintFor("paid-app") });
+    expect(describeFallback("stopped", [], ["paid-app"])).toMatchObject({ hint: hintFor("shame"), grounded: 0 });
+    expect(describeFallback("skipped", [], ["paid-app", "shame"])).toMatchObject({ hint: { ...hintFor("installment"), path: "trust" } });
+    expect(describeFallback("fail", [], chiThu.items.map((item) => item.id))).toMatchObject({ hint: null });
+    expect(JSON.stringify(describeFallback("fail", []))).not.toContain(itemOf("paid-app").content);
   });
 
   it("names the leading turn of the main interview that was replayed", () => {

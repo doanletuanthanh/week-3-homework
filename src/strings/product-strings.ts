@@ -68,7 +68,7 @@ export const DIAGNOSIS = {
   try_differently: "Lượt {turn}: thử hỏi lại câu này theo cách khác.",
 } as const;
 
-/** Màn 6 item 4: how a missed item could have been opened. */
+/** A hint for next time (Màn 6, Màn 7): how its item could have been opened. */
 export const PATH_LABEL = {
   follow_up: "Hỏi tiếp chi tiết",
   past_story: "Kéo về một lần cụ thể",
@@ -76,11 +76,35 @@ export const PATH_LABEL = {
   surface: "Hỏi thẳng",
 } as const;
 
-/** Màn 6 item 4, a missed trust item: code fills the turns from the ledger. */
+/** A hint for next time: one sentence on how its path is asked. */
+export const PATH_TIP = {
+  follow_up: "{Persona} sẽ gợi mở trước. Hỏi tiếp ngay vào câu đó.",
+  past_story: "Kéo {persona} về một lần cụ thể đã xảy ra.",
+  trust: "{Persona} chỉ kể khi đủ tin bạn. Tránh câu phán xét hay dẫn dắt.",
+  surface: "Hỏi thẳng vào chuyện này là {persona} kể.",
+} as const;
+
+/** The hint of a missed trust item: code fills the turns from the ledger. */
 export const TRUST_MISSED = {
-  not_enough: "{Persona} chưa đủ tin để kể.",
   turns: "{turns} làm {persona} dè dặt hơn.",
 } as const;
+
+/**
+ * Màn 6, "Gợi ý cho lần luyện sau": up to three items the persona did not tell, each as what to ask
+ * about and how, never as what it is. `{topic}` is an item's public label; `{count}` the untold
+ * items no hint is shown for.
+ */
+export const HINTS = {
+  title: "Gợi ý cho lần luyện sau",
+  ask_about: "Thử hỏi về: {topic}",
+  show_question: "Xem câu hỏi gợi ý",
+  hinted: "{Persona} đã gợi",
+  asked_next: "Bạn hỏi ngay sau",
+  more: "Còn {count} điều khác {persona} chưa kể. Luyện lại từ đầu để tìm ra.",
+} as const;
+
+/** Màn 6: the line the told items are folded under. */
+export const TOLD_SUMMARY = "Bạn đã khai thác được {count} điều";
 
 /** FR-19: follows the words the learner added, only when the verifier agreed they were new. */
 export const LEADING_NEVER_SAID = "{persona} chưa từng nói điều này.";
@@ -97,7 +121,6 @@ export const REPLAY_RESULT = {
   unlocked_note: "Đây chính là điều bạn bỏ lỡ.",
   other_item: "Bạn mở được một điều khác: {item}",
   held_back: "Điều {persona} đã giữ lại",
-  opening_question: "Một câu đã mở được nó",
   no_leading: "Ba câu không dẫn dắt, có {count} câu bám vào lời {persona}.",
   still_leading: "Lượt {turn} vẫn thêm ý của bạn: “{words}”.",
   stopped_grounded: "Có {count} câu bám vào lời {persona} trước khi bạn dừng.",
@@ -217,9 +240,9 @@ export const HOME_SAMPLE = {
   missed: 7,
   recognised: "Nhận biết: 4",
   recognised_rest: "điều quan trọng trong ghi chú của bạn.",
-  missed_kind: "Bỏ lỡ · Hỏi tiếp chi tiết",
-  // The artboard says "Tự đặt hạn mức…"; "tự đặt" is a secret term of a persona in the library, so the sample words it otherwise.
-  missed_item: "Giữ hạn mức riêng bằng cách rút tiền mặt đầu tuần",
+  missed_kind: "Gợi ý · Hỏi tiếp chi tiết",
+  // A hint as the result shows one: a topic to ask about, never the item. No persona of the library has this topic or its words.
+  missed_item: "Thử hỏi về: cách giữ mức tiêu mỗi tuần",
   persona_turn: "lượt 11",
   quote: "Tuần nào cũng vậy, chị có cách riêng để không tiêu quá tay.",
   quote_marked: "cách riêng để không tiêu quá tay",
@@ -286,7 +309,10 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(CANVAS_EXPLANATION).map(([name, text]) => ({ key: `canvas_explanation.${name}`, text })),
     ...Object.entries(DIAGNOSIS).map(([name, text]) => ({ key: `diagnosis.${name}`, text })),
     ...Object.entries(PATH_LABEL).map(([name, text]) => ({ key: `path_label.${name}`, text })),
+    ...Object.entries(PATH_TIP).map(([name, text]) => ({ key: `path_tip.${name}`, text })),
     ...Object.entries(TRUST_MISSED).map(([name, text]) => ({ key: `trust_missed.${name}`, text })),
+    ...Object.entries(HINTS).map(([name, text]) => ({ key: `hints.${name}`, text })),
+    { key: "told_summary", text: TOLD_SUMMARY },
     { key: "leading_never_said", text: LEADING_NEVER_SAID },
     { key: "canvas_replay_opened", text: CANVAS_REPLAY_OPENED },
     ...Object.entries(REPLAY_RESULT).map(([name, text]) => ({ key: `replay_result.${name}`, text })),

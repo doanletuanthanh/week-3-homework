@@ -264,8 +264,8 @@ test.describe("learner text with HTML in it is shown as text (NFR-5)", () => {
     await expectShownAsText(page, ".notes-review .paper");
 
     // The replay on offer is skipped: the comments, with their way into the transcript, are open.
-    await page.locator(".replay-offer").getByRole("button", { name: "Bỏ qua, cho tôi xem luôn" }).click();
-    await page.getByRole("alertdialog", { name: "Bỏ qua lần luyện lại?" }).getByRole("button", { name: "Cho tôi xem luôn" }).click();
+    await page.locator(".replay-offer").getByRole("button", { name: "Bỏ qua, xem kết quả luôn" }).click();
+    await page.getByRole("alertdialog", { name: "Bỏ qua lần luyện lại?" }).getByRole("button", { name: "Xem kết quả luôn" }).click();
     await page.getByRole("button", { name: "Lượt 1", exact: true }).first().click();
     const drawer = page.getByRole("dialog", { name: "Transcript buổi chính" });
     await expect(drawer.locator('[data-turn="1"]')).toContainText(HOSTILE);
@@ -311,7 +311,7 @@ test.describe("accessibility notes of the review", () => {
     await guess(page, 5);
     await expectResult(page, 5, 2);
 
-    await page.locator(".replay-offer").getByRole("button", { name: "Bỏ qua, cho tôi xem luôn" }).click();
+    await page.locator(".replay-offer").getByRole("button", { name: "Bỏ qua, xem kết quả luôn" }).click();
     const skip = page.getByRole("alertdialog", { name: "Bỏ qua lần luyện lại?" });
     await expect(skip).toHaveAccessibleDescription("Bạn sẽ không thử lại được khoảnh khắc này.");
     await skip.getByRole("button", { name: "Ở lại" }).click();
@@ -319,7 +319,7 @@ test.describe("accessibility notes of the review", () => {
     await page.locator(".replay-offer").getByRole("button", { name: "Quay lại lượt 3" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Luyện lại từ lượt 3" })).toBeVisible();
     await page.locator(".rbar").getByRole("button", { name: "Dừng" }).click();
-    await expect(page.getByRole("alertdialog", { name: "Dừng luyện lại?" })).toHaveAccessibleDescription("Điều bị giữ sẽ được mở ra.");
+    await expect(page.getByRole("alertdialog", { name: "Dừng luyện lại?" })).toHaveAccessibleDescription("Bạn sẽ không hỏi tiếp được ở lần luyện lại này.");
   });
 
   test("'Tải thêm' says how many rows it added, each time, and puts focus on the first of them", async ({ page }) => {

@@ -136,7 +136,7 @@ export type RevealItem = {
   id: string;
   content: string;
   path: UnlockPath;
-  /** `held` is the replay target: neither told nor listed as missed until the replay has ended. */
+  /** `held` is the replay target: neither told nor missed. The replay's own result speaks of it. */
   state: "told" | "missed" | "held";
   toldTurn: number | null;
   sampleQuestion: string;
@@ -187,7 +187,7 @@ export type RevealJson = {
   slotCount: number;
   claims: RevealClaim[];
   diagnosisKey: DiagnosisKey | null;
-  /** No replay: the most important item still locked, whose sample question is shown instead. */
+  /** No replay: the most important item still locked. Stored only: the hints for next time take its place on the screen. */
   sampleItemId: string | null;
   /** How often the verifier agreed, per kind of check (NFR-8). Null when the verifier failed. */
   verifierChecks: Partial<Record<CheckKind, { agree: number; disagree: number }>> | null;

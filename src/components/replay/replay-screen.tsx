@@ -160,7 +160,7 @@ export function ReplayScreen({ sessionId, persona, date, level, forkAfterTurn, c
               Giữ lại để bạn thử
             </span>
           )}
-          {level === "primary" && ended && <span className={`pill ${unlocked ? "pill-tertiary" : "pill-neutral"}`}>{unlocked ? "Đã mở khóa" : "Đã mở niêm phong"}</span>}
+          {level === "primary" && ended && <span className={`pill ${unlocked ? "pill-tertiary" : "pill-neutral"}`}>{unlocked ? "Đã mở khóa" : "Vẫn giữ lại"}</span>}
         </div>
         {!ended && (
           <button type="button" className="btn btn-surface btn-md sbar-end" onClick={() => setStopOpen(true)} disabled={busy || stopping}>
@@ -243,7 +243,7 @@ export function ReplayScreen({ sessionId, persona, date, level, forkAfterTurn, c
           Dừng luyện lại?
         </h2>
         <p id="stop-consequence" className="body-md c-variant dlg-text">
-          Điều bị giữ sẽ được mở ra.
+          Bạn sẽ không hỏi tiếp được ở lần luyện lại này.
         </p>
         {stopError && (
           <p className="ferr" role="alert">

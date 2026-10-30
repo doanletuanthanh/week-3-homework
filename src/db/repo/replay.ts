@@ -93,7 +93,7 @@ export async function startReplayBranch(
 export type SkipReplayOutcome = "skipped" | "already_ended" | "not_found" | "not_offered";
 
 /**
- * "Bỏ qua, cho tôi xem luôn": records the offered replay as skipped, with no turns, and moves the
+ * "Bỏ qua, xem kết quả luôn": records the offered replay as skipped, with no turns, and moves the
  * session to `done`. A session that is already `done` is left as it is.
  */
 export async function skipReplayBranch(

@@ -183,6 +183,7 @@ export function buildSessionView(input: {
       canvasText: session.canvasText,
       reveal: session.revealJson,
       replaySucceeded: outcome?.level === "primary" && outcome.result === "success",
+      scenarioItems: scenario.content.items,
     });
     if (reveal) {
       // Guessing here would tell a learner "you practised them all" when nobody looked.

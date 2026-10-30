@@ -247,7 +247,8 @@ test.describe("the library with the app and web app topics in it", () => {
     await page.getByRole("button", { name: "Xem kết quả" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Bạn đoán 1.Chị Hạnh đã kể: 1 trên ${HANH.items.length}.`, { timeout: 20_000 });
     expect((await db.session(sessionId)).status).toBe("done");
-    // The reveal opens what she told and keeps the other nine items of this session's persona to their tags.
+    // The reveal opens what she told, folded under its count, and keeps the other nine items of this session's persona to their tags.
+    await page.getByRole("region", { name: "Bạn đã khai thác được 1 điều" }).locator("summary").click();
     await expect(page.getByText(HANH.items[0].content)).toBeVisible();
     expect(findSealed(await nextStep(page).innerHTML(), KHOA)).toEqual([]);
 

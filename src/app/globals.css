@@ -177,8 +177,6 @@ mark{background:var(--amber-container);color:inherit;border-radius:4px;padding:0
 .li{display:flex;align-items:center;gap:12px;padding:14px 24px}
 .li + .li{border-top:1px solid var(--surface-container)}
 .check{width:20px;height:20px;border-radius:50%;background:var(--secondary);color:#fff;display:grid;place-items:center;flex:none}
-.ring{width:20px;height:20px;border-radius:50%;border:2px solid #E2E8F0;background:#fff;display:grid;place-items:center;flex:none}
-.ring::after{content:"";width:8px;height:2px;border-radius:2px;background:var(--amber-mark)}
 .sealed{width:20px;height:20px;border-radius:6px;background:var(--tertiary-container);color:#fff;display:grid;place-items:center;flex:none}
 
 /* rails */
@@ -538,7 +536,6 @@ p > .trefs{margin:0 6px 0 0;vertical-align:middle}
 .held-card .sealed{width:40px;height:40px}
 .held-card .label-md{display:block;color:#fff;margin-bottom:4px}
 .held-card .body-sm{color:#cfe9dc}
-.no-replay{padding:26px 28px;display:flex;flex-direction:column;gap:12px}
 
 .reveal-list{overflow:hidden;padding-bottom:8px}
 .reveal-list ul{list-style:none;margin:0;padding:0}
@@ -546,10 +543,22 @@ p > .trefs{margin:0 6px 0 0;vertical-align:middle}
 .reveal-list .li{padding:14px 28px}
 .reveal-list li + li{border-top:1px solid var(--surface-container)}
 .li-text{flex:1;min-width:0}
-.ex-btn{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit}
-.ex-btn[aria-expanded="true"]{background:rgba(242,243,255,.55)}
-.exp{padding:6px 28px 24px 60px;display:flex;flex-direction:column;gap:14px;background:rgba(242,243,255,.55)}
-.exp .ctx,.exp .bubble-p{background:#fff;box-shadow:var(--shadow-sm)}
+/* the told list, folded under its count */
+.told summary{list-style:none;cursor:pointer}
+.told summary::-webkit-details-marker{display:none}
+.told[open] summary{padding-bottom:12px}
+.told:not([open]) summary{padding-bottom:16px}
+.told-chev{margin-left:auto;flex:none;color:var(--on-surface-variant);transition:transform .15s}
+.told[open] .told-chev{transform:rotate(180deg)}
+/* a hint for next time: on Màn 6 in its list, on the replay's result under the held item */
+.hints li{padding:16px 28px 18px}
+.hint-body{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hint-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hint-topic{flex:1 1 12rem;min-width:0;overflow-wrap:anywhere}
+.hint-ask{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.hint-ask .ctx{align-self:stretch}
+.hints-more{padding:14px 28px 8px;border-top:1px solid var(--surface-container)}
+.rr-held{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
 
 .notes-review{padding:24px 28px 28px}
 .notes-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
@@ -722,9 +731,8 @@ dialog.drawer::backdrop{background:rgba(15,23,42,.35)}
   .replay-actions .lnk{align-self:center;padding:4px 0}
   .sec-h{padding:16px 16px 6px}
   .reveal-list .li{padding:14px 16px;align-items:flex-start;flex-wrap:wrap}
-  .ex-btn .li-text{flex-basis:calc(100% - 44px)}
-  .ex-btn .pill{margin-left:32px}
-  .exp{padding:6px 16px 20px}
+  .hints li{padding:14px 16px 16px}
+  .hints-more{padding:12px 16px 6px}
   .notes-review{padding:18px 16px}
   .paper{padding:0 14px}
   .takeaway{padding:22px 18px}

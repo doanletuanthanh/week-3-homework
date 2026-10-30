@@ -47,7 +47,7 @@ export async function startReplay(db: Database, user: AppUser, sessionId: string
   return outcome === "started" || outcome === "already_started" ? { ok: true } : { ok: false, error: outcome };
 }
 
-/** "Bỏ qua, cho tôi xem luôn": no replay is played, and nothing stays sealed. */
+/** "Bỏ qua, xem kết quả luôn": no replay is played, and what was sealed for it is shown, the target as a hint. */
 export async function skipReplay(db: Database, user: AppUser, sessionId: string): Promise<ReplayActionResult> {
   const outcome = await skipReplayBranch(db, { userId: user.id, sessionId }, (tx, session, branch) => recordResult(tx, session, branch, 0));
   return outcome === "skipped" || outcome === "already_ended" ? { ok: true } : { ok: false, error: outcome };
@@ -55,7 +55,7 @@ export async function skipReplay(db: Database, user: AppUser, sessionId: string)
 
 export type StopReplayResult = { ok: true; outcome: ReplayOutcome | null } | { ok: false; error: ReplayActionError };
 
-/** "Dừng": ends the replay where it is. The answer carries what was held, which is now unsealed. */
+/** "Dừng": ends the replay where it is. The answer carries the outcome: a hint for what was held, never its text. */
 export async function stopReplay(db: Database, user: AppUser, sessionId: string): Promise<StopReplayResult> {
   const found = await getSession(db, user.id, sessionId);
   if (!found) return { ok: false, error: "not_found" };

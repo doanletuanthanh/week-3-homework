@@ -5,9 +5,9 @@ import type { RevealHeader } from "@/server/session-view";
 type Props = {
   header: RevealHeader;
   reveal: BrowserReveal;
-  /** What the replay target is called in the tally: held while the replay is ahead, opened after it. */
+  /** What the replay target is called in the tally: held while the replay is ahead; after it, opened or still held. */
   heldLabel: string;
-  /** The replay has ended, so the target is no longer sealed. */
+  /** The replay opened the target. */
   heldOpen: boolean;
 };
 

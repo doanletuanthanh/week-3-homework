@@ -54,6 +54,7 @@ const target = chiThu.items.find((item) => item.id === TARGET_ID)!;
 const itemOf = (id: string) => chiThu.items.find((item) => item.id === id)!;
 const HABIT_CLAIM = "Câu ngay sau thường hỏi sang chuyện khác.";
 
+const targetHint = { topic: target.topic_tag, path: target.path, sampleQuestion: target.sample_question, hook: null, trustTurns: [] };
 const targetStrings = [target.content, target.sample_question, target.topic_tag, target.do_not_assert.text, `"${target.id}"`, `"${target.do_not_assert.id}"`];
 const leaked = (payload: unknown) => targetStrings.filter((text) => JSON.stringify(payload).includes(text));
 
@@ -253,7 +254,8 @@ describe("runReplayTurn: a primary replay", () => {
     expect(next.models.prompts("PERSONA")[0]).toContain(`<dieu_noi_ngay>\n- ${target.content}\n</dieu_noi_ngay>`);
     const last = await replayTurn(learner, sessionId, 3);
 
-    expect(last.result).toMatchObject({ ok: true, replayTurnIndex: 3, outcome: { level: "primary", result: "fail", target: { content: target.content } } });
+    expect(last.result).toMatchObject({ ok: true, replayTurnIndex: 3, outcome: { level: "primary", result: "fail", hint: targetHint } });
+    expect(JSON.stringify(last.result)).not.toContain(target.content);
     expect((await replayBranch(sessionId))!.result).toBe("fail");
     expect(await statusOf(sessionId)).toBe("done");
   });
@@ -317,8 +319,9 @@ describe("runReplayTurn: a primary replay", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      outcome: { level: "primary", result: "partial", otherItem: itemOf("tried-methods").content, target: { content: target.content, sampleQuestion: target.sample_question } },
+      outcome: { level: "primary", result: "partial", otherItem: itemOf("tried-methods").content, hint: targetHint },
     });
+    expect(JSON.stringify(result)).not.toContain(target.content);
     expect((await replayBranch(sessionId))!.result).toBe("partial");
   });
 
@@ -357,7 +360,7 @@ describe("runReplayTurn: the replay of a leading question", () => {
     expect(result).toMatchObject({
       ok: true,
       replayTurnIndex: 3,
-      outcome: { level: "fallback1", result: "success", leadingTurn: 1, grounded: 2, stillLeading: null, sampleQuestion: null },
+      outcome: { level: "fallback1", result: "success", leadingTurn: 1, grounded: 2, stillLeading: null, hint: null },
     });
     expect(await statusOf(sessionId)).toBe("done");
     // The judge was also asked to label the question.
@@ -401,7 +404,7 @@ describe("runReplayTurn: the replay of a leading question", () => {
     await replayTurn(learner, sessionId, 2, { analysis: { label: "confirm_grounded", grounded_turn_id: 1 } });
     expect(await stopReplay(db(), learner, sessionId)).toMatchObject({
       ok: true,
-      outcome: { level: "fallback1", result: "stopped", grounded: 1, stillLeading: null, sampleQuestion: target.sample_question },
+      outcome: { level: "fallback1", result: "stopped", grounded: 1, stillLeading: null, hint: targetHint },
     });
   });
 
@@ -431,7 +434,7 @@ describe("runReplayTurn: the replay of a leading question", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      outcome: { level: "fallback1", result: "fail", grounded: 1, stillLeading: { turn: 2, words: "tại chị lười" }, sampleQuestion: target.sample_question },
+      outcome: { level: "fallback1", result: "fail", grounded: 1, stillLeading: { turn: 2, words: "tại chị lười" }, hint: targetHint },
     });
     expect((await replayBranch(sessionId))!.result).toBe("fail");
   });
@@ -459,15 +462,14 @@ describe("runReplayTurn: the replay of a leading question", () => {
 });
 
 describe("stopReplay and skipReplay", () => {
-  it("Dừng ends the replay where it is: stopped, done, and the answer carries what was held", async () => {
+  it("Dừng ends the replay where it is: stopped, done, and the answer carries a hint for what was held, never its text", async () => {
     const { learner, sessionId } = await revealedSession();
     await start(learner, sessionId);
     await replayTurn(learner, sessionId, 1);
 
-    expect(await stopReplay(db(), learner, sessionId)).toEqual({
-      ok: true,
-      outcome: { level: "primary", result: "stopped", target: { content: target.content, sampleQuestion: target.sample_question }, otherItem: null },
-    });
+    const stopped = await stopReplay(db(), learner, sessionId);
+    expect(stopped).toEqual({ ok: true, outcome: { level: "primary", result: "stopped", hint: targetHint, otherItem: null } });
+    expect(JSON.stringify(stopped)).not.toContain(target.content);
     expect(await statusOf(sessionId)).toBe("done");
     expect(await replayBranch(sessionId)).toMatchObject({ result: "stopped" });
     expect((await eventRows(sessionId, "replay_result")).map((event) => event.props)).toEqual([{ level: "primary", result: "stopped", turns: 1 }]);
@@ -484,7 +486,7 @@ describe("stopReplay and skipReplay", () => {
     await start(learner, sessionId);
     expect(await stopReplay(db(), learner, sessionId)).toMatchObject({
       ok: true,
-      outcome: { level: "fallback1", result: "stopped", grounded: 0, stillLeading: null, sampleQuestion: target.sample_question },
+      outcome: { level: "fallback1", result: "stopped", grounded: 0, stillLeading: null, hint: targetHint },
     });
     expect((await eventRows(sessionId, "replay_result")).map((event) => event.props)).toEqual([{ level: "fallback1", result: "stopped", turns: 0 }]);
   });
@@ -834,6 +836,8 @@ type Ending = {
   result: string | null;
   /** Text held back before the end that must be in the payloads after it. */
   unsealed: string[];
+  /** Text that stays on the server after the end too: an item the learner never heard. */
+  kept: string[];
 };
 
 const playTurns = async (learner: AppUser, sessionId: string, steps: ReplayStep[]) => {
@@ -841,7 +845,10 @@ const playTurns = async (learner: AppUser, sessionId: string, steps: ReplayStep[
   for (const [position, step] of steps.entries()) expect((await replayTurn(learner, sessionId, position + 1, step)).result.ok).toBe(true);
 };
 
+/** A replay that opened the target: the learner heard it, so its text goes out. */
 const PRIMARY_UNSEALED = [target.content, target.sample_question, HABIT_CLAIM];
+/** Any other end of a primary replay: the target goes out as a hint, its text stays. */
+const PRIMARY_HINTED = [target.topic_tag, target.sample_question, HABIT_CLAIM];
 
 // FR-41: every way a session can end.
 const ENDINGS: Ending[] = [
@@ -851,23 +858,26 @@ const ENDINGS: Ending[] = [
     play: (learner, sessionId) => playTurns(learner, sessionId, [{ analysis: PICK_UP, judge: [judged(toldItems(TARGET_ID))] }]),
     result: "success",
     unsealed: PRIMARY_UNSEALED,
+    kept: [],
   },
   {
     name: "primary replay, partial",
     setup: () => revealedSession(),
     play: (learner, sessionId) => playTurns(learner, sessionId, [{ analysis: { topic: topic(a("tag", "tried-methods")) }, judge: [judged(toldItems("tried-methods"))] }, {}, {}]),
     result: "partial",
-    unsealed: PRIMARY_UNSEALED,
+    unsealed: PRIMARY_HINTED,
+    kept: [target.content],
   },
-  { name: "primary replay, fail", setup: () => revealedSession(), play: (learner, sessionId) => playTurns(learner, sessionId, [{}, {}, {}]), result: "fail", unsealed: PRIMARY_UNSEALED },
+  { name: "primary replay, fail", setup: () => revealedSession(), play: (learner, sessionId) => playTurns(learner, sessionId, [{}, {}, {}]), result: "fail", unsealed: PRIMARY_HINTED, kept: [target.content] },
   {
     name: "fallback 1 replay, success",
     setup: () => fallbackSession(),
     play: (learner, sessionId) => playTurns(learner, sessionId, [{}, { analysis: { label: "confirm_grounded", grounded_turn_id: 1 } }, {}]),
     result: "success",
     unsealed: [FALLBACK_CLAIM],
+    kept: [target.content],
   },
-  { name: "fallback 1 replay, fail", setup: () => fallbackSession(), play: (learner, sessionId) => playTurns(learner, sessionId, [{}, {}, {}]), result: "fail", unsealed: [FALLBACK_CLAIM] },
+  { name: "fallback 1 replay, fail", setup: () => fallbackSession(), play: (learner, sessionId) => playTurns(learner, sessionId, [{}, {}, {}]), result: "fail", unsealed: [FALLBACK_CLAIM], kept: [target.content] },
   {
     name: "Dừng",
     setup: () => revealedSession(),
@@ -876,19 +886,21 @@ const ENDINGS: Ending[] = [
       expect(await stopReplay(db(), learner, sessionId)).toMatchObject({ ok: true });
     },
     result: "stopped",
-    unsealed: PRIMARY_UNSEALED,
+    unsealed: PRIMARY_HINTED,
+    kept: [target.content],
   },
   {
     name: "Bỏ qua",
     setup: () => revealedSession(),
     play: async (learner, sessionId) => expect(await skipReplay(db(), learner, sessionId)).toEqual({ ok: true }),
     result: "skipped",
-    unsealed: PRIMARY_UNSEALED,
+    unsealed: PRIMARY_HINTED,
+    kept: [target.content],
   },
-  { name: "no replay moment", setup: () => revealedSession(NO_REPLAY, "làm kế toán"), play: async () => {}, result: null, unsealed: [] },
+  { name: "no replay moment", setup: () => revealedSession(NO_REPLAY, "làm kế toán"), play: async () => {}, result: null, unsealed: [], kept: [target.content] },
 ];
 
-describe.each(ENDINGS)("after the session ends: $name (FR-27, FR-41)", ({ setup, play, result, unsealed }) => {
+describe.each(ENDINGS)("after the session ends: $name (FR-27, FR-41)", ({ setup, play, result, unsealed, kept }) => {
   it("the main interview's data is byte-identical, except the status flag", async () => {
     const { learner, sessionId } = await setup();
     const before = await mainData(sessionId);
@@ -903,7 +915,7 @@ describe.each(ENDINGS)("after the session ends: $name (FR-27, FR-41)", ({ setup,
     expect((await eventNames(sessionId)).filter((name) => !name.startsWith("replay_"))).toEqual(mainEvents);
   });
 
-  it("nothing stays sealed: every held part is in what the browser gets", async () => {
+  it("nothing stays sealed: every held part is in what the browser gets, and no text of an item the learner never heard", async () => {
     const { learner, sessionId } = await setup();
     if (unsealed.length > 0) {
       const held = JSON.stringify(await payloads(learner, sessionId));
@@ -916,6 +928,7 @@ describe.each(ENDINGS)("after the session ends: $name (FR-27, FR-41)", ({ setup,
     const sent = await payloads(learner, sessionId);
     const text = JSON.stringify(sent);
     for (const part of unsealed) expect(text, `unsealed: ${part}`).toContain(part);
+    for (const part of kept) expect(text, `kept: ${part}`).not.toContain(part);
 
     if (!sent.reveal.found || !sent.reveal.ready) throw new Error("the reveal is not ready");
     const { reveal } = sent.reveal;
@@ -926,7 +939,12 @@ describe.each(ENDINGS)("after the session ends: $name (FR-27, FR-41)", ({ setup,
     const visible = [reveal.takeaway.praise, reveal.takeaway.habit, ...reveal.takeaway.comments].filter((claim) => claim !== null);
     expect(visible.map((claim) => claim.id).sort()).toEqual(stored.claims.filter((claim) => claim.shown).map((claim) => claim.id).sort());
     expect(sent.transcript!.filter((turn) => turn.leading !== null).map((turn) => turn.index)).toEqual(stored.leading.filter((turn) => turn.novel).map((turn) => turn.turn));
-    if (stored.replay.level === "primary") expect(reveal.replay).toMatchObject({ level: "primary", target: { content: target.content, sampleQuestion: target.sample_question } });
+    if (stored.replay.level === "primary") {
+      const opened = result === "success" ? { content: target.content, sampleQuestion: target.sample_question } : null;
+      expect(reveal.replay).toMatchObject({ level: "primary", target: opened });
+    }
+    // The session page hands its client component exactly what the reveal route sends.
+    expect(sent.page).toMatchObject({ screen: "reveal", reveal });
 
     // The page shows how the replay ended; a session without a replay moment has no card.
     expect(sent.page).toMatchObject({ screen: "reveal", replay: result === null ? null : { outcome: { result } } });

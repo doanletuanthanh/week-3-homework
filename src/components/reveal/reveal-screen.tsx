@@ -6,8 +6,8 @@ import type { BrowserReveal } from "@/engine/seal";
 import { ReportProblem } from "@/components/custom/report-problem";
 import type { NextStep as NextStepChoice } from "@/server/library";
 import type { RevealHeader } from "@/server/session-view";
-import { MissedList } from "./missed-list";
 import { NextStep } from "./next-step";
+import { NextTimeHints } from "./next-time-hints";
 import { NotesReview } from "./notes-review";
 import { ReplayOffer } from "./replay-offer";
 import { ReplayResultCard } from "./replay-result-card";
@@ -36,11 +36,12 @@ type Props = {
 };
 
 /**
- * Màn 6 once the result is ready, in its fixed order: the two numbers, the replay offer, what
- * was told, what was missed, the notes, the takeaway, the next step. It renders stored data and
- * calls no model. While the replay is ahead (`offer`) the server has left its target out; when
- * the session is `done` nothing is held, the replay's result stands where the offer stood, and
- * the takeaway can be downloaded.
+ * Màn 6 once the result is ready, in its fixed order: the two numbers, the replay offer, the
+ * takeaway, hints for next time, what was told (folded), the notes, the next step. It renders
+ * stored data and calls no model. The server never sends the text of an item the learner did not
+ * hear, and while the replay is ahead (`offer`) it leaves the target out altogether; once the
+ * session is `done` the replay's result stands where the offer stood and the takeaway can be
+ * downloaded.
  */
 export function RevealScreen({ sessionId, retryPersonaId, persona, header, reveal, waitlisted, next, print, replay, custom = null }: Props) {
   const [openTurn, setOpenTurn] = useState<number | null>(null);
@@ -53,7 +54,7 @@ export function RevealScreen({ sessionId, retryPersonaId, persona, header, revea
     <OpenTurnContext value={setOpenTurn}>
       <main className="reveal" data-mode={reveal.mode}>
         <div className="reveal-col">
-          <TwoNumbers header={header} reveal={reveal} heldLabel={!done ? "Giữ lại" : opened ? "Mở khi luyện lại" : "Đã mở niêm phong"} heldOpen={done} />
+          <TwoNumbers header={header} reveal={reveal} heldLabel={!done ? "Giữ lại" : opened ? "Mở khi luyện lại" : "Vẫn giữ lại"} heldOpen={opened} />
           {replayed === null ? (
             <ReplayOffer sessionId={sessionId} replay={reveal.replay} personaName={persona.displayName} />
           ) : (
@@ -67,10 +68,10 @@ export function RevealScreen({ sessionId, retryPersonaId, persona, header, revea
               />
             )
           )}
-          <ToldList items={reveal.toldItems} fictional={custom !== null} />
-          <MissedList items={reveal.missedItems} persona={persona} fictional={custom !== null} />
-          {reveal.notes !== null && <NotesReview notes={reveal.notes} ungraded={reveal.recognized.state === "ungraded"} persona={persona} />}
           <Takeaway takeaway={reveal.takeaway} persona={persona} canDownload={done} sessionId={sessionId} print={print} />
+          <NextTimeHints hints={reveal.hints} missed={reveal.missed} persona={persona} fictional={custom !== null} />
+          <ToldList items={reveal.toldItems} fictional={custom !== null} />
+          {reveal.notes !== null && <NotesReview notes={reveal.notes} ungraded={reveal.recognized.state === "ungraded"} persona={persona} />}
           {custom && <ReportProblem sessionId={sessionId} reported={custom.reported} />}
           <NextStep waitlisted={waitlisted} next={next} retry={retryPersonaId ? { personaId: retryPersonaId, displayName: persona.displayName } : null} />
         </div>

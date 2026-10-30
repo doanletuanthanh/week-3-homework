@@ -265,7 +265,7 @@ test.describe("Màn 11 and after: a topic that passes", () => {
     expect(await db.attemptsOf(userId)).toHaveLength(1);
   });
 
-  test("labels every item of the reveal as fiction and takes the learner's report of the scenario", async ({ page, context }) => {
+  test("labels every hint of the reveal as fiction and takes the learner's report of the scenario", async ({ page, context }) => {
     const { sessionId } = await playableTopic(page, context, "ct-reveal");
     for (const [position, text] of ["Chị kể em nghe về công việc của chị được không ạ?", "Chị đi làm bằng gì ạ?"].entries()) {
       expect(turnOutcome(await postTurn(page.request, sessionId, { text, expectedIndex: position + 1 }))).toMatchObject({ turnIndex: position + 1 });
@@ -282,9 +282,10 @@ test.describe("Màn 11 and after: a topic that passes", () => {
 
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bạn đoán 1.Chị Mai đã kể: 0 trên 11.", { timeout: 30_000 });
     await expect(strip(page)).toContainText("Đây không phải insight thật.");
-    const missed = page.locator("section[aria-labelledby='missed-title'] > ul > li");
-    await expect(missed).toHaveCount(11);
-    await expect(page.locator("section[aria-labelledby='missed-title'] .fict")).toHaveText(Array.from({ length: 11 }, () => "chi tiết hư cấu"));
+    const hints = page.locator("section[aria-labelledby='hints-title'] > ul > li");
+    await expect(hints).toHaveCount(3);
+    await expect(page.locator("section[aria-labelledby='hints-title'] .fict")).toHaveText(Array.from({ length: 3 }, () => "chi tiết hư cấu"));
+    await expect(page.locator("section[aria-labelledby='hints-title'] .hints-more")).toHaveText("Còn 8 điều khác chị Mai chưa kể. Luyện lại từ đầu để tìm ra.");
 
     // Not reported yet: the button is there and the session row is clean.
     expect((await db.session(sessionId)).problemReportedAt).toBeNull();

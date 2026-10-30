@@ -158,6 +158,8 @@ test.describe("Màn 9: one session through every state", () => {
     await expect(page.locator(".replay-offer")).toHaveCount(0);
     await expect(composer(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Tải về" })).toBeEnabled();
+    // The told list is folded: its turn links show once it is opened.
+    await page.getByRole("region", { name: "Bạn đã khai thác được 2 điều" }).locator("summary").click();
     await page.getByRole("button", { name: "Lượt 1", exact: true }).first().click();
     await expect(transcriptDrawer(page).locator("li.turn")).toHaveCount(7);
     await page.keyboard.press("Escape");

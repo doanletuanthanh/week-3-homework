@@ -152,7 +152,7 @@ describe("the serialised props of the session page", () => {
   it.each(["revealed", "replaying"] as const)("%s: the reveal in the props is the sealed one, with nothing of the target", (status) => {
     const session = sessionOf({ ...ready, status });
     const rendered = view(session);
-    expect(rendered).toMatchObject({ screen: "reveal", reveal: toBrowserReveal({ status, guess: 4, canvasText: NOTES, reveal }) });
+    expect(rendered).toMatchObject({ screen: "reveal", reveal: toBrowserReveal({ status, guess: 4, canvasText: NOTES, reveal, scenarioItems: chiThu.items }) });
 
     const text = JSON.stringify(rendered);
     for (const sealed of targetStrings) expect(text).not.toContain(sealed);
@@ -164,10 +164,11 @@ describe("the serialised props of the session page", () => {
     expect(text).not.toContain("lý do của verifier");
   });
 
-  it("done: the target is in the props", () => {
+  it("done: no item the learner did not hear has its text in the props, the target included", () => {
     const text = props(sessionOf({ ...ready, status: "done" }));
-    expect(text).toContain(target.content);
-    expect(text).toContain(target.sample_question);
+    for (const item of reveal.items.filter((entry) => entry.state !== "told")) expect(text).not.toContain(item.content);
+    for (const item of reveal.items.filter((entry) => entry.state === "told")) expect(text).toContain(item.content);
+    expect(text).not.toContain(target.content);
     // Still only what a screen needs: no ids, no reasons, no stored result.
     for (const field of ["revealJson", "revealParts", "canvasMatches", "itemId", "reason"]) expect(text).not.toContain(`"${field}"`);
   });

@@ -176,9 +176,11 @@ describe.each(PRIMARY)("sealed payloads, primary target: $name", (fixture) => {
     expect(sent.transcript!.find((turn) => turn.index === hookTurn)!.leading).toBeNull();
     const notes = (sent.reveal as { reveal: { notes: { text: string; match: unknown }[] } }).reveal.notes;
     expect(notes.filter((segment) => segment.match !== null)).toHaveLength(stored.canvasMatches.length - 1);
+    // No other item the persona did not tell has its text in a payload either: those are hints.
+    for (const item of stored.items.filter((entry) => entry.state !== "told")) expect(JSON.stringify(sent)).not.toContain(item.content);
   });
 
-  it("done: what was held is in the payloads", async () => {
+  it("done: what was held is in the payloads, but no text of an item the learner did not hear", async () => {
     const { learner, sessionId } = await revealed(fixture);
     await submitGuess(db(), learner, sessionId, { guess: 3 });
     await setStatus(sessionId, "done");
@@ -186,9 +188,13 @@ describe.each(PRIMARY)("sealed payloads, primary target: $name", (fixture) => {
     const sent = await payloads(learner, sessionId);
 
     const text = JSON.stringify(sent.reveal);
-    expect(text).toContain(target.content);
-    expect(text).toContain(target.sample_question);
     for (const sealedText of fixture.sealedTexts) expect(text).toContain(sealedText);
+    // No replay opened the target: its text, like that of every untold item, stays on the server.
+    for (const item of stored.items.filter((entry) => entry.state !== "told")) expect(JSON.stringify(sent)).not.toContain(item.content);
+    expect(JSON.stringify(sent)).not.toContain(target.content);
+    for (const item of stored.items.filter((entry) => entry.state === "told")) expect(text).toContain(item.content);
+    // The session page hands its client component exactly what the reveal route sends.
+    expect(sent.page).toMatchObject({ screen: "reveal", reveal: (sent.reveal as { reveal: object }).reveal });
     expect(sent.reveal).toMatchObject({ reveal: { mode: "done", recognized: { state: "count", value: stored.counts.recognizedFull } } });
     expect(sent.list).toEqual({ told: stored.counts.told, total: 11, recognized: { state: "count", value: stored.counts.recognizedFull } });
     // The stored result itself did not change: unsealing is a matter of what is sent.

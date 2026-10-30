@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { CheckIcon, LockIcon, UnlockIcon, WarningIcon } from "@/components/icons";
+import { HintBody } from "@/components/reveal/next-time-hints";
 import type { ReplayOutcome } from "@/engine/replay-result";
+import type { BrowserHint } from "@/engine/seal";
 import { REPLAY_RESULT, fillTemplate } from "@/strings/product-strings";
 
 type Persona = { displayName: string; displayNameCapitalized: string };
@@ -10,39 +12,36 @@ type Props = {
   persona: Persona;
   /** A small line over the result, e.g. where the replay started. */
   eyebrow?: string;
-  /** Shows the target's sample question with a success too (the result card of Màn 6). */
-  withSampleQuestion?: boolean;
+  /**
+   * The result card of Màn 6: a success shows its sample question too, and a leading-question
+   * replay leaves its hint to the hints for next time under the card.
+   */
+  resultCard?: boolean;
   /** The actions under the result: "Về kết quả buổi", or the link to the replay's turns. */
   children?: ReactNode;
 };
 
-/** The item the persona held back, and one question that would have opened it. */
-function HeldItem({ target, persona }: { target: { content: string; sampleQuestion: string }; persona: Persona }) {
+/** The item the persona held back, which the replay did not open: a hint for it, never its text. */
+function HeldItem({ hint, persona }: { hint: BrowserHint; persona: Persona }) {
   return (
-    <>
-      <div className="rr-row">
-        <span className="sealed rr-mark">
-          <LockIcon size={24} strokeWidth={2.2} />
-        </span>
-        <div>
-          <span className="eyebrow c-tertiary">{fillTemplate(REPLAY_RESULT.held_back, { persona: persona.displayName })}</span>
-          <p className="headline-md">{target.content}</p>
-        </div>
+    <div className="rr-row">
+      <span className="sealed rr-mark">
+        <LockIcon size={24} strokeWidth={2.2} />
+      </span>
+      <div className="rr-held">
+        <span className="eyebrow c-tertiary">{fillTemplate(REPLAY_RESULT.held_back, { persona: persona.displayName })}</span>
+        <HintBody hint={hint} persona={persona} />
       </div>
-      <div className="ctx rr-indent">
-        <span className="ctx-k">{REPLAY_RESULT.opening_question}</span>
-        <p className="q">“{target.sampleQuestion}”</p>
-      </div>
-    </>
+    </div>
   );
 }
 
 /**
  * What a finished replay says (PRD Màn 7), in fixed strings filled by code: the item that was
- * opened, the item that stayed held with a question for it, or how the three questions went.
- * Item texts and the learner's own words are rendered as text nodes.
+ * opened, a hint for the item that stayed held, or how the three questions went. Item texts and
+ * the learner's own words are rendered as text nodes.
  */
-export function ReplayResult({ outcome, persona, eyebrow, withSampleQuestion, children }: Props) {
+export function ReplayResult({ outcome, persona, eyebrow, resultCard, children }: Props) {
   if (outcome.level === "primary" && outcome.result === "success") {
     return (
       <div className="rr rr-unlocked" role="status" data-result="success">
@@ -57,7 +56,7 @@ export function ReplayResult({ outcome, persona, eyebrow, withSampleQuestion, ch
           </div>
         </div>
         <div className="rr-foot">
-          {withSampleQuestion && (
+          {resultCard && (
             <p className="rr-sample">
               <span className="label-sm">CÂU HỎI MẪU</span>
               <span className="q2">“{outcome.target.sampleQuestion}”</span>
@@ -83,7 +82,7 @@ export function ReplayResult({ outcome, persona, eyebrow, withSampleQuestion, ch
               <p className="headline-sm">{fillTemplate(REPLAY_RESULT.other_item, { item: outcome.otherItem })}</p>
             </div>
           )}
-          <HeldItem target={outcome.target} persona={persona} />
+          <HeldItem hint={outcome.hint} persona={persona} />
         </>
       ) : outcome.result === "success" ? (
         <div className="rr-row">
@@ -109,10 +108,9 @@ export function ReplayResult({ outcome, persona, eyebrow, withSampleQuestion, ch
               </p>
             </div>
           )}
-          {outcome.sampleQuestion !== null && (
-            <div className={`ctx${outcome.result === "skipped" ? "" : " rr-indent"}`}>
-              <span className="ctx-k">Câu hỏi mẫu</span>
-              <p className="q">“{outcome.sampleQuestion}”</p>
+          {outcome.hint !== null && !resultCard && (
+            <div className={outcome.result === "skipped" ? undefined : "rr-indent"}>
+              <HintBody hint={outcome.hint} persona={persona} />
             </div>
           )}
         </>

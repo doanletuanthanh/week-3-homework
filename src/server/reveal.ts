@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { REVEAL_HEARTBEAT_MS, REVEAL_STALE_MS } from "@/config/limits";
 import type { Database, Executor } from "@/db/client";
+import { loadReplay } from "@/db/repo/replay";
 import { claimRevealRun, finaliseReveal, loadMainBranch, saveRevealPart, storeGuess, touchRevealRun, type GuessOutcome } from "@/db/repo/reveal";
 import { getSession, listTurns, type SessionRow } from "@/db/repo/sessions";
 import { sessions } from "@/db/schema";
@@ -198,7 +199,16 @@ export async function getRevealView(db: Database, user: AppUser, sessionId: stri
   const found = await getSession(db, user.id, sessionId);
   if (!found) return { found: false };
   const { session } = found;
-  const reveal = toBrowserReveal({ status: session.status, guess: session.guess, canvasText: session.canvasText, reveal: session.revealJson });
+  // As on the session page: only a replay that opened its target lets the target's text out.
+  const branch = session.status === "done" ? (await loadReplay(db, sessionId))?.branch : undefined;
+  const reveal = toBrowserReveal({
+    status: session.status,
+    guess: session.guess,
+    canvasText: session.canvasText,
+    reveal: session.revealJson,
+    replaySucceeded: branch?.fallbackLevel === "primary" && branch.result === "success",
+    scenarioItems: found.scenario.content.items,
+  });
   return reveal ? { found: true, ready: true, reveal } : { found: true, ready: false, due: revealRunIsDue(session) };
 }
 

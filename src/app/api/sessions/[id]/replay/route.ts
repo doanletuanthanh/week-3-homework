@@ -11,9 +11,9 @@ const bodySchema = z.object({ action: z.enum(["start", "skip", "stop"]) });
 
 /**
  * The three things a learner can do with the replay their reveal offers: start it ("Quay lại lượt
- * N"), skip it ("Bỏ qua, cho tôi xem luôn"), or stop it while it runs ("Dừng"). Starting answers
+ * N"), skip it ("Bỏ qua, xem kết quả luôn"), or stop it while it runs ("Dừng"). Starting answers
  * only that it started. Skipping and stopping end the replay, so the session is `done` and its
- * page shows what was held; the answer to a stop carries the outcome, which is no longer sealed.
+ * page shows what was held back, the target as a hint; the answer to a stop carries the outcome.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

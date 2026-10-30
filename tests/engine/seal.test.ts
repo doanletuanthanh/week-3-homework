@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveCanvasMatches } from "@/engine/reveal-compute";
 import type { JudgePart, RevealBasis, RevealJson } from "@/engine/reveal-types";
-import { toBrowserResult, toBrowserReveal, toBrowserTranscript } from "@/engine/seal";
+import { MAX_HINTS, toBrowserResult, toBrowserReveal, toBrowserTranscript, type BrowserReveal } from "@/engine/seal";
 import { SESSION_STATUSES } from "@/db/schema";
 import type { ScenarioItem } from "@/scenario/schema";
 import { DROPPED, a, chiThu, engineSession, topic } from "../helpers/engine-fixtures";
@@ -74,8 +74,12 @@ function fallbackFixture(): Fixture {
   return { name: "fallback 1", basis, notes, reveal: assemble(basis, fullParts(basis, judgeOf(basis, notes, []))) };
 }
 
-const view = (fixture: Fixture, status: string, guess: number | null = 4) =>
-  toBrowserReveal({ status, guess, canvasText: fixture.notes, reveal: fixture.reveal });
+const view = (fixture: Fixture, status: string, guess: number | null = 4, replaySucceeded?: boolean) =>
+  toBrowserReveal({ status, guess, canvasText: fixture.notes, reveal: fixture.reveal, replaySucceeded, scenarioItems: chiThu.items });
+
+/** The text of every item the persona did not tell in the main interview, the held one included. */
+const untoldContents = (reveal: RevealJson) => reveal.items.filter((item) => item.state !== "told").map((item) => item.content);
+const topicsOf = (payload: BrowserReveal) => payload.hints.map((hint) => hint.topic);
 
 describe("toBrowserReveal: default deny", () => {
   const fixture = mainFixture();
@@ -92,8 +96,8 @@ describe("toBrowserReveal: default deny", () => {
 
   it("sends nothing before the guess is stored, or before a result exists", () => {
     expect(view(fixture, "revealed", null)).toBeNull();
-    expect(toBrowserReveal({ status: "revealed", guess: 4, canvasText: NOTES, reveal: null })).toBeNull();
-    expect(toBrowserReveal({ status: "done", guess: null, canvasText: NOTES, reveal: fixture.reveal })).toBeNull();
+    expect(toBrowserReveal({ status: "revealed", guess: 4, canvasText: NOTES, reveal: null, scenarioItems: chiThu.items })).toBeNull();
+    expect(toBrowserReveal({ status: "done", guess: null, canvasText: NOTES, reveal: fixture.reveal, scenarioItems: chiThu.items })).toBeNull();
   });
 
   it("gives result numbers to a list for a done session only", () => {
@@ -120,10 +124,16 @@ describe.each(PRIMARY)("sealing a primary replay target: $name", (fixture) => {
     expect(payload.held).toBe(1);
     expect(payload.replay).toMatchObject({ level: "primary", target: null });
 
-    // Neither told nor missed, and the missed count leaves it out.
-    expect(payload.toldItems.length + payload.missedItems.length + 1).toBe(chiThu.items.length);
-    expect(payload.missed).toBe(payload.missedItems.length);
-    expect([...payload.toldItems, ...payload.missedItems].map((item) => item.content)).not.toContain(target.content);
+    // Neither told nor missed, and no hint: the counts and the hints leave it out.
+    expect(payload.toldItems.length + payload.missed + 1).toBe(chiThu.items.length);
+    expect(payload.hints).toHaveLength(Math.min(MAX_HINTS, payload.missed));
+    expect(payload.toldItems.map((item) => item.content)).not.toContain(target.content);
+    expect(topicsOf(payload)).not.toContain(target.topic_tag);
+  });
+
+  it.each(["revealed", "replaying", "done"])("%s: no item the learner did not hear has its text in the payload", (status) => {
+    const text = JSON.stringify(view(fixture, status));
+    for (const content of untoldContents(reveal)) expect(text).not.toContain(content);
   });
 
   it.each(["revealed", "replaying"])("%s: the note that matches the target is plain text and is not counted", (status) => {
@@ -142,7 +152,7 @@ describe.each(PRIMARY)("sealing a primary replay target: $name", (fixture) => {
     expect(sent.every((claim) => !claim.turns.includes(hookTurn))).toBe(true);
     const sealedIds = reveal.claims.filter((claim) => claim.sealed).map((claim) => claim.id);
     expect(sent.map((claim) => claim.id).filter((id) => sealedIds.includes(id))).toEqual([]);
-    expect(payload.missedItems.flatMap((item) => item.trustTurns)).not.toContain(hookTurn);
+    expect(payload.hints.flatMap((hint) => hint.trustTurns)).not.toContain(hookTurn);
   });
 
   it.each(["revealed", "replaying"])("%s: the transcript has no mark on the target's hook turn", (status) => {
@@ -153,18 +163,35 @@ describe.each(PRIMARY)("sealing a primary replay target: $name", (fixture) => {
     expect(Object.keys(turns[1]).sort()).toEqual(["index", "leading", "learnerText", "personaText"]);
   });
 
-  it("done: everything that was held is there", () => {
+  it("done: everything that was held is there but the target's text, which the replay did not open", () => {
     const payload = view(fixture, "done")!;
     expect(payload.mode).toBe("done");
-    expect(payload.replay).toMatchObject({ level: "primary", target: { content: target.content, sampleQuestion: target.sample_question } });
+    expect(payload.replay).toMatchObject({ level: "primary", target: null });
+    expect(JSON.stringify(payload)).not.toContain(target.content);
     expect(payload.recognized).toEqual({ state: "count", value: reveal.counts.recognizedFull });
+    // The target's note is marked again, with its label and without the item's text.
     expect(payload.notes!.filter((segment) => segment.match !== null)).toHaveLength(reveal.canvasMatches.length);
-    expect(payload.notes!.some((segment) => segment.match?.itemContent === target.content)).toBe(true);
     const sent = [payload.takeaway.praise, ...payload.takeaway.comments, payload.takeaway.habit].filter((claim) => claim !== null);
     expect(sent.map((claim) => claim.id)).toEqual(reveal.claims.filter((claim) => claim.shown).map((claim) => claim.id));
-    // The target is shown in its own card: it does not move into the told list, and the numbers of the session stand.
+    // The replay's own result speaks of the target: it moves into neither the told list nor the hints, and the numbers of the session stand.
+    expect(payload.toldItems.map((item) => item.content)).not.toContain(target.content);
+    expect(topicsOf(payload)).not.toContain(target.topic_tag);
+    expect(payload.told).toBe(reveal.counts.told);
+  });
+
+  it("done after a replay that opened the target: its text, and its note, are there", () => {
+    const payload = view(fixture, "done", 4, true)!;
+    expect(payload.replay).toMatchObject({ level: "primary", target: { content: target.content, sampleQuestion: target.sample_question } });
+    const notes = payload.notes!.filter((segment) => segment.match?.openedInReplay);
+    expect(notes.length).toBeGreaterThan(0);
+    expect(notes.every((segment) => segment.match!.itemContent === target.content)).toBe(true);
+    // Opened in the replay, not told in the interview: the counts and the hints are the interview's.
     expect(payload.toldItems.map((item) => item.content)).not.toContain(target.content);
     expect(payload.told).toBe(reveal.counts.told);
+  });
+
+  it.each(["revealed", "replaying"])("%s: a replay said to have succeeded unseals nothing while the replay is ahead", (status) => {
+    expect(leaked(view(fixture, status, 4, true), target)).toEqual([]);
   });
 });
 
@@ -178,7 +205,8 @@ describe("what the primary fixtures seal, case by case", () => {
     ]);
     expect(payload.notes).toEqual([
       { text: "app trả phí bỏ không\n", match: null },
-      { text: "khoản lặt vặt không ghi", match: { kind: "unconfirmed", itemContent: itemOf("small-spend").content, turn: 2, openedInReplay: false } },
+      // A guess that matched an item the persona did not tell: the label and the turn of its hook, not the item.
+      { text: "khoản lặt vặt không ghi", match: { kind: "unconfirmed", itemContent: null, turn: 2, openedInReplay: false } },
     ]);
   });
 
@@ -190,12 +218,12 @@ describe("what the primary fixtures seal, case by case", () => {
     expect(sealed.takeaway.comments).toEqual([]);
     // Something is held back, so the screen must not say there was nothing to note.
     expect(sealed.takeaway.emptyLine).toBe(false);
-    expect(sealed.missedItems.find((item) => item.path === "trust")!.trustTurns).toEqual([3]);
+    expect(sealed.hints.find((hint) => hint.path === "trust")!.trustTurns).toEqual([3]);
     expect(marks(fixture.basis, fixture.reveal, "revealed")).toEqual([[3, "thêm cho"]]);
 
     const open = view(fixture, "done")!;
     expect(open.takeaway.comments.map((claim) => [claim.type, claim.turns, claim.addedWords])).toEqual([["leading", [1, 3], "Chị kể"]]);
-    expect(open.missedItems.find((item) => item.path === "trust")!.trustTurns).toEqual([1, 3]);
+    expect(open.hints.find((hint) => hint.path === "trust")!.trustTurns).toEqual([1, 3]);
     expect(marks(fixture.basis, fixture.reveal, "done")).toEqual([
       [1, "Chị kể"],
       [3, "thêm cho"],
@@ -219,7 +247,7 @@ describe("sealing fallback 1: the leading turn being replayed", () => {
     expect(payload.held).toBe(0);
     expect(payload.takeaway.comments).toEqual([]);
     expect(JSON.stringify(payload.takeaway)).not.toContain("Chị kể");
-    expect(payload.missedItems.flatMap((item) => item.trustTurns)).not.toContain(1);
+    expect(payload.hints.flatMap((hint) => hint.trustTurns)).not.toContain(1);
     expect(marks(basis, reveal, status)).toEqual([[3, "thêm cho"]]);
   });
 
@@ -254,13 +282,25 @@ describe("toBrowserReveal: the offer screen of the main fixture", () => {
     ]);
   });
 
-  it("gives each marked note what its FR-48a sentence needs: the kind, the item, and a turn to link to", () => {
+  it("offers the three heaviest missed items as hints, in scenario order on equal weight, and only counts the rest", () => {
+    // shame and installment weigh 3; roommate is the first of the missed items that weigh 2. paid-app is held.
+    expect(payload.hints).toEqual([
+      { topic: itemOf("shame").topic_tag, path: "follow_up", sampleQuestion: itemOf("shame").sample_question, hook: expect.anything(), trustTurns: [] },
+      { topic: itemOf("installment").topic_tag, path: "trust", sampleQuestion: itemOf("installment").sample_question, hook: null, trustTurns: [4] },
+      { topic: itemOf("roommate").topic_tag, path: "trust", sampleQuestion: itemOf("roommate").sample_question, hook: null, trustTurns: [4] },
+    ]);
+    expect(payload.hints[0].hook).toMatchObject({ turn: 3, next: { turn: 4 } });
+    expect(payload.missed - payload.hints.length).toBe(5);
+    expect(Object.keys(payload.hints[0]).sort()).toEqual(["hook", "path", "sampleQuestion", "topic", "trustTurns"]);
+  });
+
+  it("gives each marked note what its FR-48a sentence needs: the kind, the item once it was told, and a turn to link to", () => {
     expect(payload.notes).toEqual([
       { text: "kế toán, ở trọ với bạn\n", match: null },
       { text: "mỗi tháng gửi ba mẹ 3 triệu", match: { kind: "told", itemContent: itemOf("money-home").content, turn: 1, openedInReplay: false } },
       // The target's note, as plain text.
       { text: "\nđang trả phí cho một app mà không dùng?\n", match: null },
-      { text: "chắc có nợ thẻ tín dụng", match: { kind: "unrevealed", itemContent: itemOf("installment").content, turn: null, openedInReplay: false } },
+      { text: "chắc có nợ thẻ tín dụng", match: { kind: "unrevealed", itemContent: null, turn: null, openedInReplay: false } },
       { text: "\n", match: null },
       { text: "lương thấp nên khó để dành", match: { kind: "never_said", itemContent: null, turn: null, openedInReplay: false } },
     ]);
@@ -305,7 +345,7 @@ describe("toBrowserReveal: empty, unmatched and degraded states", () => {
   it("empty notes: no NHẬN BIẾT number at all, and no notes section", () => {
     const basis = basisOf(session, "");
     const reveal = assemble(basis, fullParts(basis, { ...judgedNotes(), matches: [] }));
-    const payload = toBrowserReveal({ status: "revealed", guess: 0, canvasText: "", reveal })!;
+    const payload = toBrowserReveal({ status: "revealed", guess: 0, canvasText: "", reveal, scenarioItems: chiThu.items })!;
     expect(payload.recognized).toEqual({ state: "empty" });
     expect(payload.notes).toBeNull();
     expect(payload.replay).toMatchObject({ diagnosis: { key: "changed_topic", turn: 2 } });
@@ -314,7 +354,7 @@ describe("toBrowserReveal: empty, unmatched and degraded states", () => {
   it("notes that match nothing: a count of zero, shown as the 'none yet' line, and the notes as plain text", () => {
     const basis = basisOf(session, "kế toán");
     const reveal = assemble(basis, fullParts(basis, { ...judgedNotes(), matches: [] }));
-    const payload = toBrowserReveal({ status: "revealed", guess: 0, canvasText: "kế toán", reveal })!;
+    const payload = toBrowserReveal({ status: "revealed", guess: 0, canvasText: "kế toán", reveal, scenarioItems: chiThu.items })!;
     expect(payload.recognized).toEqual({ state: "count", value: 0 });
     expect(payload.notes).toEqual([{ text: "kế toán", match: null }]);
   });
@@ -322,7 +362,7 @@ describe("toBrowserReveal: empty, unmatched and degraded states", () => {
   it("end judge failed: the notes are shown ungraded and NHẬN BIẾT is hidden", () => {
     const basis = basisOf(session, NOTES);
     const reveal = assemble(basis, { ...fullParts(basis), judge: { ok: false } });
-    const payload = toBrowserReveal({ status: "revealed", guess: 2, canvasText: NOTES, reveal })!;
+    const payload = toBrowserReveal({ status: "revealed", guess: 2, canvasText: NOTES, reveal, scenarioItems: chiThu.items })!;
     expect(payload.recognized).toEqual({ state: "ungraded" });
     expect(payload.notes).toEqual([{ text: NOTES, match: null }]);
     expect(toBrowserResult("done", reveal)).toEqual({ told: 2, total: 11, recognized: { state: "ungraded" } });
@@ -334,18 +374,22 @@ describe("toBrowserReveal: empty, unmatched and degraded states", () => {
       { ...fullParts(basis), verifier: { ok: false as const } },
       { judge: judgedNotes(), generator: { ok: false as const }, verifier: verifierFor(basis, { judge: judgedNotes(), generator: { ok: false } }) },
     ]) {
-      const payload = toBrowserReveal({ status: "revealed", guess: 2, canvasText: NOTES, reveal: assemble(basis, parts) })!;
+      const payload = toBrowserReveal({ status: "revealed", guess: 2, canvasText: NOTES, reveal: assemble(basis, parts), scenarioItems: chiThu.items })!;
       expect(payload.takeaway).toEqual({ praise: null, comments: [], habit: null, emptyLine: true });
     }
   });
 
-  it("no replay moment: the sample question of the heaviest locked item stands in for the offer", () => {
+  it("no replay moment: no offer, and the heaviest locked items are the hints", () => {
     const plain = engineSession();
     plain.turn({});
     const basis = basisOf(plain);
     const reveal = assemble(basis, fullParts(basis, { ...judgedNotes(), matches: [] }));
-    const payload = toBrowserReveal({ status: "done", guess: 0, canvasText: "", reveal })!;
-    expect(payload.replay).toEqual({ level: "none", sampleQuestion: itemOf("paid-app").sample_question });
+    const payload = toBrowserReveal({ status: "done", guess: 0, canvasText: "", reveal, scenarioItems: chiThu.items })!;
+    expect(payload.replay).toEqual({ level: "none" });
+    expect(payload.hints.map((hint) => [hint.topic, hint.sampleQuestion])).toEqual(
+      ["paid-app", "shame", "installment"].map((id) => [itemOf(id).topic_tag, itemOf(id).sample_question]),
+    );
+    for (const item of chiThu.items) expect(JSON.stringify(payload)).not.toContain(item.content);
     expect(payload.held).toBe(0);
     expect(payload.missed).toBe(11);
     expect(payload.takeaway).toEqual({ praise: null, comments: [], habit: null, emptyLine: true });

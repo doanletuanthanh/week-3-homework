@@ -15,7 +15,7 @@ const NOT_CONNECTED = "Không kết nối được. Thử lại.";
 /**
  * Màn 6 item 2. With a replay moment: the fixed diagnosis line, the way back into the session and
  * the way past it, and for a primary moment the card of the item that is held back, which says
- * nothing about it. With none: the sample question of the most important item still locked.
+ * nothing about it. With none, nothing: the hints for next time say what to ask.
  */
 export function ReplayOffer({ sessionId, replay, personaName }: Props) {
   const router = useRouter();
@@ -23,18 +23,7 @@ export function ReplayOffer({ sessionId, replay, personaName }: Props) {
   const [skipOpen, setSkipOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (replay.level === "none") {
-    if (replay.sampleQuestion === null) return null;
-    return (
-      <section className="card no-replay">
-        <span className="eyebrow c-outline">Buổi này không có lượt để luyện lại</span>
-        <div className="ctx">
-          <span className="ctx-k">Câu hỏi mẫu</span>
-          <p className="q">“{replay.sampleQuestion}”</p>
-        </div>
-      </section>
-    );
-  }
+  if (replay.level === "none") return null;
 
   async function act(action: "start" | "skip") {
     setSending(action);
@@ -67,7 +56,7 @@ export function ReplayOffer({ sessionId, replay, personaName }: Props) {
               {sending === "start" ? "Đang mở…" : `Quay lại lượt ${replay.returnTurn}`}
             </button>
             <button type="button" className="lnk" onClick={() => setSkipOpen(true)} disabled={sending !== null}>
-              Bỏ qua, cho tôi xem luôn
+              Bỏ qua, xem kết quả luôn
             </button>
           </div>
           {error && (
@@ -84,7 +73,7 @@ export function ReplayOffer({ sessionId, replay, personaName }: Props) {
             </span>
             <div>
               <span className="label-md">Giữ lại để bạn thử</span>
-              <p className="body-sm">Một điều {personaName} chưa kể. Mở ra sau khi bạn luyện lại hoặc bỏ qua.</p>
+              <p className="body-sm">Một điều {personaName} chưa kể. Luyện lại để thử mở nó.</p>
             </div>
           </div>
         )}
@@ -109,7 +98,7 @@ export function ReplayOffer({ sessionId, replay, personaName }: Props) {
             Ở lại
           </button>
           <button type="button" className="btn btn-primary btn-md" onClick={() => void act("skip")} disabled={sending !== null}>
-            {sending === "skip" ? "Đang mở…" : "Cho tôi xem luôn"}
+            {sending === "skip" ? "Đang mở…" : "Xem kết quả luôn"}
           </button>
         </div>
       </Dialog>

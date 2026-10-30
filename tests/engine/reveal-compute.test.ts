@@ -106,7 +106,7 @@ describe("resolveCanvasMatches: ten fixed canvases", () => {
     const matches = resolveCanvasMatches(chiThu, state, basis.canvasTokens, raw(text));
     const reveal = assemble(basis, { ...fullParts(basis), judge: { ok: true, verdict: { hook_dropped: false, disclosed_item_ids: [], violations: [] }, matches } });
     // `done`: nothing is held back, so every match is on the page.
-    const notes = toBrowserReveal({ status: "done", guess: 3, canvasText: text, reveal })!.notes!;
+    const notes = toBrowserReveal({ status: "done", guess: 3, canvasText: text, reveal, scenarioItems: chiThu.items })!.notes!;
 
     // Marked and plain stretches together are the notes as written, character for character.
     expect(notes.map((segment) => segment.text).join("")).toBe(text);
@@ -137,7 +137,7 @@ describe("resolveCanvasMatches: ten fixed canvases", () => {
     const basis = basisOf(session, NOTES);
     const reveal = assemble(basis, fullParts(basis));
     expect(reveal.canvasMatches.every((match) => match.reason === "lý do nội bộ của judge")).toBe(true);
-    expect(JSON.stringify(toBrowserReveal({ status: "done", guess: 3, canvasText: NOTES, reveal }))).not.toContain("lý do nội bộ");
+    expect(JSON.stringify(toBrowserReveal({ status: "done", guess: 3, canvasText: NOTES, reveal, scenarioItems: chiThu.items }))).not.toContain("lý do nội bộ");
   });
 });
 

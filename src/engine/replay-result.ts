@@ -1,4 +1,5 @@
-import type { Scenario } from "@/scenario/schema";
+import type { Scenario, ScenarioItem } from "@/scenario/schema";
+import type { BrowserHint } from "./seal";
 import { sliceTokens, type TokenRange } from "./tokens";
 import { isGoodLabel, type Label } from "./types";
 
@@ -67,13 +68,16 @@ function otherItemTold(turns: ReplayTurn[], targetItemId: string | null): string
 
 /**
  * What the learner is shown about a finished replay (PRD Màn 7, and the result card of Màn 6).
- * It holds the target's content, so it exists only for a replay that has ended.
+ * It says what the replay was after, so it exists only for a replay that has ended. The target's
+ * text is in it only when the replay opened the target; otherwise the target is a hint.
  */
 export type ReplayOutcome =
+  | { level: "primary"; result: "success"; target: { content: string; sampleQuestion: string }; otherItem: null }
   | {
       level: "primary";
-      result: ReplayResult;
-      target: { content: string; sampleQuestion: string };
+      result: Exclude<ReplayResult, "success">;
+      /** The target, still untold: what to ask about next time, and how. */
+      hint: BrowserHint;
       /** `partial`: the other item the learner opened. */
       otherItem: string | null;
     }
@@ -86,9 +90,12 @@ export type ReplayOutcome =
       grounded: number;
       /** The first replay question that Call 1 and the replay judge both found leading. */
       stillLeading: { turn: number; words: string } | null;
-      /** The sample question of the most important item still locked. */
-      sampleQuestion: string | null;
+      /** The most important item still locked, as a hint. */
+      hint: BrowserHint | null;
     };
+
+/** An item the learner did not hear, as the replay's result names it: its topic, its path and a question for it. */
+const hintOf = (item: ScenarioItem): BrowserHint => ({ topic: item.topic_tag, path: item.path, sampleQuestion: item.sample_question, hook: null, trustTurns: [] });
 
 /**
  * Builds the shown outcome of an ended replay from its stored turns. Pure, so opening a finished
@@ -110,10 +117,11 @@ export function describeReplay(input: {
   if (level === "primary") {
     const target = itemOf(targetItemId);
     if (!target) throw new Error("a primary replay has no target item");
+    if (result === "success") return { level, result, target: { content: target.content, sampleQuestion: target.sample_question }, otherItem: null };
     return {
       level,
       result,
-      target: { content: target.content, sampleQuestion: target.sample_question },
+      hint: hintOf(target),
       otherItem: result === "partial" ? (itemOf(otherItemTold(turns, targetItemId))?.content ?? null) : null,
     };
   }
@@ -127,6 +135,6 @@ export function describeReplay(input: {
     leadingTurn: forkAfterTurn + 1,
     grounded: turns.filter((turn) => isGoodLabel(turn.label)).length,
     stillLeading: leading ? { turn: leading.index, words: sliceTokens(leading.learnerTokens, leading.introducedSpan) ?? "" } : null,
-    sampleQuestion: result === "success" ? null : (topLocked?.sample_question ?? null),
+    hint: result === "success" || !topLocked ? null : hintOf(topLocked),
   };
 }
