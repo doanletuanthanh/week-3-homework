@@ -1,7 +1,7 @@
 ---
 phase: 8
 title: "Progress before and after"
-status: pending
+status: completed
 priority: P1
 effort: "1d"
 dependencies: [2]
@@ -73,15 +73,15 @@ export function compareProgress(newestFirst: ProgressSource[], first: ProgressSo
 
 ## Todo
 
-- [ ] Query + first-session finder
-- [ ] `compareProgress`
-- [ ] Page + CSS, sparkline removed
-- [ ] Unit + e2e tests
+- [x] Query + first-session finder
+- [x] `compareProgress`
+- [x] Page + CSS, sparkline removed
+- [x] Unit + e2e tests
 
 ## Success Criteria
 
-- [ ] Tests green
-- [ ] Reviewer-style read: with two chị Thu sessions the page says in words what got better, with one of the learner's own questions before and after
+- [x] Tests green
+- [x] Reviewer-style read: with two chị Thu sessions the page says in words what got better, with one of the learner's own questions before and after
 
 ## Risk Assessment
 
@@ -90,6 +90,18 @@ export function compareProgress(newestFirst: ProgressSource[], first: ProgressSo
 - Dropping "Nhận biết" and "Đoán đúng" from this page removes two measures; both stay on each result screen. Confirmed by the user (Validation Session 1).
 <!-- Updated: Validation Session 1 - user confirmed dropping both measures from /progress -->
 
+
+## Results (2026-10-30)
+
+Built as specified, with these changes from code review (`plans/reports/code-reviewer-261030-1541-progress-before-after.md`):
+- **Baseline lookup.** The previous session with the same persona is found by its own query (`findPreviousProgressSource`), however far back, not among the 10 newest. The newest, previous and first sessions are 3 small queries, with the last two run in parallel. `PROGRESS_SESSIONS` is gone.
+- **What was told.** It shows totals ("4/11 → 4/8") whenever the two totals differ, including two versions of the same persona. The trend compares shares, so the word never contradicts the counts.
+- **Third line.** It reads "Lời gợi mở bạn chưa hỏi tiếp" and does not count a hook dropped in the last reply, where no question followed.
+- **Habit sentence dropped.** It repeated the third line's count, so `HABITS` and the habit line were removed. The guide-check link stays.
+- **Turn index.** Each stored question carries its own `turn`, so the leading example is matched by turn, not by array position.
+- **Accessibility and CSS.** `role="list"` is set on the two lists, which drop their list style. `.prog-habit` was unused and is removed.
+- **Not done.** "Câu dẫn dắt" counts every question labelled leading, as the spec says. The result screen shows only verifier-confirmed ones, so the two counts can differ.
+- **Stale doc.** The untracked talk script `docs/loi-thoai-thuyet-trinh-interviewlab.md:297` (slide 22) still describes the old percentage trend. It is left for the user, since it isn't in the repo.
 
 ## Security Considerations
 

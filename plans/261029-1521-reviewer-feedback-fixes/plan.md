@@ -76,7 +76,7 @@ Sources: https://apidog.com/blog/what-is-gpt-6-1-terra/ · https://aireiter.com/
 | 5 | [Switch roles to OpenAI and measure tiers](./phase-05-switch-roles-to-openai-and-measure-tiers.md) | U1 | 0.75d | 4 | Done (≈ 0.28 USD) |
 | 6 | [Plain voice in prompts and generated scenarios](./phase-06-plain-voice-in-prompts-and-generated-scenarios.md) | F5 | 1.25d | 5 | Done (≈ 0.16 USD) |
 | 7 | [Takeaway copy without AI slop](./phase-07-takeaway-copy-without-ai-slop.md) | F5 | 1d | 3, 6 | Done (≈ 0.10 USD) |
-| 8 | [Progress before and after](./phase-08-progress-before-and-after.md) | F6 | 1d | 2 | Pending |
+| 8 | [Progress before and after](./phase-08-progress-before-and-after.md) | F6 | 1d | 2 | Done |
 | 9 | [Docs, strings and release checks](./phase-09-docs-strings-and-release-checks.md) | all | 1d | 1–8 | Pending |
 
 Run the phases in order 4 → 9. Phase 6 gives phase 7 the shared voice rules, and phase 5 picks the models that phases 6 and 7 check against. Phase 8 does not depend on 4–7 and can run in parallel.
@@ -102,7 +102,7 @@ Before each run, print the estimate and the spend so far (`pnpm il cost-report -
 - [ ] A learner who finished chị Thu sees "Luyện lại từ đầu" on the topic card, prep screen and result; it opens a new interview at turn 0; the old result stays in Buổi của tôi (F3).
 - [ ] No untold item text in any learner payload (page RSC, `/api/sessions/[id]/reveal`, replay end); result shows ≤ 3 hints + one count line (F4).
 - [x] Takeaway: one short sentence per comment, every comment judged plain by the `voice-judge` reading, no em dash, turn chips folded (F5; `plans/reports/manual-test-261030-takeaway-copy.md`).
-- [ ] `/progress` contains no "%"; with two sessions on one persona it reads "Lần trước → Lần này" in counts plus one before/after question of the learner's own (F6).
+- [x] `/progress` contains no "%"; with two sessions on one persona it reads "Lần trước → Lần này" in counts plus one before/after question of the learner's own (F6).
 - [ ] Every role runs on OpenAI locally and on production: turns, replay, reveal and one custom topic. Each role sits on the cheapest model that passed its set 3/3 (`plans/reports/model-tiering-261030-openai.md`) (U1).
 - [ ] When the primary fails (stubbed 500, 401, or 429 `insufficient_quota`), the fallback spec answers, and each attempt has its own `llm_call` row. A stream that already sent text does not fall back (U1).
 - [x] The persona and generator prompts carry the shared voice rules. A generated scenario (0/42 texts AI voice, before 1/42) and an 8-turn transcript (8/8 plain) pass the `voice-judge` reading, and each item has a concrete detail (F5; `plans/reports/manual-test-261030-plain-voice.md`).
