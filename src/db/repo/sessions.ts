@@ -1,10 +1,10 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import type { RevealJson } from "@/engine/reveal-types";
 import type { Label, QuestionType } from "@/engine/types";
 import { tokenize } from "@/engine/tokens";
 import { initialState } from "@/engine/types";
 import type { Database, Executor } from "../client";
-import { branches, generationAttempts, scenarios, sessions, snapshots, topics, turns } from "../schema";
+import { branches, generationAttempts, OPEN_SESSION_STATUSES, scenarios, sessions, snapshots, topics, turns, type Focus } from "../schema";
 import type { Scenario } from "@/scenario/schema";
 
 export type ScenarioRow = typeof scenarios.$inferSelect;
@@ -61,15 +61,35 @@ export async function getPlayableScenario(db: Executor, personaId: string, requi
   return row ?? null;
 }
 
-/** The learner's session with a persona that counts for FR-5: a withdrawn one does not. */
-export async function findSessionForPersona(db: Executor, userId: string, personaId: string) {
+/** The learner's newest session with a persona, finished or not. A withdrawn one is left out: the persona was pulled from it. */
+export async function findLatestSessionForPersona(db: Executor, userId: string, personaId: string) {
   const [row] = await db
     .select()
     .from(sessions)
     .where(and(eq(sessions.userId, userId), eq(sessions.personaId, personaId), ne(sessions.status, "withdrawn")))
-    .orderBy(desc(sessions.startedAt))
+    .orderBy(desc(sessions.startedAt), desc(sessions.id))
     .limit(1);
   return row ?? null;
+}
+
+/** The learner's unfinished session with a persona: a non-demo learner has at most one. */
+export async function findOpenSessionForPersona(db: Executor, userId: string, personaId: string) {
+  const [row] = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.userId, userId), eq(sessions.personaId, personaId), inArray(sessions.status, [...OPEN_SESSION_STATUSES])))
+    .orderBy(desc(sessions.startedAt), desc(sessions.id))
+    .limit(1);
+  return row ?? null;
+}
+
+/** How many sessions the learner has had with a persona, whatever became of them. */
+export async function countSessionsForPersona(db: Executor, userId: string, personaId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(sessions)
+    .where(and(eq(sessions.userId, userId), eq(sessions.personaId, personaId)));
+  return row.total;
 }
 
 /** What a session starts from: the main branch, turn 0 (the opening line) and snapshot 0 (the starting state). */
@@ -91,20 +111,20 @@ export async function insertOpening(tx: Executor, sessionId: string, scenario: S
 
 /**
  * Creates the session with its main branch, turn 0 (the opening line) and snapshot 0 (the
- * starting state) in one transaction. A non-demo learner has one session per persona, enforced
- * by a unique index: when it already exists, or a parallel request wins the insert, that session
- * is returned instead and nothing is written. `afterCreate` runs inside the transaction.
+ * starting state) in one transaction. A non-demo learner has at most one unfinished session per
+ * persona, enforced by a unique index: when one exists, or a parallel request wins the insert,
+ * that session is returned instead and nothing is written. `afterCreate` runs inside the transaction.
  */
 export async function createSession(
   db: Database,
-  input: { userId: string; scenario: ScenarioRow; isDemo: boolean },
+  input: { userId: string; scenario: ScenarioRow; isDemo: boolean; focus?: Focus | null },
   afterCreate?: (tx: Executor, session: SessionRow) => Promise<void>,
 ): Promise<{ session: SessionRow; created: boolean }> {
-  const { userId, scenario, isDemo } = input;
+  const { userId, scenario, isDemo, focus = null } = input;
   const created = await db.transaction(async (tx) => {
     const [session] = await tx
       .insert(sessions)
-      .values({ userId, scenarioId: scenario.id, personaId: scenario.personaId, isDemo })
+      .values({ userId, scenarioId: scenario.id, personaId: scenario.personaId, isDemo, focus })
       .onConflictDoNothing()
       .returning();
     if (!session) return null;
@@ -115,8 +135,8 @@ export async function createSession(
   });
   if (created) return { session: created, created: true };
 
-  const existing = await findSessionForPersona(db, userId, scenario.personaId);
-  if (!existing) throw new Error("session insert conflicted but no existing session was found");
+  const existing = await findOpenSessionForPersona(db, userId, scenario.personaId);
+  if (!existing) throw new Error("session insert conflicted but no unfinished session was found");
   return { session: existing, created: false };
 }
 

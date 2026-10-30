@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
 import { adminAccessLog, scenarios, sessions } from "@/db/schema";
 import { getCustomQuota, reportCustomProblem } from "@/server/custom-topic";
+import { openSession } from "@/server/sessions";
 import { runConfig } from "../../cli/commands/config";
 import { MAX_COST_PER_PLAYABLE_USD, STATS_WINDOW, customStats, runCustom } from "../../cli/commands/custom";
 import { CliError } from "../../cli/scenario-file";
@@ -51,6 +52,24 @@ describe("il custom list", () => {
     expect(text).toContain("lan@example.com  từ chối (sexual)");
     expect(text).toContain("chủ đề: một chủ đề bị từ chối");
     expect(await log()).toMatchObject([{ adminEmail: "admin@example.com", channel: "cli", action: "custom list" }]);
+  });
+
+  it("shows a problem reported on a later session of the scenario, once the learner played it again", async () => {
+    const learner = await createLearner("minh@example.com");
+    const passed = await attempt(learner);
+    await db().update(sessions).set({ status: "done" }).where(eq(sessions.id, passed.sessionId));
+    const again = await openSession(db(), learner, `custom-${passed.attemptId}`);
+    if (!again.ok) throw new Error("the generated persona could not be played again");
+    await db().update(sessions).set({ status: "revealed" }).where(eq(sessions.id, again.session.id));
+
+    const before = capture();
+    expect(await runCustom(["list"], before.io, db(), admin)).toBe(0);
+    expect(before.out.join("\n")).not.toContain("NGƯỜI HỌC BÁO LỖI");
+
+    await reportCustomProblem(db(), learner, again.session.id);
+    const { io, out } = capture();
+    expect(await runCustom(["list"], io, db(), admin)).toBe(0);
+    expect(out.join("\n")).toContain("NGƯỜI HỌC BÁO LỖI");
   });
 
   it("closes an attempt nobody finished in time before listing, so it is not shown as running for ever", async () => {

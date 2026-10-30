@@ -55,7 +55,7 @@ function notPrimary(level: "fallback1" | "none", turn: number | null): string {
  * the reveal and stores the guess, so the demo account opens on the result with the replay still
  * ahead. It fails, with the reason, unless the replay moment is an ignored hook; a session that
  * failed is removed, so the account's newest session is always one that can be shown. Each run
- * makes a new session: a demo account has no one-session limit.
+ * makes a new session: a demo account may keep several unfinished ones.
  */
 export function runSeedDemo(args: string[], io: CliIo, db: Database | null, deps: () => SeedDemoDeps): Promise<number> {
   return reportCliErrors(io, async () => {

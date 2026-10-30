@@ -233,6 +233,20 @@ describe("Màn 6 in done mode: how the replay ended", () => {
   });
 });
 
+describe("Màn 6: the offer to play the persona again from the start", () => {
+  const withRetry = (status: SessionRow["status"], retryable: boolean) =>
+    buildSessionView({ session: sessionOf(status), scenario, topicTitle: "Chi tiêu hằng ngày", turns: mainTurns, waitlisted: false, next: { kind: "all_practised" }, replay: null, retryable });
+
+  it("is made once the session is done, and only while a version of the persona can be started", () => {
+    expect(withRetry("done", true)).toMatchObject({ screen: "reveal", retryPersonaId: "chi-thu" });
+    expect(withRetry("done", false)).toMatchObject({ screen: "reveal", retryPersonaId: null });
+  });
+
+  it("is not made while the replay is ahead: that session is still the unfinished one", () => {
+    for (const status of ["revealed", "replaying"] as const) expect(withRetry(status, true), status).toMatchObject({ screen: "reveal", retryPersonaId: null });
+  });
+});
+
 describe("ReplayResult: the fixed line of a leading-question replay that failed", () => {
   const base = { level: "fallback1" as const, result: "fail" as const, leadingTurn: 1, sampleQuestion: "Câu hỏi mẫu ạ?" };
   const html = (outcome: ReplayOutcome) => renderToStaticMarkup(createElement(ReplayResult, { outcome, persona: { displayName: "chị Thu", displayNameCapitalized: "Chị Thu" } }));

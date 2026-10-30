@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DELETE_ACCOUNT, PLAYED_BEFORE_DELETION } from "@/strings/product-strings";
+import { DELETE_ACCOUNT } from "@/strings/product-strings";
 import { createAccount, signIn, signInAndAccept, signInAsNewLearner, uniqueEmail } from "./helpers/auth";
 import { db } from "./helpers/db";
 import { startInterview } from "./helpers/interview";
@@ -94,8 +94,9 @@ test.describe("Màn 9: deleting the account", () => {
     const deletions = await db.eventsNamed("account_deleted");
     expect(deletions).toHaveLength(deletionsBefore + 1);
     expect(deletions.at(-1)).toMatchObject({ userId: null, sessionId: null, props: { sessions: 1 } });
+    // Only custom-topic counters are kept, and this learner made no topic of their own: nothing new is kept.
     const tombstones = await db.tombstones();
-    expect(tombstones).toHaveLength(tombstonesBefore + 1);
+    expect(tombstones).toHaveLength(tombstonesBefore);
     const kept = JSON.stringify(tombstones);
     for (const personal of [email, userId, sessionId, subject]) expect(kept).not.toContain(personal);
 
@@ -107,7 +108,7 @@ test.describe("Màn 9: deleting the account", () => {
     expect((await page.request.get("/api/sessions")).status()).toBe(401);
   });
 
-  test("signing in again with the same Google account does not give a second session with the persona", async ({ page, context, browser }) => {
+  test("signing in again with the same Google account starts the persona afresh: nothing of the sessions was kept", async ({ page, context }) => {
     const subject = `google-${uniqueEmail("returning")}`;
     const { email } = await learnerWithFinishedSession(page, "delete-return", subject);
     await openButton(page).click();
@@ -122,19 +123,13 @@ test.describe("Màn 9: deleting the account", () => {
     await page.goto("/data-notice?next=/prep/chi-thu");
     await page.getByRole("button", { name: "Tôi hiểu" }).click();
 
-    await expect(page.locator("main [role=alert]")).toHaveText(PLAYED_BEFORE_DELETION);
-    await expect(page.getByRole("button", { name: "Bắt đầu" })).toHaveCount(0);
-    await expect(page.getByRole("main").getByRole("link", { name: "Về chủ đề" })).toHaveAttribute("href", "/topics/ux-chi-tieu");
-    await page.goto("/my-sessions");
-    await expect(page.getByRole("heading", { name: "Bạn chưa luyện buổi nào" })).toBeVisible();
-    expect(await db.sessionsOf(newId)).toEqual([]);
-
-    // Somebody else, with another Google account, is not held to it.
-    const otherContext = await browser.newContext();
-    const other = await otherContext.newPage();
-    const started = await startInterview(other, otherContext, "delete-someone-else");
-    expect(await db.sessionsOf(started.userId)).toHaveLength(1);
-    await otherContext.close();
+    // A new account: no alert, no earlier result, the plain start.
+    await expect(page).toHaveURL("/prep/chi-thu");
+    await expect(page.locator("main [role=alert]")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Xem lại kết quả buổi trước" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Bắt đầu", exact: true }).click();
+    await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]{36}$/u);
+    expect(await db.sessionsOf(newId)).toHaveLength(1);
   });
 
   test("a second browser still signed in to the deleted account is signed out, and brings nothing back", async ({ page, context, browser }) => {

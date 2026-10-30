@@ -714,7 +714,7 @@ test.describe("keyboard only", () => {
 });
 
 test.describe("Màn 3: the button follows the session", () => {
-  test("introduces the notes, and offers start, continue or review by the state of the session", async ({ page, context }) => {
+  test("introduces the notes, and offers start, continue, or a new start beside the last result, by the state of the session", async ({ page, context }) => {
     await signInAsNewLearner(context, uniqueEmail("prep-states"));
     await page.goto("/data-notice?next=/prep/chi-thu");
     await page.getByRole("button", { name: "Tôi hiểu" }).click();
@@ -738,9 +738,11 @@ test.describe("Màn 3: the button follows the session", () => {
     await page.reload();
     await expect(resume).toHaveAttribute("href", `/sessions/${sessionId}`);
 
+    // Finished: the press starts the persona again from the beginning, and the result stays one press away.
     await db.setSessionStatus(sessionId, "done");
     await page.reload();
-    await expect(page.getByRole("link", { name: "Xem lại kết quả" })).toHaveAttribute("href", `/sessions/${sessionId}`);
+    await expect(page.getByRole("button", { name: "Luyện lại từ đầu" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Xem lại kết quả buổi trước" })).toHaveAttribute("href", `/sessions/${sessionId}`);
     await expect(resume).toHaveCount(0);
 
     // A withdrawn session does not count: the learner may start again.

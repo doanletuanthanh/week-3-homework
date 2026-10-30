@@ -1,0 +1,2 @@
+DROP INDEX "session_user_persona_key";--> statement-breakpoint
+CREATE UNIQUE INDEX "session_user_persona_open_key" ON "session" USING btree ("user_id","persona_id") WHERE "session"."is_demo" = false AND "session"."status" IN ('generating', 'interviewing', 'revealed', 'replaying');

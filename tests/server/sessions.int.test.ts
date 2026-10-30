@@ -35,7 +35,7 @@ describe("openSession", () => {
     ]);
   });
 
-  it("writes one session_started event with the persona, the topic and the kind", async () => {
+  it("writes one session_started event with the persona, the topic, the kind and the attempt", async () => {
     const learner = await createLearner("linh@example.com");
     const session = await startSession(learner);
     await startSession(learner); // "Tiếp tục": no second event
@@ -45,12 +45,12 @@ describe("openSession", () => {
         userId: learner.id,
         sessionId: session.id,
         name: "session_started",
-        props: { persona_id: PERSONA_ID, topic_id: "ux-chi-tieu", kind: "curated", scenario_version: 1 },
+        props: { persona_id: PERSONA_ID, topic_id: "ux-chi-tieu", kind: "curated", scenario_version: 1, attempt: 1 },
       },
     ]);
   });
 
-  it("returns the existing session instead of starting a second one for the same persona", async () => {
+  it("returns the unfinished session instead of starting a second one for the same persona", async () => {
     const learner = await createLearner("linh@example.com");
 
     const first = await startSession(learner);
@@ -74,13 +74,19 @@ describe("openSession", () => {
     expect(await getDb().select().from(events)).toHaveLength(1);
   });
 
-  it("is held to one session per learner and persona by the database, not only by the check", async () => {
+  it("is held to one unfinished session per learner and persona by the database, not only by the check", async () => {
     const learner = await createLearner("linh@example.com");
     const session = await startSession(learner);
 
-    const second = getDb().insert(sessions).values({ userId: learner.id, scenarioId: session.scenarioId, personaId: PERSONA_ID });
-
-    await expect(second).rejects.toMatchObject({ cause: { constraint_name: "session_user_persona_key" } });
+    for (const status of ["interviewing", "revealed", "replaying", "generating"] as const) {
+      await getDb().update(sessions).set({ status }).where(eq(sessions.id, session.id));
+      const second = getDb().insert(sessions).values({ userId: learner.id, scenarioId: session.scenarioId, personaId: PERSONA_ID });
+      await expect(second, status).rejects.toMatchObject({ cause: { constraint_name: "session_user_persona_open_key" } });
+    }
+    // A finished one does not hold the next.
+    await getDb().update(sessions).set({ status: "done" }).where(eq(sessions.id, session.id));
+    await getDb().insert(sessions).values({ userId: learner.id, scenarioId: session.scenarioId, personaId: PERSONA_ID });
+    expect(await getDb().select().from(sessions)).toHaveLength(2);
   });
 
   it("does not count a withdrawn session: the learner starts again with the persona", async () => {
@@ -117,6 +123,65 @@ describe("openSession", () => {
     expect(result).toEqual({ ok: false, reason: "not_found" });
     expect(sessionEntryPath(result, "khong-co")).toBe("/");
     expect(await getDb().select().from(sessions)).toHaveLength(0);
+  });
+});
+
+describe("openSession: playing a persona again once its session is done", () => {
+  async function finishedSession(learner: Awaited<ReturnType<typeof createLearner>>) {
+    const session = await startSession(learner);
+    await getDb().update(sessions).set({ status: "done", endedAt: new Date() }).where(eq(sessions.id, session.id));
+    return (await getDb().select().from(sessions).where(eq(sessions.id, session.id)))[0];
+  }
+
+  it("starts a new session from the opening line, and leaves the finished one as it was", async () => {
+    const learner = await createLearner("linh@example.com");
+    const finished = await finishedSession(learner);
+
+    const again = await startSession(learner);
+
+    expect(again.id).not.toBe(finished.id);
+    expect(again).toMatchObject({ userId: learner.id, personaId: PERSONA_ID, status: "interviewing", endedAt: null, guess: null, revealJson: null });
+    const transcript = await listTurns(getDb(), learner.id, again.id);
+    expect(transcript).toHaveLength(1);
+    expect(transcript[0]).toMatchObject({ index: 0, learnerText: null });
+    expect(transcript[0].personaText).toContain("chị là Thu");
+    expect(await getDb().select().from(snapshots).where(eq(snapshots.sessionId, again.id))).toMatchObject([{ index: 0, unlocked: [], ledger: [], disclosed: [], openness: 4 }]);
+    expect((await getDb().select().from(sessions).where(eq(sessions.id, finished.id)))[0]).toEqual(finished);
+    expect(await listTurns(getDb(), learner.id, finished.id)).toHaveLength(1);
+  });
+
+  it("counts it as the second attempt with the persona", async () => {
+    const learner = await createLearner("linh@example.com");
+    await finishedSession(learner);
+
+    const again = await startSession(learner);
+
+    expect((await getDb().select().from(events).where(eq(events.sessionId, again.id)))[0]).toMatchObject({
+      name: "session_started",
+      props: { persona_id: PERSONA_ID, kind: "curated", attempt: 2 },
+    });
+  });
+
+  it("then opens that new one again, and many presses at once start only one", async () => {
+    const learner = await createLearner("linh@example.com");
+    await finishedSession(learner);
+
+    const results = await Promise.all(Array.from({ length: 5 }, () => startSession(learner)));
+
+    expect(new Set(results.map((session) => session.id)).size).toBe(1);
+    expect(await startSession(learner)).toMatchObject({ id: results[0].id });
+    expect(await getDb().select().from(sessions)).toHaveLength(2);
+    expect(await getDb().select().from(events)).toHaveLength(2);
+  });
+
+  it("leaves a demo account as it was: a new session at every press", async () => {
+    const demo = await createLearner("demo@example.com", DEMO_LISTS);
+    const finished = await finishedSession(demo);
+
+    const first = await startSession(demo);
+    const second = await startSession(demo);
+
+    expect(new Set([finished.id, first.id, second.id]).size).toBe(3);
   });
 });
 
@@ -215,6 +280,19 @@ describe("daily cost cap", () => {
     await spend(100);
 
     expect(await openSession(getDb(), learner, PERSONA_ID)).toMatchObject({ ok: true, session: { id: session.id } });
+  });
+
+  it("refuses to start a persona again at the cap: the cap is all that bounds playing again", async () => {
+    const learner = await createLearner("linh@example.com");
+    const session = await startSession(learner);
+    await getDb().update(sessions).set({ status: "done" }).where(eq(sessions.id, session.id));
+    await spend(4);
+
+    const result = await openSession(getDb(), learner, PERSONA_ID);
+
+    expect(result).toEqual({ ok: false, reason: "cap_reached" });
+    expect(sessionEntryPath(result, PERSONA_ID)).toBe("/prep/chi-thu?blocked=cap");
+    expect(await getDb().select().from(sessions)).toHaveLength(1);
   });
 
   it("honours the demo reserve: a demo account starts a session a learner cannot", async () => {

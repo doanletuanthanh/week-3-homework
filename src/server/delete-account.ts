@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { accountCommittedToday, countAttemptsToday, deleteCustomContent, sweepStaleAttempts } from "@/db/repo/custom-topics";
 import { moveSpendToLedger } from "@/db/repo/llm-calls";
-import { addCustomUsage, addPlayedPersonas } from "@/db/repo/quota-tombstone";
+import { addCustomUsage } from "@/db/repo/quota-tombstone";
 import { deleteAuthAccount, deleteUserRow } from "@/db/repo/users";
 import { sessions, users } from "@/db/schema";
 import type { AppUser } from "./auth";
@@ -14,9 +14,8 @@ export type DeleteAccountResult = { ok: true } | { ok: false; error: "not_found"
 
 /**
  * FR-66: removes the learner's account and everything stored about them, in one transaction, so
- * a failure removes nothing. What stays names nobody: the personas the account had played and
- * what it used of the custom-topic limits, under a keyed hash of the Google account (so deleting
- * and signing in again opens no second session and resets no limit);
+ * a failure removes nothing. What stays names nobody: what it used of the custom-topic limits,
+ * under a keyed hash of the Google account (so deleting and signing in again resets no limit);
  * the cost of its model calls, added to the day's ledger (so a daily cap reads the same total);
  * one event that an account was deleted; and the rows of the admin access log, without their ids.
  * Traces already sent to LangSmith are outside this and expire there.
@@ -34,21 +33,9 @@ export async function deleteAccount(db: Database, user: Pick<AppUser, "id" | "is
     // below, even when it had runs left. The learner is leaving; nobody will come back for it.
     await sweepStaleAttempts(tx, user.id, { abandon: true });
 
-    const own = await tx
-      .select({ personaId: sessions.personaId, status: sessions.status, isDemo: sessions.isDemo })
-      .from(sessions)
-      .where(eq(sessions.userId, user.id));
+    const own = await tx.select({ status: sessions.status }).from(sessions).where(eq(sessions.userId, user.id));
     if (own.some((session) => session.status === "generating")) return { ok: false, error: "generating" };
 
-    // The sessions the one-session rule counts: a demo or withdrawn session never did.
-    // A custom persona is deleted with the account, so there is nothing to play twice: only authored ones are kept.
-    const played = [
-      ...new Set(
-        own
-          .filter((session) => !session.isDemo && session.status !== "withdrawn")
-          .flatMap((session) => (session.personaId === null || session.personaId.startsWith("custom-") ? [] : [session.personaId])),
-      ),
-    ];
     const today = await countAttemptsToday(tx, user.id);
     const usage = {
       freeCustomUsed: account.freeCustomUsed,
@@ -59,13 +46,10 @@ export async function deleteAccount(db: Database, user: Pick<AppUser, "id" | "is
     };
     // Spend alone counts too: attempts that ended as system errors are no attempts, but they used the account's share.
     const usedCustom = usage.freeCustomUsed || usage.failedCount > 0 || usage.attemptsToday > 0 || usage.refusalsToday > 0 || usage.spendTodayUsd > 0;
-    if (played.length > 0 || usedCustom) {
+    if (usedCustom) {
       const key = await quotaKeyOf(tx, user.id);
       if (key === null) console.warn(JSON.stringify({ event: "account_deleted_without_quota_key" }));
-      else {
-        if (played.length > 0) await addPlayedPersonas(tx, key, played);
-        if (usedCustom) await addCustomUsage(tx, key, usage);
-      }
+      else await addCustomUsage(tx, key, usage);
     }
 
     await moveSpendToLedger(tx, user.id);

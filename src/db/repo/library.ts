@@ -118,7 +118,7 @@ export async function getTopicWithPersonas(
 
 export type PersonaSessionRow = { personaId: string; id: string; status: SessionRow["status"]; startedAt: Date };
 
-/** The learner's newest session with each persona that counts for FR-5: a withdrawn one does not. */
+/** The learner's newest session with each persona. A withdrawn one is left out: the persona was pulled from it. */
 export async function listSessionsForPersonas(db: Executor, userId: string, personaIds: string[]): Promise<PersonaSessionRow[]> {
   if (personaIds.length === 0) return [];
   const rows = await db
@@ -138,7 +138,7 @@ async function listPersonaIds(db: Executor, userId: string, state: "done" | "cou
   return rows.flatMap((row) => (row.personaId === null ? [] : [row.personaId]));
 }
 
-/** Persona ids the learner has any counting session with (FR-5: a withdrawn one does not count). */
+/** Persona ids the learner has practised: any session but a withdrawn one. */
 export const listPractisedPersonaIds = (db: Executor, userId: string) => listPersonaIds(db, userId, "counting");
 
 /** Persona ids the learner has finished a session with. */

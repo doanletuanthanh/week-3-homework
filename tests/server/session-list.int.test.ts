@@ -156,14 +156,16 @@ describe("a withdrawn session", () => {
     const again = await openSession(db(), learner, PERSONA_ID);
     expect(again).toMatchObject({ ok: true });
     expect((await listSessions(db(), learner)).items.map((item) => item.state)).toEqual(["in_progress", "withdrawn"]);
-    // The learner who finished has had their one session: the new version opens no second one.
-    expect(await openSession(db(), finished, PERSONA_ID)).toMatchObject({ ok: true, session: { id: finishedId } });
-    expect(await db().select().from(sessions).where(eq(sessions.userId, finished.id))).toHaveLength(1);
+    // The learner who finished starts the persona again on the new version; the finished session keeps its result.
+    const retry = await openSession(db(), finished, PERSONA_ID);
+    expect(retry).toMatchObject({ ok: true, session: { status: "interviewing" } });
+    expect(retry.ok && retry.session.id).not.toBe(finishedId);
+    expect((await listSessions(db(), finished)).items).toMatchObject([{ state: "in_progress" }, { id: finishedId, state: "done", result: { told: 1 } }]);
   });
 });
 
-describe("one session per persona across versions (FR-5)", () => {
-  it.each(["interviewing", "done"] as const)("a new version of the persona opens no second session for a learner whose session is %s", async (status) => {
+describe("one unfinished session per persona across versions", () => {
+  it.each(["interviewing", "revealed"] as const)("a new version of the persona opens no second session for a learner whose session is %s", async (status) => {
     const learner = await createLearner("linh@example.com");
     const first = await startSession(learner);
     await db().update(sessions).set({ status }).where(eq(sessions.id, first.id));
@@ -175,6 +177,19 @@ describe("one session per persona across versions (FR-5)", () => {
     // A learner who has not played starts on the new version.
     const other = await startSession(await createLearner("an@example.com"));
     expect(other.scenarioId).not.toBe(first.scenarioId);
+  });
+
+  it("a learner whose session is done starts again on the new version, and the finished session stays on its own", async () => {
+    const learner = await createLearner("linh@example.com");
+    const first = await startSession(learner);
+    await db().update(sessions).set({ status: "done" }).where(eq(sessions.id, first.id));
+
+    await importScenarioFile(db(), PERSONA_FILE); // version 2
+
+    const again = await startSession(learner);
+    expect(again.id).not.toBe(first.id);
+    expect(again.scenarioId).not.toBe(first.scenarioId);
+    expect((await db().select().from(sessions).where(eq(sessions.id, first.id)))[0]).toMatchObject({ status: "done", scenarioId: first.scenarioId });
   });
 });
 

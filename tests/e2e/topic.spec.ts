@@ -18,7 +18,9 @@ const cards = (page: Page) => page.locator("article.pcard");
 /** The one card of chị Thu's topic. */
 const card = (page: Page) => cards(page).first();
 const ribbon = (page: Page) => card(page).locator(".ribbon");
-const mainLink = (page: Page) => card(page).locator(".actionbar a");
+/** The main button of the card's state; a finished session's card also links its result. */
+const mainLink = (page: Page) => card(page).locator(".actionbar a.btn-primary");
+const resultLink = (page: Page) => card(page).locator(".actionbar a.btn-surface");
 const practised = (page: Page) => page.locator(".topic-done");
 const openedEvents = (userId: string) => db.eventsOfUser(userId).then((rows) => rows.filter((event) => event.name === "topic_opened"));
 const allOpenedEvents = () => db.eventsNamed("topic_opened");
@@ -238,14 +240,17 @@ test.describe("Màn 2b: the card follows the learner's session (PRD §7)", () =>
     await expect(page).toHaveURL(`/sessions/${sessionId}`);
     await expect(page.getByLabel("Câu hỏi của bạn")).toBeVisible();
 
-    // Finished: the day it started, and the way to the result.
+    // Finished: the day it started, the way to the result, and a new start from Màn 3.
     await db.setSessionStatus(sessionId, "done");
     const started = (await db.session(sessionId)).startedAt;
     const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit" }).format(started);
     await page.goto(TOPIC_PATH);
     await expect(ribbon(page)).toHaveText(`Đã luyện · ${day}`);
-    await expect(mainLink(page)).toHaveText("Xem lại kết quả");
-    await expect(mainLink(page)).toHaveAttribute("href", `/sessions/${sessionId}`);
+    await expect(resultLink(page)).toHaveText("Xem lại kết quả");
+    await expect(resultLink(page)).toHaveAttribute("href", `/sessions/${sessionId}`);
+    await expect(mainLink(page)).toHaveText("Luyện lại từ đầu");
+    await expect(mainLink(page)).toHaveAttribute("href", "/prep/chi-thu");
+    await expect(card(page).locator("form")).toHaveCount(0);
     await expect(practised(page)).toHaveText("Bạn đã luyện 1/1");
 
     // Withdrawn: it does not count, the learner may start again.
@@ -296,7 +301,8 @@ test.describe("Màn 2b: the card follows the learner's session (PRD §7)", () =>
     await db.setSessionStatus(sessionId, "done");
     await page.goBack();
     await expect(page).toHaveURL(TOPIC_PATH);
-    await expect(mainLink(page)).toHaveText("Xem lại kết quả");
+    await expect(mainLink(page)).toHaveText("Luyện lại từ đầu");
+    await expect(resultLink(page)).toHaveAttribute("href", `/sessions/${sessionId}`);
     await expect(practised(page)).toHaveText("Bạn đã luyện 1/1");
   });
 
@@ -392,48 +398,52 @@ test.describe("Màn 2b: the event of an opened topic (signed-in learners only)",
 });
 
 test.describe("Màn 2b: a demo account (FR-45)", () => {
-  test("every card also starts one more session, and the main button opens the newest", async ({ page }) => {
+  test("a card beside an unfinished session also starts one more; in the other states its main button leads to a new one", async ({ page }) => {
     const demoId = await signInAsDemo(page);
     const newest = async () => (await db.sessionsOf(demoId)).filter((session) => session.status !== "withdrawn").sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
     const another = card(page).getByRole("button", { name: "Bắt đầu buổi mới" });
 
-    // Whatever the account already has, the extra button is there beside the main one.
-    await expect(another).toBeVisible();
-    await expect(mainLink(page)).toHaveCount(1);
+    // Whatever the account already has: its newest session with chị Thu is finished, or there is none.
     const before = await newest();
-    if (before) await expect(mainLink(page)).toHaveAttribute("href", `/sessions/${before.id}`);
-    else await expect(mainLink(page)).toHaveAttribute("href", "/prep/chi-thu");
+    if (before && before.status !== "done") await db.setSessionStatus(before.id, "done");
+    await page.goto(TOPIC_PATH);
+    await expect(another).toHaveCount(0);
+    const start = before ? "Luyện lại từ đầu" : "Bắt đầu";
+    await expect(mainLink(page)).toHaveText(start);
+    await expect(mainLink(page)).toHaveAttribute("href", "/prep/chi-thu");
 
-    // It starts a session at once and leads into it.
-    await another.click();
+    // Màn 3 starts one and leads into it.
+    await mainLink(page).click();
+    await expect(page).toHaveURL("/prep/chi-thu");
+    await page.getByRole("button", { name: start, exact: true }).click();
     await expect(page).toHaveURL(SESSION_URL);
     const firstId = page.url().split("/").pop()!;
     expect(firstId).not.toBe(before?.id);
     expect(await db.session(firstId)).toMatchObject({ userId: demoId, personaId: "chi-thu", status: "interviewing" });
 
-    // The card now speaks for that session, and still offers one more.
+    // Unfinished: the card opens it, and starts one more beside it at once.
     await page.goto(TOPIC_PATH);
     await expect(ribbon(page)).toHaveText("Đang làm dở");
     await expect(mainLink(page)).toHaveText("Tiếp tục buổi luyện");
-    await expect(mainLink(page)).toHaveAttribute("href", `/sessions/${firstId}`);
-    await expect(another).toBeVisible();
-
-    // Finished: "Xem lại kết quả", and one more can still be started.
-    await db.setSessionStatus(firstId, "done");
-    await page.reload();
-    await expect(mainLink(page)).toHaveText("Xem lại kết quả");
     await expect(mainLink(page)).toHaveAttribute("href", `/sessions/${firstId}`);
     await another.click();
     await expect(page).toHaveURL(SESSION_URL);
     const secondId = page.url().split("/").pop()!;
     expect(secondId).not.toBe(firstId);
 
-    // The newest one is what the main button opens; the finished one is still in the list.
+    // The newest one is what the main button opens.
     await page.goto(TOPIC_PATH);
     await expect(mainLink(page)).toHaveText("Tiếp tục buổi luyện");
     await expect(mainLink(page)).toHaveAttribute("href", `/sessions/${secondId}`);
     expect((await newest())!.id).toBe(secondId);
-    // Practised all the same, as the library says: a finished session exists.
+
+    // Finished: the result and a new start, and no extra button beside them.
+    await db.setSessionStatus(secondId, "done");
+    await page.reload();
+    await expect(resultLink(page)).toHaveAttribute("href", `/sessions/${secondId}`);
+    await expect(mainLink(page)).toHaveText("Luyện lại từ đầu");
+    await expect(another).toHaveCount(0);
+    // Practised, as the library says: a finished session exists.
     await expect(practised(page)).toHaveText("Bạn đã luyện 1/1");
     await page.goto("/library");
     await expect(page.locator(`a.tcard[href="${TOPIC_PATH}"] .tcard-done`)).toHaveText("Đã luyện 1/1");

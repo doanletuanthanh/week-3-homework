@@ -84,10 +84,13 @@ describe("PersonaCard: the label and the button of each state (PRD §7)", () => 
     expect(links(markup)).toEqual([["Tiếp tục buổi luyện", "/sessions/s-1"]]);
   });
 
-  it("a finished session: 'Đã luyện · dd/mm' and 'Xem lại kết quả' to the session", () => {
+  it("a finished session: 'Đã luyện · dd/mm', 'Xem lại kết quả' to the session and 'Luyện lại từ đầu' to Màn 3", () => {
     const markup = render(card({ button: "review", sessionId: "s-1", sessionDate: "25/09" }));
     expect(markup).toContain("Đã luyện · 25/09");
-    expect(links(markup)).toEqual([["Xem lại kết quả", "/sessions/s-1"]]);
+    expect(links(markup)).toEqual([
+      ["Xem lại kết quả", "/sessions/s-1"],
+      ["Luyện lại từ đầu", "/prep/chi-thu"],
+    ]);
   });
 
   it("shows who the persona is, the research question and the seal counter", () => {
@@ -109,14 +112,20 @@ describe("PersonaCard: the label and the button of each state (PRD §7)", () => 
     }
   });
 
-  it("a demo account's card also starts one more session, in every state (FR-45)", () => {
-    for (const state of [card(), card({ button: "continue", sessionId: "s-1" }), card({ button: "review", sessionId: "s-1", sessionDate: "25/09" })]) {
+  it("a demo account's card also starts one more session beside an unfinished one (FR-45)", () => {
+    const markup = render(card({ button: "continue", sessionId: "s-1" }), true);
+    expect(markup.match(/<form/gu)).toHaveLength(1);
+    expect(markup).toContain('<input type="hidden" name="personaId" value="chi-thu"/>');
+    expect(markup).toMatch(/<button type="submit"[^>]*>Bắt đầu buổi mới<\/button>/u);
+    // The main button is still there, and still the one of the state.
+    expect(links(markup)).toEqual([["Tiếp tục buổi luyện", "/sessions/s-1"]]);
+  });
+
+  it("a demo account's card with no session or a finished one has a learner's buttons: they already lead to a new session", () => {
+    for (const state of [card(), card({ button: "review", sessionId: "s-1", sessionDate: "25/09" })]) {
       const markup = render(state, true);
-      expect(markup.match(/<form/gu)).toHaveLength(1);
-      expect(markup).toContain('<input type="hidden" name="personaId" value="chi-thu"/>');
-      expect(markup).toMatch(/<button type="submit"[^>]*>Bắt đầu buổi mới<\/button>/u);
-      // The main button is still there, and still the one of the state.
-      expect(links(markup)).toHaveLength(1);
+      expect(markup).not.toContain("<form");
+      expect(links(markup)).toEqual(links(render(state)));
     }
   });
 

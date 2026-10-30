@@ -28,7 +28,7 @@ async function signInAsListDemo(page: Page): Promise<AppUser> {
   return { id, email: DEMO_LIST_EMAIL, isAdmin: false, isDemo: true, noticeAcked: true, roleFilter: null };
 }
 
-/** Gives the demo account sessions until it has at least this many. A demo account has no one-session limit. */
+/** Gives the demo account sessions until it has at least this many. A demo account may keep several unfinished ones. */
 async function ensureDemoSessions(demo: AppUser, atLeast: number) {
   for (let count = (await db.sessionsOf(demo.id)).length; count < atLeast; count += 1) {
     expect((await openSession(getDb(), demo, "chi-thu")).ok).toBe(true);
@@ -358,7 +358,7 @@ test.describe("Màn 3 for a demo account (FR-45)", () => {
     await expect(composer(page)).toBeVisible();
   });
 
-  test("a learner gets no second start: one session per persona", async ({ page, context }) => {
+  test("a learner gets no second start while the session is unfinished", async ({ page, context }) => {
     const { sessionId, userId } = await startInterview(page, context, "mine-one-session");
 
     await page.goto("/prep/chi-thu");

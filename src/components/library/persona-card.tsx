@@ -4,6 +4,7 @@ import { PersonaAvatar } from "@/components/persona-avatar";
 import { StartSessionButton } from "@/components/start-session-button";
 import { startSession } from "@/server/actions";
 import type { PersonaCardView } from "@/server/library";
+import { RETRY } from "@/strings/product-strings";
 
 /** The state of the learner's session with the persona (PRD §7), in words: colour never carries it alone. */
 function State({ persona }: { persona: PersonaCardView }) {
@@ -32,8 +33,8 @@ function State({ persona }: { persona: PersonaCardView }) {
   }
 }
 
-/** The button of the card (PRD §7). A link: a session is created on Màn 3, not here. */
-function MainButton({ persona }: { persona: PersonaCardView }) {
+/** The buttons of the card (PRD §7). Links: a session is created on Màn 3, not here. */
+function Buttons({ persona }: { persona: PersonaCardView }) {
   if (persona.button === "start" || persona.sessionId === null) {
     return (
       <Link className="btn btn-primary btn-card" href={`/prep/${persona.personaId}`}>
@@ -43,23 +44,33 @@ function MainButton({ persona }: { persona: PersonaCardView }) {
     );
   }
   // The session's own URL shows the screen of its state, Màn 3 included while no question was asked.
-  return persona.button === "review" ? (
-    <Link className="btn btn-surface btn-card" href={`/sessions/${persona.sessionId}`}>
-      Xem lại kết quả
-      <ArrowRightIcon size={16} />
-    </Link>
-  ) : (
-    <Link className="btn btn-primary btn-card" href={`/sessions/${persona.sessionId}`}>
-      <ReplayIcon size={16} />
-      Tiếp tục buổi luyện
-    </Link>
+  if (persona.button === "continue") {
+    return (
+      <Link className="btn btn-primary btn-card" href={`/sessions/${persona.sessionId}`}>
+        <ReplayIcon size={16} />
+        Tiếp tục buổi luyện
+      </Link>
+    );
+  }
+  // Finished: the result stays one press away, and Màn 3 starts the persona again from its opening line.
+  return (
+    <>
+      <Link className="btn btn-surface btn-card" href={`/sessions/${persona.sessionId}`}>
+        Xem lại kết quả
+      </Link>
+      <Link className="btn btn-primary btn-card" href={`/prep/${persona.personaId}`}>
+        {RETRY.start}
+        <ArrowRightIcon size={16} />
+      </Link>
+    </>
   );
 }
 
 /**
  * A persona of a topic (Màn 2b): who it is, the research question, how many things it holds
- * unsaid, and the button that fits the learner's session with it. `demo`: the account has no
- * one-session limit, so every card can also start one more (FR-45).
+ * unsaid, and the buttons that fit the learner's session with it. `demo`: the account may keep
+ * several unfinished sessions, so a card whose session is unfinished can also start one more
+ * (FR-45); in the other states the main button already leads to a new one.
  */
 export function PersonaCard({ persona, demo }: { persona: PersonaCardView; demo: boolean }) {
   return (
@@ -88,13 +99,13 @@ export function PersonaCard({ persona, demo }: { persona: PersonaCardView; demo:
         </div>
       </div>
       <div className="actionbar">
-        {demo && (
+        {demo && persona.button === "continue" && (
           <form action={startSession}>
             <input type="hidden" name="personaId" value={persona.personaId} />
             <StartSessionButton another card />
           </form>
         )}
-        <MainButton persona={persona} />
+        <Buttons persona={persona} />
       </div>
     </article>
   );

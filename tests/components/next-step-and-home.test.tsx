@@ -5,7 +5,7 @@ import { CreateTopicCard } from "@/components/library/create-topic-card";
 import { TopicCard } from "@/components/library/topic-card";
 import { NextStep } from "@/components/reveal/next-step";
 import type { LibraryTopic, NextPersona } from "@/server/library";
-import { HOME_SAMPLE, productStrings } from "@/strings/product-strings";
+import { HOME_SAMPLE, RETRY, productStrings } from "@/strings/product-strings";
 import { curatedPersonas } from "../helpers/curated-scenarios";
 import { findSealed } from "../helpers/sealed-strings";
 
@@ -102,6 +102,34 @@ describe("NextStep: nobody left to offer", () => {
       expect(markup).not.toContain('href="/"');
       expect(markup).not.toContain("/prep/");
     }
+  });
+});
+
+describe("NextStep: the persona just practised, again from the start (once the session is done)", () => {
+  const retry = { personaId: "chi-thu", displayName: "chị Thu" };
+
+  it("beside another persona: a link to its prep screen, after the main button", () => {
+    const markup = renderToStaticMarkup(<NextStep waitlisted={false} next={{ kind: "next", persona: persona() }} retry={retry} />);
+
+    expect(links(markup)).toEqual([
+      ["Luyện tiếp với anh Dũng", "/prep/anh-dung"],
+      ["Luyện lại với chị Thu từ đầu", "/prep/chi-thu"],
+      ["Về thư viện", "/library"],
+      ["Kiểm tra bộ câu hỏi", "/guide-check"],
+    ]);
+  });
+
+  it("with nobody else to offer: the main button of the card", () => {
+    for (const next of [{ kind: "all_practised" }, { kind: "none_exist" }] as const) {
+      const markup = renderToStaticMarkup(<NextStep waitlisted={false} next={next} retry={retry} />);
+      expect(markup, next.kind).toContain('<a class="btn btn-primary btn-card" href="/prep/chi-thu">Luyện lại với chị Thu từ đầu');
+      expect(links(markup)[0], next.kind).toEqual(["Luyện lại với chị Thu từ đầu", "/prep/chi-thu"]);
+    }
+  });
+
+  it("has its sentences in the fixed-string check", () => {
+    const checked = new Map(productStrings().map((entry) => [entry.key, entry.text]));
+    for (const [name, value] of Object.entries(RETRY)) expect(checked.get(`retry.${name}`), name).toBe(value);
   });
 });
 

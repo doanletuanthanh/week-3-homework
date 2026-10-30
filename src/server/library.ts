@@ -10,12 +10,10 @@ import {
   type PersonaCardRow,
   type PersonaSessionRow,
 } from "@/db/repo/library";
-import { listPlayedPersonas } from "@/db/repo/quota-tombstone";
 import { setRoleFilter } from "@/db/repo/users";
 import { TOPIC_ROLES, type RoleFilter, type TopicRole } from "@/db/schema";
 import type { AppUser } from "./auth";
 import { recordEvent } from "./events";
-import { quotaKeyOf } from "./quota";
 import { STATE_OF } from "./session-list";
 import { clockOf, dayOf } from "./session-view";
 
@@ -158,7 +156,7 @@ export type PersonaCardView = {
   researchGoal: string;
   itemCount: number;
   button: PersonaButton;
-  /** The session the button opens: the learner's newest counting one. Null for "Bắt đầu". */
+  /** The learner's newest session with the persona that was not withdrawn. Null for "Bắt đầu". */
   sessionId: string | null;
   /** The day that session started, as "dd/mm". Null without a session. */
   sessionDate: string | null;
@@ -211,8 +209,7 @@ export async function pickNextPersona(
   input: { userId: string; topicId: string; topicRole: TopicRole | null; roleFilter: RoleFilter | null; requirePublished: boolean },
 ): Promise<NextStep> {
   const personas = await listCuratedPersonas(db, input.requirePublished);
-  const key = await quotaKeyOf(db, input.userId);
-  const practised = new Set([...(await listPractisedPersonaIds(db, input.userId)), ...(key ? await listPlayedPersonas(db, key) : [])]);
+  const practised = new Set(await listPractisedPersonaIds(db, input.userId));
   const role = input.topicRole ?? (input.roleFilter === "other" ? null : input.roleFilter);
   // Same topic first, then the other topics of the role, each in library order.
   const candidates = [

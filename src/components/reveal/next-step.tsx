@@ -6,14 +6,20 @@ import { AlertIcon, ArrowRightIcon, CheckIcon, LockIcon } from "@/components/ico
 import { sendJson } from "@/components/interview/turn-request";
 import { PersonaAvatar } from "@/components/persona-avatar";
 import type { NextStep as NextStepChoice } from "@/server/library";
-import { LIBRARY, NEXT_STEP, TOPIC, fillTemplate } from "@/strings/product-strings";
+import { LIBRARY, NEXT_STEP, RETRY, TOPIC, fillTemplate } from "@/strings/product-strings";
+
+/** The persona just practised, offered again from its opening line once the session is done. */
+type Retry = { personaId: string; displayName: string };
 
 /**
  * The first card of the next step (FR-31): a persona the learner has not practised, of the same
  * topic first; or that every persona of the role was practised; or, when the role has none, just
  * the way to the library. It never says "you practised them all" about a role with no persona.
+ * With `retry` it also offers the persona just practised again: as the main button when there is
+ * no other persona to offer.
  */
-function Suggestion({ next }: { next: NextStepChoice }) {
+function Suggestion({ next, retry }: { next: NextStepChoice; retry: Retry | null }) {
+  const retryLabel = retry ? fillTemplate(RETRY.with_persona, { persona: retry.displayName }) : null;
   if (next.kind === "next") {
     const { persona } = next;
     return (
@@ -36,6 +42,11 @@ function Suggestion({ next }: { next: NextStepChoice }) {
             {fillTemplate(NEXT_STEP.continue_with, { persona: persona.displayName })}
             <ArrowRightIcon size={16} />
           </Link>
+          {retry && (
+            <Link href={`/prep/${retry.personaId}`} className="lnk">
+              {retryLabel}
+            </Link>
+          )}
           <Link href="/library" className="lnk">
             {TOPIC.to_library}
           </Link>
@@ -46,6 +57,12 @@ function Suggestion({ next }: { next: NextStepChoice }) {
   return (
     <div className="card next-card">
       {next.kind === "all_practised" && <p className="body-md">{NEXT_STEP.all_practised}</p>}
+      {retry && (
+        <Link className="btn btn-primary btn-card" href={`/prep/${retry.personaId}`}>
+          {retryLabel}
+          <ArrowRightIcon size={16} />
+        </Link>
+      )}
       <Link href="/library" className="lnk">
         {LIBRARY.enter}
       </Link>
@@ -55,9 +72,9 @@ function Suggestion({ next }: { next: NextStepChoice }) {
 
 /**
  * Màn 6 item 7: what to practise next, and the waitlist for more personas. Pressing the waitlist
- * button again writes nothing new.
+ * button again writes nothing new. `retry` is set once the session is done.
  */
-export function NextStep({ waitlisted, next }: { waitlisted: boolean; next: NextStepChoice }) {
+export function NextStep({ waitlisted, next, retry = null }: { waitlisted: boolean; next: NextStepChoice; retry?: Retry | null }) {
   const [joined, setJoined] = useState(waitlisted);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -74,7 +91,7 @@ export function NextStep({ waitlisted, next }: { waitlisted: boolean; next: Next
 
   return (
     <section className="next-step" aria-label="Bước tiếp theo">
-      <Suggestion next={next} />
+      <Suggestion next={next} retry={retry} />
       <div className="card next-card next-guide">
         <h3 className="headline-sm">Áp dụng cho ý tưởng app của bạn</h3>
         <p className="body-sm c-variant">Kiểm tra những câu bạn định hỏi người dùng thật: câu nào dẫn dắt, câu nào nên hỏi lại.</p>

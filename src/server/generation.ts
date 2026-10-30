@@ -139,7 +139,8 @@ export async function runGeneration(db: Database, attemptId: string, options: Ru
     if (result.outcome === "passed") {
       await recordEvent(tx, subject, {
         name: "session_started",
-        props: { persona_id: session.personaId!, topic_id: after.topicId!, kind: "custom", scenario_version: 1 },
+        // The persona was made for this session: no session had it before.
+        props: { persona_id: session.personaId!, topic_id: after.topicId!, kind: "custom", scenario_version: 1, attempt: 1 },
       });
     }
   });

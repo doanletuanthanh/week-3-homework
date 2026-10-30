@@ -4,8 +4,11 @@ import type { ReplayLevel, ReplayResult } from "@/engine/replay-result";
 
 /** FR-38 events the app writes. */
 export type AppEvent =
-  /** For a custom session, written when its scenario passed its checks: that is when it can be played. */
-  | { name: "session_started"; props: { persona_id: string; topic_id: string; kind: "curated" | "custom"; scenario_version: number } }
+  /**
+   * For a custom session, written when its scenario passed its checks: that is when it can be played.
+   * `attempt` counts the learner's sessions with the persona, this one included: 2 and up is a retry.
+   */
+  | { name: "session_started"; props: { persona_id: string; topic_id: string; kind: "curated" | "custom"; scenario_version: number; attempt: number } }
   /** A topic passed moderation and its attempt started. The topic text is not in it. */
   | { name: "custom_topic_requested"; props: { focus: Focus; constraints: ModerationConstraint[] } }
   /** The attempt stopped running, however it ended. */

@@ -93,8 +93,8 @@ test.describe("publish and unpublish, as a learner sees them", () => {
     await expect(composer(page)).toHaveCount(0);
     await expect(sendButton(page)).toHaveCount(0);
 
-    // The persona is pulled: the prep screen is back to "being updated", and a withdrawn session
-    // does not count as the learner's one session with the persona.
+    // The persona is pulled: the prep screen is back to "being updated", and the withdrawn session
+    // is no unfinished one to continue.
     await page.goto("/prep/chi-thu");
     await expect(page.locator("main [role=alert]")).toHaveText(BEING_UPDATED);
     await expect(startButton(page)).toHaveCount(0);

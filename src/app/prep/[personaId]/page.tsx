@@ -7,12 +7,12 @@ import { StartSessionButton } from "@/components/start-session-button";
 import { PrepSkeleton } from "@/components/ui/page-skeletons";
 import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
-import { countLearnerTurns, findSessionForPersona, getPlayableScenario, getVisibleScenario } from "@/db/repo/sessions";
+import { countLearnerTurns, findLatestSessionForPersona, getPlayableScenario, getVisibleScenario } from "@/db/repo/sessions";
+import { isOpenSessionStatus } from "@/db/schema";
 import { personaCard } from "@/scenario/persona-card";
 import { continueSession, startSession } from "@/server/actions";
 import { getUser } from "@/server/auth";
-import { playedBeforeDeletion } from "@/server/quota";
-import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, PLAYED_BEFORE_DELETION, SESSION_CAP_REACHED, TOPIC, LIBRARY, MY_SESSIONS_NAME } from "@/strings/product-strings";
+import { CUSTOM_LABEL, focusLabel as focusLabelOf, PERSONA_BEING_UPDATED, RETRY, SESSION_CAP_REACHED, TOPIC, LIBRARY, MY_SESSIONS_NAME } from "@/strings/product-strings";
 
 export const metadata = { title: "Chuẩn bị · InterviewLab" };
 
@@ -53,14 +53,19 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
   const db = getDb();
   const persona = personaCard(found.scenario.content);
   const user = await getUser();
-  // A demo account has no one-session limit: this is its newest session with the persona.
-  const session = user ? await findSessionForPersona(db, user.id, personaId) : null;
-  const playedBefore = user !== null && !user.isDemo && !session && (await playedBeforeDeletion(db, user.id, personaId));
-  const canStartAnother = user?.isDemo === true && session !== null && playable;
+  // The learner's newest session with the persona. A non-demo learner has at most one unfinished
+  // session with it, and that one is always the newest.
+  const latest = user ? await findLatestSessionForPersona(db, user.id, personaId) : null;
+  const open = latest !== null && isOpenSessionStatus(latest.status) ? latest : null;
+  // Finished: the press starts the persona again from its opening line, and the result stays one press away.
+  const finished = latest?.status === "done" ? latest : null;
+  // FR-45: a demo account can start one more beside its unfinished session.
+  const canStartAnother = user?.isDemo === true && open !== null && playable;
+  const canStart = (playable && open === null) || canStartAnother;
   // No question asked yet: "Tiếp tục buổi luyện" is the press that leads into the interview (PRD §7).
-  const notAskedYet = session !== null && session.status === "interviewing" && session.endedAt === null && (await countLearnerTurns(db, session.id)) === 0;
+  const notAskedYet = open !== null && open.status === "interviewing" && open.endedAt === null && (await countLearnerTurns(db, open.id)) === 0;
   const custom = found.scenario.origin === "generated";
-  const focusLabel = custom && session?.focus ? focusLabelOf(session.focus) : null;
+  const focusLabel = custom && latest?.focus ? focusLabelOf(latest.focus) : null;
 
   return (
     <main className="container prep">
@@ -169,42 +174,36 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
             </div>
           </div>
 
-          {playedBefore && (
-            <p className="ferr" role="alert">
-              <AlertIcon size={16} />
-              {PLAYED_BEFORE_DELETION}
-            </p>
-          )}
-          {blocked === "cap" && (!session || canStartAnother) && (
+          {blocked === "cap" && canStart && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {SESSION_CAP_REACHED}
             </p>
           )}
-          {blocked === "error" && (!session || canStartAnother) && (
+          {blocked === "error" && canStart && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {SESSION_START_FAILED}
             </p>
           )}
-          {!playable && !session && !playedBefore && (
+          {!playable && !open && (
             <p className="ferr" role="alert">
               <AlertIcon size={16} />
               {PERSONA_BEING_UPDATED}
             </p>
           )}
-          {session && notAskedYet ? (
+          {open && notAskedYet ? (
             <form action={continueSession}>
-              <input type="hidden" name="sessionId" value={session.id} />
+              <input type="hidden" name="sessionId" value={open.id} />
               <StartSessionButton label="Tiếp tục buổi luyện" />
             </form>
-          ) : session ? (
-            // One session per persona: the button follows its state, and its URL shows the right screen.
-            <Link className="btn btn-primary btn-lg prep-start" href={`/sessions/${session.id}`}>
-              {session.status === "done" ? "Xem lại kết quả" : "Tiếp tục buổi luyện"}
+          ) : open ? (
+            // The unfinished session's URL shows the screen of its state.
+            <Link className="btn btn-primary btn-lg prep-start" href={`/sessions/${open.id}`}>
+              Tiếp tục buổi luyện
               <ArrowRightIcon />
             </Link>
-          ) : !playable || playedBefore ? (
+          ) : !playable ? (
             // Nothing to start: back to the topic, or for a topic of the learner's own, to their sessions.
             <Link className="btn btn-tonal btn-lg prep-start" href={custom ? "/my-sessions" : `/topics/${found.topic.id}`}>
               {custom ? MY_SESSIONS_NAME : TOPIC.to_topic}
@@ -212,11 +211,16 @@ async function PrepScreen({ personaId, blocked, found, playable }: { personaId: 
           ) : (
             <form action={startSession}>
               <input type="hidden" name="personaId" value={personaId} />
-              <StartSessionButton />
+              <StartSessionButton retry={finished !== null} />
             </form>
           )}
+          {finished && (
+            <Link className="btn btn-surface btn-lg prep-start prep-another" href={`/sessions/${finished.id}`}>
+              {RETRY.previous_result}
+            </Link>
+          )}
           {canStartAnother && (
-            // FR-45: the main button above opens the newest session; this starts one more.
+            // FR-45: the main button above opens the unfinished session; this starts one more.
             <form action={startSession}>
               <input type="hidden" name="personaId" value={personaId} />
               <StartSessionButton another />

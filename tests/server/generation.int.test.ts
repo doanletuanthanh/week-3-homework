@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/db/client";
 import { setConfig } from "@/db/repo/config";
 import { getSession, listTurns } from "@/db/repo/sessions";
-import { branches, scenarios, sessions, snapshots, topics } from "@/db/schema";
+import { branches, events, scenarios, sessions, snapshots, topics } from "@/db/schema";
 import { getCustomQuota } from "@/server/custom-topic";
 import { getAttemptView, runGeneration } from "@/server/generation";
 import { listSessions } from "@/server/session-list";
+import { openSession } from "@/server/sessions";
 import { buildSessionView } from "@/server/session-view";
 import { runTurn } from "@/server/turns";
 import {
@@ -117,6 +118,24 @@ describe("runGeneration: an attempt that passes", () => {
     const learner = await createLearner("minh@example.com");
     const { sessionId } = await attempt(learner);
     expect((await listSessions(db(), learner)).items).toEqual([expect.objectContaining({ id: sessionId, personaName: "Chị Thu", topicTitle: TOPIC, state: "in_progress", result: null })]);
+  });
+
+  it("can be played again from the opening line once its session is done, with the focus the learner chose", async () => {
+    const learner = await createLearner("minh@example.com");
+    const { sessionId, attemptId } = await attempt(learner, { moderation: { decision: "allow", reason_code: null, constraints: [], focus: "trust" } });
+    await db().update(sessions).set({ status: "done" }).where(eq(sessions.id, sessionId));
+    // Stored as published for its owner: it stays playable when only published versions are.
+    await setConfig(db(), "require_published", true, "admin@example.com");
+
+    const result = await openSession(db(), learner, `custom-${attemptId}`);
+
+    expect(result).toMatchObject({ ok: true, session: { personaId: `custom-${attemptId}`, focus: "trust", status: "interviewing" } });
+    const again = result.ok ? result.session : null;
+    expect(again!.id).not.toBe(sessionId);
+    expect(await listTurns(db(), learner.id, again!.id)).toMatchObject([{ index: 0, learnerText: null, personaText: chiThu.opening_line }]);
+    expect(await db().select().from(events).where(eq(events.sessionId, again!.id))).toMatchObject([
+      { name: "session_started", props: { persona_id: `custom-${attemptId}`, kind: "custom", scenario_version: 1, attempt: 2 } },
+    ]);
   });
 });
 

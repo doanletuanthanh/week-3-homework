@@ -19,6 +19,8 @@ import { TwoNumbers } from "./two-numbers";
 
 type Props = {
   sessionId: string;
+  /** Set once the session is done and the persona can still be started: the next step offers to play it again. */
+  retryPersonaId: string | null;
   persona: { displayName: string; displayNameCapitalized: string };
   header: RevealHeader;
   /** Built by the server's seal: whatever is held back for the replay is not in it. */
@@ -40,7 +42,7 @@ type Props = {
  * the session is `done` nothing is held, the replay's result stands where the offer stood, and
  * the takeaway can be downloaded.
  */
-export function RevealScreen({ sessionId, persona, header, reveal, waitlisted, next, print, replay, custom = null }: Props) {
+export function RevealScreen({ sessionId, retryPersonaId, persona, header, reveal, waitlisted, next, print, replay, custom = null }: Props) {
   const [openTurn, setOpenTurn] = useState<number | null>(null);
   const [replayOpen, setReplayOpen] = useState(false);
   const done = reveal.mode === "done";
@@ -70,7 +72,7 @@ export function RevealScreen({ sessionId, persona, header, reveal, waitlisted, n
           {reveal.notes !== null && <NotesReview notes={reveal.notes} ungraded={reveal.recognized.state === "ungraded"} persona={persona} />}
           <Takeaway takeaway={reveal.takeaway} persona={persona} canDownload={done} sessionId={sessionId} print={print} />
           {custom && <ReportProblem sessionId={sessionId} reported={custom.reported} />}
-          <NextStep waitlisted={waitlisted} next={next} />
+          <NextStep waitlisted={waitlisted} next={next} retry={retryPersonaId ? { personaId: retryPersonaId, displayName: persona.displayName } : null} />
         </div>
       </main>
       <TranscriptDrawer sessionId={sessionId} personaName={persona.displayNameCapitalized} turn={openTurn} onClose={() => setOpenTurn(null)} />

@@ -211,10 +211,12 @@ test.describe("daily cost cap", () => {
     await signIn(context, DEMO_EMAIL);
     await page.goto("/data-notice?next=/prep/chi-thu");
     const agree = page.getByRole("button", { name: "Tôi hiểu" });
-    await expect(agree.or(page.getByRole("button", { name: "Bắt đầu" }))).toBeVisible();
+    // Whatever the shared account already has with chị Thu: no session, a finished one, or an unfinished one.
+    const start = page.getByRole("button", { name: /^(Bắt đầu|Luyện lại từ đầu|Bắt đầu buổi mới)$/u });
+    await expect(agree.or(start)).toBeVisible();
     if (await agree.isVisible()) await agree.click();
 
-    await page.getByRole("button", { name: "Bắt đầu" }).click();
+    await start.click();
     await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]{36}$/);
 
     // An ordinary learner is refused at the same moment.

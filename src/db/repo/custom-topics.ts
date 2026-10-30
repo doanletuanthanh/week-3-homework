@@ -476,10 +476,16 @@ export async function reportProblem(db: Executor, userId: string, sessionId: str
   return rows.length > 0;
 }
 
-/** The newest learner requests with what became of them. Not filtered by learner: the operator's view. Admin drafts are left out. */
+/**
+ * The newest learner requests with what became of them. Not filtered by learner: the operator's view. Admin drafts are left out.
+ * A problem may be reported from any session on the generated scenario, the learner having played it again: the first report counts.
+ */
 export async function listAttempts(db: Executor, limit: number) {
+  const problemReportedAt = sql<Date | null>`(SELECT min(s.problem_reported_at) FROM session s WHERE s.scenario_id = ${generationAttempts.scenarioId})`.mapWith(
+    sessions.problemReportedAt,
+  );
   return db
-    .select({ attempt: generationAttempts, email: users.email, problemReportedAt: sessions.problemReportedAt, sessionStatus: sessions.status })
+    .select({ attempt: generationAttempts, email: users.email, problemReportedAt, sessionStatus: sessions.status })
     .from(generationAttempts)
     .innerJoin(users, eq(users.id, generationAttempts.userId))
     .leftJoin(sessions, eq(sessions.id, generationAttempts.sessionId))

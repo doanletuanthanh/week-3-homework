@@ -85,7 +85,7 @@ export const scenarios = pgTable(
   "scenario",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    /** Stable across versions; the one-session-per-persona rule counts by it. */
+    /** Stable across versions: a learner's sessions with a persona are found by it, whatever its version. */
     personaId: text("persona_id").notNull(),
     topicId: text("topic_id")
       .notNull()
@@ -116,6 +116,14 @@ export const SESSION_STATUSES = [
   "failed_eval",
   "withdrawn",
 ] as const;
+
+/**
+ * A session the learner has not finished. A non-demo learner has at most one per persona: the
+ * partial index `session_user_persona_open_key` names the same four.
+ */
+export const OPEN_SESSION_STATUSES = ["generating", "interviewing", "revealed", "replaying"] as const satisfies readonly (typeof SESSION_STATUSES)[number][];
+
+export const isOpenSessionStatus = (status: (typeof SESSION_STATUSES)[number]): boolean => (OPEN_SESSION_STATUSES as readonly string[]).includes(status);
 
 /** What a learner asked to practise in a custom topic (FR-53). `general` is the answer to anything else. */
 export const FOCUSES = ["follow_up", "past_story", "trust", "no_leading", "general"] as const;
@@ -174,11 +182,12 @@ export const sessions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    // FR-5: one session per persona per learner. Demo accounts are exempt, and a withdrawn
-    // session does not count, so the learner can start again when the persona returns.
-    uniqueIndex("session_user_persona_key")
+    // One unfinished session per persona per learner (`OPEN_SESSION_STATUSES`), so "Tiếp tục" and
+    // two presses at once lead to the same one. A finished session does not count: the learner may
+    // start the persona again from the beginning. Demo accounts are exempt.
+    uniqueIndex("session_user_persona_open_key")
       .on(table.userId, table.personaId)
-      .where(sql`${table.isDemo} = false AND ${table.status} <> 'withdrawn'`),
+      .where(sql`${table.isDemo} = false AND ${table.status} IN ('generating', 'interviewing', 'revealed', 'replaying')`),
   ],
 );
 
@@ -428,12 +437,12 @@ export const generationAttempts = pgTable(
 
 /**
  * What stays of a deleted account, so that deleting it and signing in again resets no limit. The
- * key is a keyed hash of the Google account; the row holds counters and persona ids only: no
- * email, name, text, user id or session id.
+ * key is a keyed hash of the Google account; the row holds counters only: no email, name, text,
+ * user id or session id.
  */
 export const quotaTombstones = pgTable("quota_tombstone", {
   key: text("key").primaryKey(),
-  /** Personas the account had a session with that counted for the one-session rule. */
+  /** No longer written or read. Kept until no deployed code reads it, then dropped. */
   playedPersonaIds: jsonb("played_persona_ids").$type<string[]>().notNull().default([]),
   /** The custom-topic limits of FR-56, carried over a deletion. */
   freeCustomUsed: boolean("free_custom_used").notNull().default(false),

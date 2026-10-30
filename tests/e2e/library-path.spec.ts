@@ -263,11 +263,11 @@ test.describe("the library with the app and web app topics in it", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(KHOA.persona.name);
     await expect(page.getByText(KHOA.research_goal)).toBeVisible();
 
-    // Back on the topic: one of two practised, and her card leads to the result.
+    // Back on the topic: one of two practised, and her card leads to the result and to a new start.
     await page.goto(topicPath);
     await expect(page.locator(".topic-done")).toHaveText("Bạn đã luyện 1/2");
-    await expect(personaCard(page, HANH.persona.name).locator(".actionbar a")).toHaveText("Xem lại kết quả");
-    await expect(personaCard(page, HANH.persona.name).locator(".actionbar a")).toHaveAttribute("href", revealUrl);
+    await expect(personaCard(page, HANH.persona.name).locator(".actionbar a")).toHaveText(["Xem lại kết quả", "Luyện lại từ đầu"]);
+    await expect(personaCard(page, HANH.persona.name).locator(".actionbar a").first()).toHaveAttribute("href", revealUrl);
     await expect(personaCard(page, KHOA.persona.name).locator(".actionbar a")).toHaveText("Bắt đầu");
     await page.goto("/library");
     await expect(page.locator(`a.tcard[href="${topicPath}"] .tcard-done`)).toHaveText("Đã luyện 1/2");

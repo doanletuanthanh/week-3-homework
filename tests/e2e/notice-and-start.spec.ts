@@ -200,7 +200,7 @@ test.describe("pending action after sign-in", () => {
 });
 
 test.describe("starting a session", () => {
-  test("a learner has one session per persona and is offered to continue it", async ({ page, context }) => {
+  test("a learner with an unfinished session is offered to continue it, not a second start", async ({ page, context }) => {
     const id = await signInAsNewLearner(context, uniqueEmail("one-session"));
     await page.goto("/data-notice?next=/prep/chi-thu");
     await page.getByRole("button", { name: "Tôi hiểu" }).click();
@@ -217,7 +217,7 @@ test.describe("starting a session", () => {
     expect(await db.sessionsOf(id)).toHaveLength(1);
   });
 
-  test("an account the auth server holds no Google identity for cannot start a session", async ({ page, context }) => {
+  test("an account the auth server holds no Google identity for starts a session like any other", async ({ page, context }) => {
     const id = await signInAsNewLearner(context, uniqueEmail("no-identity"));
     await db.removeGoogleIdentity(id);
     await page.goto("/data-notice?next=/prep/chi-thu");
@@ -225,9 +225,8 @@ test.describe("starting a session", () => {
 
     await page.getByRole("button", { name: "Bắt đầu" }).click();
 
-    await expect(page).toHaveURL("/prep/chi-thu?blocked=error");
-    await expect(page.locator("main [role=alert]")).toHaveText("Không kết nối được. Thử lại.");
-    expect(await db.sessionsOf(id)).toEqual([]);
+    await expect(page).toHaveURL(/\/sessions\/[0-9a-f-]{36}$/u);
+    expect(await db.sessionsOf(id)).toHaveLength(1);
   });
 
   test("a demo account can start a new session with the same persona again", async ({ page, context }) => {

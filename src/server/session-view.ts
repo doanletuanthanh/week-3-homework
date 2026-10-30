@@ -47,6 +47,11 @@ export type SessionView = { /** A generated scenario plays: every screen carries
   | {
       screen: "reveal";
       sessionId: string;
+      /**
+       * The persona to play again from its Màn 3 ("Luyện lại … từ đầu"): set once the session is
+       * done, and only while a version of the persona can be started.
+       */
+      retryPersonaId: string | null;
       persona: Persona;
       header: RevealHeader;
       reveal: BrowserReveal;
@@ -114,6 +119,8 @@ export function buildSessionView(input: {
   next: NextStep | null;
   /** The session's replay branch with its turns, when it has one. */
   replay?: LoadedReplay | null;
+  /** A version of the persona can be started now: a finished result then offers to play it again. */
+  retryable?: boolean;
 }): SessionView {
   const { session, scenario, topicTitle, waitlisted } = input;
   const replay = input.replay ?? null;
@@ -184,6 +191,8 @@ export function buildSessionView(input: {
         custom,
         screen: "reveal",
         sessionId,
+        // While the replay is ahead this session is still the unfinished one: there is nothing to start again.
+        retryPersonaId: reveal.mode === "done" && input.retryable === true ? scenario.personaId : null,
         persona,
         header,
         reveal,

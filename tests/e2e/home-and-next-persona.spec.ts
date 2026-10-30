@@ -327,10 +327,11 @@ test.describe("Màn 6 item 7: the persona to practise next (FR-31)", () => {
       await expect(suggestion(page)).toContainText(DAT_SAN.title);
       await expect(suggestion(page).getByRole("link", { name: "Luyện tiếp với cô Lan" })).toHaveAttribute("href", "/prep/co-lan");
 
-      // 3. Everyone practised: the old line, the library, and the waitlist.
+      // 3. Everyone practised: the old line, chị Thu again from the start, the library, and the waitlist.
       await practise(page, "co-lan", revealUrl);
       await expect(suggestion(page)).toContainText(ALL_PRACTISED);
-      await expect(suggestion(page).getByRole("link")).toHaveText(["Vào thư viện"]);
+      await expect(suggestion(page).getByRole("link")).toHaveText(["Luyện lại với chị Thu từ đầu", "Vào thư viện"]);
+      await expect(suggestion(page).getByRole("link", { name: "Luyện lại với chị Thu từ đầu" })).toHaveAttribute("href", "/prep/chi-thu");
       await expect(suggestion(page).getByRole("link", { name: "Vào thư viện" })).toHaveAttribute("href", "/library");
       await expect(page.getByText("Luyện tiếp với")).toHaveCount(0);
       await expect(page.getByRole("main").getByRole("link", { name: "Về trang chủ" })).toHaveCount(0);
@@ -418,10 +419,11 @@ test.describe("Màn 6 item 7: the persona to practise next (FR-31)", () => {
     await page.getByRole("button", { name: "Xem kết quả" }).click();
     await expect(nextStep(page)).toBeVisible({ timeout: 20_000 });
 
-    // BA has no persona: only the way to the library, and the waitlist.
+    // BA has no persona: this persona again from the start, the way to the library, and the waitlist.
     await expect(page.getByText(ALL_PRACTISED)).toHaveCount(0);
     await expect(page.getByText("Luyện tiếp với")).toHaveCount(0);
-    await expect(suggestion(page).getByRole("link")).toHaveText(["Vào thư viện"]);
+    await expect(suggestion(page).getByRole("link")).toHaveText([/^Luyện lại với .+ từ đầu$/u, "Vào thư viện"]);
+    await expect(suggestion(page).getByRole("link").first()).toHaveAttribute("href", /^\/prep\/custom-[0-9a-f-]{36}$/u);
     await expect(nextStep(page).getByRole("button", { name: "Báo tôi khi có" })).toBeVisible();
 
     // With the filter on UX, the curated UX persona is offered, as one of another topic.

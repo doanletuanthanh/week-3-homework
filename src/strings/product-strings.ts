@@ -31,9 +31,6 @@ export const SESSION_CAP_REACHED = "Hôm nay InterviewLab đã hết chỗ cho b
 /** Màn 3, shown when no version of the persona can be played right now. */
 export const PERSONA_BEING_UPDATED = "Nhân vật này đang được cập nhật.";
 
-/** Màn 3, shown to an account that had its session with the persona, was deleted, and signed in again (FR-5). */
-export const PLAYED_BEFORE_DELETION = "Bạn đã luyện với nhân vật này trước khi xóa tài khoản. Mỗi nhân vật chỉ có một buổi.";
-
 /** What the learner types to enable "Xóa vĩnh viễn". */
 export const DELETE_CONFIRM_WORD = "XÓA";
 
@@ -245,6 +242,16 @@ export const NEXT_STEP = {
 } as const;
 
 /**
+ * Playing a persona again from its opening line, once the last session with it is finished: on
+ * its card (Màn 2b), on Màn 3 and on the result (Màn 6). `{persona}` is the persona's form of address.
+ */
+export const RETRY = {
+  start: "Luyện lại từ đầu",
+  with_persona: "Luyện lại với {persona} từ đầu",
+  previous_result: "Xem lại kết quả buổi trước",
+} as const;
+
+/**
  * Màn 2b · Chủ đề. `warning` is the overlap warning of FR-51, word for word from the PRD;
  * `generated` is the line a topic the learner made carries.
  */
@@ -273,7 +280,6 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(DATA_NOTICE).map(([name, text]) => ({ key: `data_notice.${name}`, text })),
     { key: "session_cap_reached", text: SESSION_CAP_REACHED },
     { key: "persona_being_updated", text: PERSONA_BEING_UPDATED },
-    { key: "played_before_deletion", text: PLAYED_BEFORE_DELETION },
     ...Object.entries(DELETE_ACCOUNT).map(([name, text]) => ({ key: `delete_account.${name}`, text })),
     { key: "delete_confirm_word", text: DELETE_CONFIRM_WORD },
     { key: "footer_data_note", text: FOOTER_DATA_NOTE },
@@ -302,5 +308,6 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(HOME).map(([name, text]) => ({ key: `home.${name}`, text })),
     ...Object.entries(HOME_SAMPLE).flatMap(([name, text]) => (typeof text === "string" ? [{ key: `home_sample.${name}`, text }] : [])),
     ...Object.entries(NEXT_STEP).map(([name, text]) => ({ key: `next_step.${name}`, text })),
+    ...Object.entries(RETRY).map(([name, text]) => ({ key: `retry.${name}`, text })),
   ];
 }

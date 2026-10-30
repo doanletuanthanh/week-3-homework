@@ -5,13 +5,11 @@ import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/client";
 import { getTopicWithPersonas, getVisibleTopic, listCuratedPersonas, listOwnCustomTopics, listSessionsForPersonas } from "@/db/repo/library";
-import { addPlayedPersonas } from "@/db/repo/quota-tombstone";
 import { setRoleFilter } from "@/db/repo/users";
 import { events, scenarios, sessions, users } from "@/db/schema";
 import type { Scenario, TopicFile } from "@/scenario/schema";
 import { resolveUser } from "@/server/auth";
 import { chooseRoleFilter, filterTopics, listLibraryTopics, personaButton, pickNextPersona, reportTopicOpened, toPersonaCardView, TOPIC_VISIT_MINUTES } from "@/server/library";
-import { quotaKeyOf } from "@/server/quota";
 import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { INVALID, attempt, attemptRow } from "../helpers/custom-db";
 import { findSealed, readChiThu } from "../helpers/sealed-strings";
@@ -303,15 +301,6 @@ describe("pickNextPersona", () => {
     await setStatus((await startSession(linh, "anh-dung")).id, "withdrawn");
 
     expect(await ask(linh.id)).toMatchObject({ persona: { personaId: "anh-dung" } });
-  });
-
-  it("leaves out a persona played under an account since deleted", async () => {
-    await importPersona("anh-dung");
-    const linh = await createLearner("linh@example.com");
-    await startSession(linh);
-    await addPlayedPersonas(db(), (await quotaKeyOf(db(), linh.id))!, ["anh-dung"]);
-
-    expect(await ask(linh.id)).toEqual({ kind: "all_practised" });
   });
 
   it("uses the library filter for a custom topic, and every topic when no role is chosen", async () => {

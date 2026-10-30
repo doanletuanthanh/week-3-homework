@@ -12,14 +12,13 @@ import { resolveUser } from "@/server/auth";
 import type { AppUser } from "@/server/auth";
 import { canStartSession, sessionSpendToday } from "@/server/cost-cap";
 import { deleteAccount } from "@/server/delete-account";
-import { playedBeforeDeletion, quotaKeyOf } from "@/server/quota";
+import { quotaKeyOf } from "@/server/quota";
 import { skipReplay, startReplay } from "@/server/replay";
 import { openSession, sessionEntryPath } from "@/server/sessions";
-import { importScenarioFile } from "../../cli/commands/import-scenario";
 import { replayTurn, revealedSession } from "../helpers/replay-fixtures";
 import { NOTES } from "../helpers/reveal-fixtures";
 import { PLAYED, revealScript } from "../helpers/session-fixtures";
-import { PERSONA_FILE, PERSONA_ID, authAccountRows, createGoogleLearner, createLearner, giveGoogleAccount, googleClaims, identityRows, resetDatabase, startSession } from "../helpers/test-db";
+import { PERSONA_ID, authAccountRows, createGoogleLearner, createLearner, giveGoogleAccount, googleClaims, identityRows, resetDatabase, startSession } from "../helpers/test-db";
 
 const db = () => getDb();
 const NO_LISTS = { ADMIN_EMAILS: [], DEMO_ACCOUNT_EMAILS: [] };
@@ -237,13 +236,21 @@ describe("deleteAccount: the ledger's day", () => {
 });
 
 describe("deleteAccount: what is kept so that no limit is reset", () => {
-  it("keeps the personas the account played under a keyed hash of its Google account, and nothing else", async () => {
+  it("keeps nothing of the personas an account played: without custom-topic use, nothing is kept at all", async () => {
     const { learner } = await learnerWithEverything();
     await deleteAccount(db(), learner);
 
+    expect(await db().select().from(quotaTombstones)).toEqual([]);
+  });
+
+  it("keeps the custom-topic counters under a keyed hash of its Google account, and nothing else", async () => {
+    const { learner } = await learnerWithEverything();
+    await db().update(users).set({ freeCustomUsed: true }).where(eq(users.id, learner.id));
+    await deleteAccount(db(), learner);
+
     const rows = await db().select().from(quotaTombstones);
-    expect(rows).toMatchObject([{ key: keyOf(LINH_SUBJECT), playedPersonaIds: [PERSONA_ID] }]);
-    // Besides the personas: the custom-topic counters, which are numbers and a day, never text.
+    expect(rows).toMatchObject([{ key: keyOf(LINH_SUBJECT), freeCustomUsed: true }]);
+    // Counters and a day, never text.
     expect(Object.keys(rows[0]).sort()).toEqual([
       "customAttempts",
       "customDay",
@@ -255,12 +262,11 @@ describe("deleteAccount: what is kept so that no limit is reset", () => {
       "playedPersonaIds",
       "updatedAt",
     ]);
-    // This learner never asked for a custom topic: every counter is empty.
-    expect(rows[0]).toMatchObject({ customAttempts: 0, customDay: null, customFailedCount: 0, customRefusals: 0, customSpendUsd: 0, freeCustomUsed: false });
+    expect(rows[0]).toMatchObject({ customAttempts: 0, customFailedCount: 0, customRefusals: 0, customSpendUsd: 0, playedPersonaIds: [] });
     expect(rows[0].key).toMatch(/^[0-9a-f]{64}$/u);
   });
 
-  it("delete, sign in again with the same Google account: no second session with a persona already played", async () => {
+  it("delete, sign in again with the same Google account: the returning account starts a session with a persona it had played", async () => {
     const { learner } = await learnerWithEverything();
     await deleteAccount(db(), learner);
 
@@ -269,76 +275,16 @@ describe("deleteAccount: what is kept so that no limit is reset", () => {
     expect(back.id).not.toBe(learner.id);
 
     const result = await openSession(db(), back, PERSONA_ID);
-    expect(result).toEqual({ ok: false, reason: "played_before" });
-    expect(sessionEntryPath(result, PERSONA_ID)).toBe("/prep/chi-thu");
-    expect(await playedBeforeDeletion(db(), back.id, PERSONA_ID)).toBe(true);
-    expect(await db().select().from(sessions)).toEqual([]);
-    // Asking many times at once does not get through either.
-    const many = await Promise.all(Array.from({ length: 5 }, () => openSession(db(), back, PERSONA_ID)));
-    expect(many.every((entry) => !entry.ok)).toBe(true);
-    expect(await db().select().from(sessions)).toEqual([]);
-  });
-
-  it("publishing a new version of the persona does not open a session for the returning account either", async () => {
-    const { learner } = await learnerWithEverything();
-    await deleteAccount(db(), learner);
-    await importScenarioFile(db(), PERSONA_FILE);
-
-    const back = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
-    expect(await openSession(db(), back, PERSONA_ID)).toEqual({ ok: false, reason: "played_before" });
-  });
-
-  it("does not hold a different Google account to it, even one using the deleted account's address", async () => {
-    const { learner } = await learnerWithEverything();
-    await deleteAccount(db(), learner);
-
-    const someoneElse = await createGoogleLearner("linh@example.com", "another-google-subject");
-
-    expect(await playedBeforeDeletion(db(), someoneElse.id, PERSONA_ID)).toBe(false);
-    expect(await openSession(db(), someoneElse, PERSONA_ID)).toMatchObject({ ok: true });
-  });
-
-  it("the returning account may still play a persona it had not played", async () => {
-    const { learner } = await learnerWithEverything();
-    await deleteAccount(db(), learner);
-    const back = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
-
-    expect(await playedBeforeDeletion(db(), back.id, "anh-khoa")).toBe(false);
-  });
-
-  it("does not count a withdrawn session or a demo session as played", async () => {
-    const learner = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
-    const session = await startSession(learner);
-    await db().update(sessions).set({ status: "withdrawn" }).where(eq(sessions.id, session.id));
-    const demo = await createGoogleLearner("demo@example.com", "google-subject-of-demo", DEMO_LISTS);
-    await startSession(demo);
-
-    await deleteAccount(db(), learner);
-    await deleteAccount(db(), demo);
-
-    expect(await db().select().from(quotaTombstones)).toEqual([]);
-    const back = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
-    expect(await openSession(db(), back, PERSONA_ID)).toMatchObject({ ok: true });
-  });
-
-  it("adds to what an earlier deletion of the same Google account kept", async () => {
-    const first = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
-    const session = await startSession(first);
-    // Stands for a session with a second persona: the rule counts by this column.
-    await db().update(sessions).set({ personaId: "anh-khoa" }).where(eq(sessions.id, session.id));
-    await deleteAccount(db(), first);
-
-    const second = await createGoogleLearner("linh@example.com", LINH_SUBJECT);
-    await startSession(second);
-    await deleteAccount(db(), second);
-
-    expect(await db().select().from(quotaTombstones)).toMatchObject([{ key: keyOf(LINH_SUBJECT), playedPersonaIds: ["anh-khoa", PERSONA_ID] }]);
+    expect(result).toMatchObject({ ok: true, session: { userId: back.id, personaId: PERSONA_ID, status: "interviewing" } });
+    expect(sessionEntryPath(result, PERSONA_ID)).toMatch(/^\/sessions\//u);
   });
 
   it("still deletes an account the auth server holds no Google identity for, and says so in the log", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const learner = await createLearner("linh@example.com");
     await startSession(learner);
+    // Something to keep: the free custom topic was used.
+    await db().update(users).set({ freeCustomUsed: true }).where(eq(users.id, learner.id));
     // The identity is gone by the time the account is deleted.
     await db().execute(sql`DELETE FROM auth.identities WHERE user_id = ${learner.id}`);
 
@@ -394,6 +340,8 @@ describe("deleteAccount: when it does not happen", () => {
     expect(await deleteAccount(db(), { id: randomUUID(), isDemo: false })).toEqual({ ok: false, error: "not_found" });
 
     const { learner } = await learnerWithEverything();
+    // Something to keep, so a second deletion would show as a second count.
+    await db().update(users).set({ freeCustomUsed: true }).where(eq(users.id, learner.id));
     const results = await Promise.all([deleteAccount(db(), learner), deleteAccount(db(), learner)]);
 
     expect(results.map((result) => result.ok).sort()).toEqual([false, true]);
@@ -488,25 +436,13 @@ describe("quotaKeyOf", () => {
 });
 
 describe("a learner the auth server holds no Google identity for", () => {
-  it("cannot start a session: the one-session rule could not be checked against deleted accounts", async () => {
+  it("starts a session: no session limit is kept across deletions, so none needs the Google account", async () => {
     const learner = await createLearner("linh@example.com", NO_LISTS, { googleSubject: null });
 
     const result = await openSession(db(), learner, PERSONA_ID);
 
-    expect(result).toEqual({ ok: false, reason: "no_identity" });
-    expect(sessionEntryPath(result, PERSONA_ID)).toBe("/prep/chi-thu?blocked=error");
-    expect(await db().select().from(sessions)).toEqual([]);
-    expect(await db().select().from(events)).toEqual([]);
-  });
-
-  it("still gets the session it already has, and a demo account is not held to the check", async () => {
-    const learner = await createLearner("linh@example.com");
-    const session = await startSession(learner);
-    await db().execute(sql`DELETE FROM auth.identities WHERE user_id = ${learner.id}`);
-    const demo = await createLearner("demo@example.com", DEMO_LISTS, { googleSubject: null });
-
-    expect(await openSession(db(), learner, PERSONA_ID)).toMatchObject({ ok: true, session: { id: session.id } });
-    expect(await openSession(db(), demo, PERSONA_ID)).toMatchObject({ ok: true });
+    expect(result).toMatchObject({ ok: true, session: { userId: learner.id, personaId: PERSONA_ID, status: "interviewing" } });
+    expect(await db().select().from(sessions)).toHaveLength(1);
   });
 });
 

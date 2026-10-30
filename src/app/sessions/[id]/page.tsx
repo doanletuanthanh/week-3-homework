@@ -16,7 +16,7 @@ import { getDb } from "@/db/client";
 import { getConfig } from "@/db/repo/config";
 import { attemptRunIsDue, getPendingCustomSession, sweepStaleAttempts } from "@/db/repo/custom-topics";
 import { loadReplay } from "@/db/repo/replay";
-import { countLearnerTurns, getSession, listTurns } from "@/db/repo/sessions";
+import { countLearnerTurns, getPlayableScenario, getSession, listTurns } from "@/db/repo/sessions";
 import { isOnWaitlist } from "@/db/repo/waitlist";
 import { personaCard } from "@/scenario/persona-card";
 import { requireAckedUser } from "@/server/auth";
@@ -120,22 +120,17 @@ async function SessionScreen({ id }: { id: string }) {
 
   // Only a result offers a next persona; the other screens never ask.
   const hasResult = session.status === "revealed" || session.status === "replaying" || session.status === "done";
+  const requirePublished = hasResult && (await getConfig(db, "require_published"));
   const view = buildSessionView({
     session,
     scenario,
     topicTitle: topic.title,
     turns: await listTurns(db, user.id, id),
     waitlisted: await isOnWaitlist(db, user.id, "no_more_personas"),
-    next: hasResult
-      ? await pickNextPersona(db, {
-          userId: user.id,
-          topicId: topic.id,
-          topicRole: topic.role,
-          roleFilter: user.roleFilter,
-          requirePublished: await getConfig(db, "require_published"),
-        })
-      : null,
+    next: hasResult ? await pickNextPersona(db, { userId: user.id, topicId: topic.id, topicRole: topic.role, roleFilter: user.roleFilter, requirePublished }) : null,
     replay: session.status === "replaying" || session.status === "done" ? await loadReplay(db, id) : null,
+    // A persona that was taken down or pulled has no Màn 3 to start again from.
+    retryable: session.status === "done" && (await getPlayableScenario(db, scenario.personaId, requirePublished, user.id)) !== null,
   });
 
   return (
@@ -170,6 +165,7 @@ function StateScreen({ view }: { view: SessionView }) {
       return (
         <RevealScreen
           sessionId={view.sessionId}
+          retryPersonaId={view.retryPersonaId}
           persona={view.persona}
           header={view.header}
           reveal={view.reveal}
