@@ -3,12 +3,12 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/db/client";
 import { setConfig } from "@/db/repo/config";
-import { listProgressSources } from "@/db/repo/sessions";
+import { findFirstProgressSource, findNewestProgressSource, findPreviousProgressSource } from "@/db/repo/sessions";
 import { events, llmCalls, sessions } from "@/db/schema";
 import type { RevealJson } from "@/engine/reveal-types";
 import { recordCallToDb, type CallModelDeps } from "@/llm/call-model";
 import { checkGuide, guideChecksLeft } from "@/server/guide-check";
-import { progressOf } from "@/server/progress";
+import { compareProgress } from "@/server/progress";
 import { runTurn } from "@/server/turns";
 import { a, rawAnalysis, topic } from "../helpers/engine-fixtures";
 import { ALLOW, respondingModels } from "../helpers/custom-fixtures";
@@ -126,9 +126,9 @@ describe("guide check", () => {
 
 describe("progress", () => {
   const reveal = (told: number, recognizedFull: number | null) =>
-    ({ counts: { told, total: 10, revealedCount: told, recognizedFull }, canvasEmpty: false, items: [] }) as unknown as RevealJson;
+    ({ counts: { told, total: 10, revealedCount: told, recognizedFull }, canvasEmpty: false, items: [], leading: [] }) as unknown as RevealJson;
 
-  it("reads finished sessions with their checked labels, and calls no model", async () => {
+  it("reads finished sessions with each question's text and checked label, and calls no model", async () => {
     const learner = await createLearner("linh@example.com");
     const session = await startSession(learner);
     const { model } = scriptedModel([
@@ -140,11 +140,37 @@ describe("progress", () => {
     await db().update(sessions).set({ status: "done", revealJson: reveal(4, 3), guess: 6, revealedAt: new Date() }).where(eq(sessions.id, session.id));
     const callsBefore = (await db().select().from(llmCalls)).length;
 
-    const sources = await listProgressSources(db(), learner.id, 10);
-    const progress = progressOf(sources);
+    const newest = await findNewestProgressSource(db(), learner.id);
+    const first = await findFirstProgressSource(db(), learner.id);
 
-    expect(sources).toMatchObject([{ sessionId: session.id, personaName: "chị Thu", guess: 6, questions: [{ label: "open", question_type: "closed" }] }]);
-    expect(progress.sessions[0]).toMatchObject({ told: 0.4, recognized: 0.3, guessAccuracy: 0.8, grounded: 0, habits: { leading: 0, hypothetical_future: 0 } });
+    expect(newest).toMatchObject({
+      sessionId: session.id,
+      personaId: "chi-thu",
+      personaName: "chị Thu",
+      questions: [{ turn: 1, text: "Chị có ghi chi tiêu không ạ?", analysis: { label: "open", question_type: "closed" } }],
+    });
+    expect(first?.sessionId).toBe(session.id);
+    expect(await findPreviousProgressSource(db(), learner.id, newest!)).toBeNull();
+    expect(compareProgress(newest, null, first)).toMatchObject({ kind: "single", latest: { told: 4, total: 10, leading: 0, ignoredHints: 0 } });
     expect(await db().select().from(llmCalls)).toHaveLength(callsBefore);
+  });
+
+  it("finds the previous result with the same persona and the first result, only of this learner, in order", async () => {
+    const learner = await createLearner("an@example.com");
+    const other = await createLearner("binh@example.com");
+    const finish = async (owner: typeof learner, at: Date) => {
+      const session = await startSession(owner);
+      await db().update(sessions).set({ status: "done", revealJson: reveal(2, null), guess: 1, revealedAt: at }).where(eq(sessions.id, session.id));
+      return session.id;
+    };
+    const oldest = await finish(learner, new Date("2026-10-01T03:00:00Z"));
+    const middle = await finish(learner, new Date("2026-10-10T03:00:00Z"));
+    await finish(other, new Date("2026-10-15T03:00:00Z"));
+    const latest = await finish(learner, new Date("2026-10-20T03:00:00Z"));
+
+    const newest = await findNewestProgressSource(db(), learner.id);
+    expect(newest?.sessionId).toBe(latest);
+    expect((await findPreviousProgressSource(db(), learner.id, newest!))?.sessionId).toBe(middle);
+    expect((await findFirstProgressSource(db(), learner.id))?.sessionId).toBe(oldest);
   });
 });

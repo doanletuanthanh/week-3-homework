@@ -1,86 +1,86 @@
-import type { RevealJson } from "@/engine/reveal-types";
-import type { Label, QuestionType } from "@/engine/types";
+import type { ProgressSource } from "@/db/repo/sessions";
+import type { Label } from "@/engine/types";
 
-/** Sessions the trend covers: the newest ones with a result. */
-export const PROGRESS_SESSIONS = 10;
+export type { ProgressSource };
 
-/** One finished session as stored: its reveal, the guess, and the checked label of each main-branch question. */
-export type ProgressSource = {
+/** What one session shows, in counts. */
+export type SessionFacts = {
   sessionId: string;
+  personaId: string;
   personaName: string;
   revealedAt: Date;
-  guess: number;
-  reveal: Pick<RevealJson, "counts" | "items" | "canvasEmpty">;
-  /** In turn order. Null for a turn written before the engine stored its analysis. */
-  questions: ({ label: Label; question_type: QuestionType } | null)[];
-};
-
-/** The habits the reveal comments on (its comment types `leading`, `hypothetical_future`, `heard_not_followed`), named for the learner. */
-export const HABITS = {
-  leading: "Câu hỏi dẫn dắt",
-  hypothetical_future: "Hỏi về tương lai giả định",
-  heard_not_followed: "Nghe được, nhưng chưa hỏi tiếp",
-} as const;
-export type Habit = keyof typeof HABITS;
-
-/** Shares from 0 to 1. Null where the session gives nothing to measure. */
-export type SessionProgress = {
-  sessionId: string;
-  personaName: string;
-  revealedAt: Date;
-  questions: number;
-  /** Questions built on what the persona said (`confirm_grounded`, `boundary_probe`). */
-  grounded: number | null;
-  /** KHAI THÁC: items told, of all items. */
   told: number;
-  /** NHẬN BIẾT: items the notes caught, of all items. Null when the notes were not judged or empty. */
-  recognized: number | null;
-  /** 1 for a guess equal to what was told, 0 for one as far off as the whole scenario. */
-  guessAccuracy: number;
-  habits: Record<Habit, number | null>;
+  total: number;
+  /** Questions labelled `leading`. */
+  leading: number;
+  /** Items whose hook the persona dropped, with a question after it, and that were never told. */
+  ignoredHints: number;
+  /** The first leading question, preferring one the verifier agreed added new words. */
+  leadingExample: string | null;
+  /** The first question built on what the persona said. */
+  groundedExample: string | null;
 };
 
-export type Progress = {
-  /** Oldest first, so a trend reads left to right. */
-  sessions: SessionProgress[];
-  /** The habit with the highest average rate; null when none showed. */
-  weakest: { habit: Habit; name: string; rate: number } | null;
-};
+export type Trend = "better" | "same" | "worse";
+export type Line = { key: "told" | "leading" | "ignored"; before: number; after: number; trend: Trend };
 
-const shareOf = (part: number, whole: number) => (whole > 0 ? part / whole : null);
+export type Comparison =
+  | { kind: "single"; latest: SessionFacts }
+  | { kind: "pair"; samePersona: boolean; before: SessionFacts; after: SessionFacts; lines: Line[]; pair: { before: string; after: string } | null };
 
-/** What one session shows of each habit and score. Pure: computed from stored data only, no model call. */
-export function sessionProgress(source: ProgressSource): SessionProgress {
-  const judged = source.questions.filter((question) => question !== null);
-  const count = (test: (question: (typeof judged)[number]) => boolean) => shareOf(judged.filter(test).length, judged.length);
-  const { told, total, recognizedFull } = source.reveal.counts;
-  const hooked = source.reveal.items.filter((item) => item.hook !== null);
+const GROUNDED: ReadonlySet<Label> = new Set(["confirm_grounded", "boundary_probe"]);
+
+/** Pure: computed from stored data only, no model call. */
+export function factsOf(source: ProgressSource): SessionFacts {
+  const { questions, reveal } = source;
+  const labelled = (label: (value: Label) => boolean) => questions.filter((question) => question.analysis !== null && label(question.analysis.label));
+  const leading = labelled((label) => label === "leading");
+  const novelTurns = new Set(reveal.leading.filter((entry) => entry.novel).map((entry) => entry.turn));
+  const novel = leading.find((question) => novelTurns.has(question.turn));
   return {
     sessionId: source.sessionId,
+    personaId: source.personaId,
     personaName: source.personaName,
     revealedAt: source.revealedAt,
-    questions: source.questions.length,
-    grounded: count((question) => question.label === "confirm_grounded" || question.label === "boundary_probe"),
-    told: total > 0 ? told / total : 0,
-    // Empty notes are never a zero (FR-49).
-    recognized: recognizedFull === null || source.reveal.canvasEmpty ? null : shareOf(recognizedFull, total),
-    guessAccuracy: total > 0 ? 1 - Math.min(1, Math.abs(source.guess - told) / total) : 0,
-    habits: {
-      leading: count((question) => question.label === "leading"),
-      hypothetical_future: count((question) => question.question_type === "hypothetical_future"),
-      heard_not_followed: shareOf(hooked.filter((item) => item.state !== "told").length, hooked.length),
-    },
+    told: reveal.counts.told,
+    total: reveal.counts.total,
+    leading: leading.length,
+    // A hook dropped in the last reply had no question after it: nothing to follow up.
+    ignoredHints: reveal.items.filter((item) => item.hook !== null && item.hook.next !== null && item.state !== "told").length,
+    leadingExample: (novel ?? leading[0])?.text ?? null,
+    groundedExample: labelled((label) => GROUNDED.has(label))[0]?.text ?? null,
   };
 }
 
-/** The trend over the newest sessions (given newest first) and the habit to work on. */
-export function progressOf(newestFirst: ProgressSource[]): Progress {
-  const sessions = newestFirst.slice(0, PROGRESS_SESSIONS).map(sessionProgress).reverse();
-  const averages = (Object.keys(HABITS) as Habit[]).flatMap((habit) => {
-    const rates = sessions.map((session) => session.habits[habit]).filter((rate) => rate !== null);
-    return rates.length > 0 ? [{ habit, rate: rates.reduce((sum, rate) => sum + rate, 0) / rates.length }] : [];
-  });
-  // Ties go to the habit listed first.
-  const top = averages.reduce<(typeof averages)[number] | null>((best, entry) => (best === null || entry.rate > best.rate ? entry : best), null);
-  return { sessions, weakest: top && top.rate > 0 ? { habit: top.habit, name: HABITS[top.habit], rate: top.rate } : null };
+/** Higher is better for what the persona told, lower for the two habits. */
+const trendOf = (before: number, after: number, higherIsBetter: boolean): Trend =>
+  before === after ? "same" : after > before === higherIsBetter ? "better" : "worse";
+
+/** Told as a share, so two personas with different numbers of items compare fairly. */
+const toldShare = (facts: SessionFacts) => (facts.total > 0 ? facts.told / facts.total : 0);
+
+/**
+ * The newest session against a baseline: the previous one with the same persona, else the
+ * learner's first session with a result. Null when there is no session; a single session when the
+ * newest is also the first.
+ */
+export function compareProgress(newest: ProgressSource | null, previous: ProgressSource | null, first: ProgressSource | null): Comparison | null {
+  if (!newest) return null;
+  const baseline = previous ?? (first && first.sessionId !== newest.sessionId ? first : null);
+  const after = factsOf(newest);
+  if (!baseline) return { kind: "single", latest: after };
+  const before = factsOf(baseline);
+  const toldTrend = trendOf(toldShare(before), toldShare(after), true);
+  return {
+    kind: "pair",
+    samePersona: baseline.personaId === newest.personaId,
+    before,
+    after,
+    lines: [
+      { key: "told", before: before.told, after: after.told, trend: toldTrend },
+      { key: "leading", before: before.leading, after: after.leading, trend: trendOf(before.leading, after.leading, false) },
+      { key: "ignored", before: before.ignoredHints, after: after.ignoredHints, trend: trendOf(before.ignoredHints, after.ignoredHints, false) },
+    ],
+    pair: before.leadingExample && after.groundedExample ? { before: before.leadingExample, after: after.groundedExample } : null,
+  };
 }

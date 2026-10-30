@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { RevealJson } from "@/engine/reveal-types";
 import type { Label, QuestionType } from "@/engine/types";
 import { tokenize } from "@/engine/tokens";
@@ -274,29 +274,69 @@ export async function listLearnerSessions(db: Executor, userId: string, page: { 
     .offset(page.offset);
 }
 
+/** One main-branch question as stored: what the learner typed and, once checked, its label. */
+export type ProgressQuestion = {
+  turn: number;
+  text: string;
+  /** Null for a turn written before the engine stored its analysis. */
+  analysis: { label: Label; question_type: QuestionType } | null;
+};
+
+/** One finished session as stored: its reveal and its questions in turn order. */
+export type ProgressSource = {
+  sessionId: string;
+  personaId: string;
+  personaName: string;
+  revealedAt: Date;
+  reveal: Pick<RevealJson, "counts" | "items" | "leading">;
+  questions: ProgressQuestion[];
+};
+
 /**
- * A learner's newest sessions that have a result (a reveal and a guess), newest first, with the
- * checked label of each main-branch question in turn order. What the progress page is computed
- * from: stored data only.
+ * The sessions of a learner that have a result (a reveal and a guess) and match `extra`, each with
+ * its main-branch questions in turn order: what the progress page reads.
  */
-export async function listProgressSources(db: Executor, userId: string, limit: number) {
-  const rows = await db
+function progressSources(db: Executor, userId: string, extra?: SQL) {
+  return db
     .select({
       sessionId: sessions.id,
+      personaId: scenarios.personaId,
       personaName: scenarios.displayName,
       revealedAt: sessions.revealedAt,
-      guess: sessions.guess,
       reveal: sessions.revealJson,
-      questions: sql<({ label: Label; question_type: QuestionType } | null)[]>`(
-        SELECT COALESCE(jsonb_agg(${turns.decisionJson} -> 'analysis' ORDER BY ${turns.index}), '[]'::jsonb)
+      questions: sql<ProgressQuestion[]>`(
+        SELECT COALESCE(jsonb_agg(jsonb_build_object('turn', ${turns.index}, 'text', ${turns.learnerText}, 'analysis', ${turns.decisionJson} -> 'analysis') ORDER BY ${turns.index}), '[]'::jsonb)
         FROM ${turns} JOIN ${branches} ON ${branches.id} = ${turns.branchId}
         WHERE ${turns.sessionId} = ${sessions.id} AND ${branches.kind} = 'main' AND ${turns.index} > 0
       )`,
     })
     .from(sessions)
     .innerJoin(scenarios, eq(scenarios.id, sessions.scenarioId))
-    .where(and(eq(sessions.userId, userId), isNotNull(sessions.revealJson), isNotNull(sessions.guess), isNotNull(sessions.revealedAt)))
-    .orderBy(desc(sessions.revealedAt), desc(sessions.id))
-    .limit(limit);
-  return rows.map((row) => ({ ...row, revealedAt: row.revealedAt!, guess: row.guess!, reveal: row.reveal! }));
+    .where(and(eq(sessions.userId, userId), isNotNull(sessions.revealJson), isNotNull(sessions.guess), isNotNull(sessions.revealedAt), extra))
+    .$dynamic();
+}
+
+const toProgressSource = (row: Awaited<ReturnType<typeof progressSources>>[number]): ProgressSource => ({ ...row, revealedAt: row.revealedAt!, reveal: row.reveal! });
+
+const newestFirst = [desc(sessions.revealedAt), desc(sessions.id)];
+
+/** A learner's newest session with a result. */
+export async function findNewestProgressSource(db: Executor, userId: string): Promise<ProgressSource | null> {
+  const [row] = await progressSources(db, userId).orderBy(...newestFirst).limit(1);
+  return row ? toProgressSource(row) : null;
+}
+
+/** The session with a result just before `session` with the same persona, however far back. */
+export async function findPreviousProgressSource(db: Executor, userId: string, session: Pick<ProgressSource, "sessionId" | "personaId" | "revealedAt">): Promise<ProgressSource | null> {
+  const earlier = or(lt(sessions.revealedAt, session.revealedAt), and(eq(sessions.revealedAt, session.revealedAt), lt(sessions.id, session.sessionId)));
+  const [row] = await progressSources(db, userId, and(eq(scenarios.personaId, session.personaId), earlier))
+    .orderBy(...newestFirst)
+    .limit(1);
+  return row ? toProgressSource(row) : null;
+}
+
+/** A learner's first session with a result: the baseline when the newest persona was never played before. */
+export async function findFirstProgressSource(db: Executor, userId: string): Promise<ProgressSource | null> {
+  const [row] = await progressSources(db, userId).orderBy(asc(sessions.revealedAt), asc(sessions.id)).limit(1);
+  return row ? toProgressSource(row) : null;
 }

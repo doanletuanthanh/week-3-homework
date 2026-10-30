@@ -1048,16 +1048,15 @@ a.srow:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 
 /* Tiến bộ của tôi and Kiểm tra bộ câu hỏi */
 .prog,.guide{display:flex;flex-direction:column;gap:24px;padding-top:32px;padding-bottom:48px}
-.prog-habit,.guide-form,.guide-result{display:flex;flex-direction:column;gap:12px;padding:24px}
-.prog-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
-.prog-tile{display:flex;flex-direction:column;gap:6px;padding:16px;min-width:0}
-.prog-value{font:600 22px/28px var(--sans)}
-.prog-spark{display:block;width:100%;height:36px;overflow:visible}
-.prog-spark polyline{fill:none;stroke:var(--primary);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.prog-spark circle{fill:var(--primary)}
+.guide-form,.guide-result{display:flex;flex-direction:column;gap:12px;padding:24px}
+.prog-cmp{display:flex;flex-direction:column;gap:16px;padding:24px}
+.prog-lines{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font:500 18px/26px var(--sans)}
+.prog-trend{font:600 12px/16px var(--sans);padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;background:var(--surface-container)}
+.prog-trend[data-trend="better"]{background:rgba(171,241,206,.6);color:var(--primary)}
+.prog-trend[data-trend="worse"]{background:rgba(255,218,214,.7);color:var(--error)}
+.prog-links{display:flex;flex-wrap:wrap;gap:20px}
 .guide-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .guide-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:12px}
 .guide-list li p{margin:0;overflow-wrap:anywhere}
 .guide-list li p + p{margin-top:4px}
-@media (max-width:1023px){.prog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .next-step > .next-guide{grid-column:1 / -1}

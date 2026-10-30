@@ -1,70 +1,101 @@
 import { describe, expect, it } from "vitest";
-import type { RevealItem } from "@/engine/reveal-types";
+import type { LeadingTurn, RevealItem } from "@/engine/reveal-types";
+import type { Label } from "@/engine/types";
 import { scoreGuideSet } from "@/eval/guide-check-set";
 import { judgementExitCode } from "@/eval/judgement-eval";
-import { progressOf, sessionProgress, type ProgressSource } from "@/server/progress";
+import { compareProgress, factsOf, type ProgressSource } from "@/server/progress";
 
-const item = (state: RevealItem["state"], hooked: boolean) => ({ state, hook: hooked ? { turn: 1, personaText: "…", next: null } : null }) as RevealItem;
+/** An item, its hook dropped in turn 1 with a question after it unless `lastReply`. */
+const item = (state: RevealItem["state"], hooked: boolean, lastReply = false) =>
+  ({ state, hook: hooked ? { turn: 1, personaText: "…", next: lastReply ? null : { turn: 2, learnerText: "…" } } : null }) as RevealItem;
+/** Questions in turn order from turn 1, as the repo returns them. */
+const turnsOf = (...questions: [string, Label | null][]) =>
+  questions.map(([text, label], index) => ({ turn: index + 1, text, analysis: label === null ? null : { label, question_type: "open" as const } }));
+const novel = (turn: number, isNovel = true): LeadingTurn => ({ turn, span: [0, 1], spanText: "x", novel: isNovel });
 
-function source(overrides: Partial<ProgressSource> & { day: number }): ProgressSource {
+function source(overrides: Partial<ProgressSource> & { day: number; told?: number; total?: number }): ProgressSource {
+  const { day, told = 3, total = 11, ...rest } = overrides;
   return {
-    sessionId: `s${overrides.day}`,
+    sessionId: `s${day}`,
+    personaId: "chi-thu",
     personaName: "chị Thu",
-    revealedAt: new Date(2026, 9, overrides.day),
-    guess: 5,
-    reveal: { counts: { told: 5, total: 10, revealedCount: 6, recognizedFull: 2 }, canvasEmpty: false, items: [] },
+    revealedAt: new Date(2026, 9, day),
+    reveal: { counts: { told, total, revealedCount: told, recognizedFull: null }, items: [], leading: [] },
     questions: [],
-    ...overrides,
+    ...rest,
   };
 }
 
-describe("sessionProgress", () => {
-  it("measures each habit and score from stored data", () => {
-    const progress = sessionProgress(
+describe("factsOf", () => {
+  it("counts what was told, leading questions and hooks never followed up (not one dropped in the last reply), and picks the learner's own questions", () => {
+    const facts = factsOf(
       source({
         day: 1,
-        guess: 8,
-        reveal: { counts: { told: 4, total: 10, revealedCount: 5, recognizedFull: 3 }, canvasEmpty: false, items: [item("told", true), item("missed", true), item("held", true), item("missed", false)] },
-        questions: [
-          { label: "confirm_grounded", question_type: "open" },
-          { label: "boundary_probe", question_type: "closed" },
-          { label: "leading", question_type: "hypothetical_future" },
-          { label: "open", question_type: "open" },
-          null,
-        ],
+        told: 4,
+        reveal: { counts: { told: 4, total: 11, revealedCount: 5, recognizedFull: null }, items: [item("told", true), item("missed", true), item("held", true), item("missed", true, true), item("missed", false)], leading: [] },
+        questions: turnsOf(["Chị kể em nghe?", "open"], ["Chắc tại lười hả chị?", "leading"], ["Lần đó chị ghi bằng gì?", "confirm_grounded"], ["Cũ?", null]),
       }),
     );
-    expect(progress).toMatchObject({ questions: 5, grounded: 0.5, told: 0.4, recognized: 0.3, guessAccuracy: 0.6 });
-    expect(progress.habits).toEqual({ leading: 0.25, hypothetical_future: 0.25, heard_not_followed: 2 / 3 });
+    expect(facts).toMatchObject({ told: 4, total: 11, leading: 1, ignoredHints: 2, leadingExample: "Chắc tại lười hả chị?", groundedExample: "Lần đó chị ghi bằng gì?" });
   });
 
-  it("leaves unmeasured what a session gives nothing for: no judged question, no dropped hook, notes not judged or empty", () => {
-    const progress = sessionProgress(source({ day: 1, reveal: { counts: { told: 0, total: 10, revealedCount: 0, recognizedFull: null }, canvasEmpty: false, items: [] }, questions: [null] }));
-    expect(progress).toMatchObject({ grounded: null, recognized: null, habits: { leading: null, hypothetical_future: null, heard_not_followed: null } });
-    const empty = sessionProgress(source({ day: 1, reveal: { counts: { told: 0, total: 10, revealedCount: 0, recognizedFull: 0 }, canvasEmpty: true, items: [] } }));
-    expect(empty.recognized).toBeNull();
+  it("prefers a leading question the verifier agreed added new words", () => {
+    const questions = turnsOf(["Dẫn dắt một?", "leading"], ["Mở?", "open"], ["Dẫn dắt hai?", "leading"]);
+    const facts = factsOf(source({ day: 1, questions, reveal: { counts: { told: 3, total: 11, revealedCount: 3, recognizedFull: null }, items: [], leading: [novel(1, false), novel(3)] } }));
+    expect(facts.leadingExample).toBe("Dẫn dắt hai?");
   });
 
-  it("scores a guess as far off as the whole scenario as zero, never below", () => {
-    expect(sessionProgress(source({ day: 1, guess: 10, reveal: { counts: { told: 0, total: 5, revealedCount: 0, recognizedFull: 0 }, canvasEmpty: false, items: [] } })).guessAccuracy).toBe(0);
+  it("gives no example from a session whose questions were stored before the analysis was", () => {
+    const facts = factsOf(source({ day: 1, questions: turnsOf(["Một?", null], ["Hai?", null]) }));
+    expect(facts).toMatchObject({ leading: 0, leadingExample: null, groundedExample: null });
   });
 });
 
-describe("progressOf", () => {
-  it("keeps the ten newest sessions, oldest first, and names the habit with the highest average", () => {
-    const leading = { label: "leading", question_type: "open" } as const;
-    const open = { label: "open", question_type: "open" } as const;
-    const newestFirst = Array.from({ length: 12 }, (_, index) => source({ day: 12 - index, questions: index % 2 === 0 ? [leading, open] : [open, open] }));
-
-    const progress = progressOf(newestFirst);
-
-    expect(progress.sessions.map((session) => session.sessionId)).toEqual(["s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "s12"]);
-    expect(progress.weakest).toEqual({ habit: "leading", name: "Câu hỏi dẫn dắt", rate: 0.25 });
+describe("compareProgress", () => {
+  it("has nothing to show without a session, and a first-session view with one", () => {
+    expect(compareProgress(null, null, null)).toBeNull();
+    const only = source({ day: 1 });
+    expect(compareProgress(only, null, only)).toMatchObject({ kind: "single", latest: { sessionId: "s1" } });
   });
 
-  it("names no habit when none showed, and has no session when there is none", () => {
-    expect(progressOf([source({ day: 1, questions: [{ label: "open", question_type: "open" }] })]).weakest).toBeNull();
-    expect(progressOf([])).toEqual({ sessions: [], weakest: null });
+  it("compares the newest with the previous session of the same persona, not the first one", () => {
+    const newest = source({ day: 5, told: 6, questions: turnsOf(["Lần đó chị ghi bằng gì?", "boundary_probe"]) });
+    const previous = source({ day: 3, told: 2, questions: turnsOf(["Chắc tại lười hả chị?", "leading"], ["Rồi sao?", "leading"]) });
+    const comparison = compareProgress(newest, previous, source({ day: 1 }));
+    expect(comparison).toMatchObject({ kind: "pair", samePersona: true, before: { sessionId: "s3" }, after: { sessionId: "s5" } });
+    if (comparison?.kind !== "pair") throw new Error("pair expected");
+    expect(comparison.lines).toEqual([
+      { key: "told", before: 2, after: 6, trend: "better" },
+      { key: "leading", before: 2, after: 0, trend: "better" },
+      { key: "ignored", before: 0, after: 0, trend: "same" },
+    ]);
+    expect(comparison.pair).toEqual({ before: "Chắc tại lười hả chị?", after: "Lần đó chị ghi bằng gì?" });
+  });
+
+  it("falls back to the first session when the newest persona was never played before, comparing what was told as a share", () => {
+    const newest = source({ day: 5, personaId: "anh-tung", personaName: "anh Tùng", told: 3, total: 6 });
+    const first = source({ day: 1, told: 4, total: 11 });
+    const comparison = compareProgress(newest, null, first);
+    expect(comparison).toMatchObject({ kind: "pair", samePersona: false, before: { sessionId: "s1" } });
+    if (comparison?.kind !== "pair") throw new Error("pair expected");
+    // 4 of 11 before, 3 of 6 after: fewer items, a bigger share.
+    expect(comparison.lines[0]).toEqual({ key: "told", before: 4, after: 3, trend: "better" });
+  });
+
+  it("calls more leading questions and more ignored hints worse, and shows no pair without both questions", () => {
+    const before = source({ day: 1, reveal: { counts: { told: 3, total: 11, revealedCount: 3, recognizedFull: null }, items: [], leading: [] } });
+    const after = source({ day: 2, questions: turnsOf(["Chắc vậy hả?", "leading"]), reveal: { counts: { told: 3, total: 11, revealedCount: 3, recognizedFull: null }, items: [item("missed", true)], leading: [] } });
+    const comparison = compareProgress(after, before, before);
+    if (comparison?.kind !== "pair") throw new Error("pair expected");
+    expect(comparison.lines.map((line) => line.trend)).toEqual(["same", "worse", "worse"]);
+    expect(comparison.pair).toBeNull();
+  });
+
+  it("compares what was told as a share, so a newer version of the same persona with fewer items is judged fairly", () => {
+    const comparison = compareProgress(source({ day: 2, told: 4, total: 8 }), source({ day: 1, told: 4, total: 11 }), null);
+    if (comparison?.kind !== "pair") throw new Error("pair expected");
+    expect(comparison).toMatchObject({ samePersona: true, before: { total: 11 }, after: { total: 8 } });
+    expect(comparison.lines[0]).toEqual({ key: "told", before: 4, after: 4, trend: "better" });
   });
 });
 
