@@ -1,3 +1,4 @@
+import { containsTerm } from "@/scenario/text-normalize";
 import { resolveAlias } from "./aliases";
 import { diagnose } from "./diagnosis";
 import { buildItems, commentSlots, recognizedCount, settle, topLockedItemId } from "./reveal-compute";
@@ -45,7 +46,11 @@ function targetHook(state: EngineState, selection: ReplaySelection) {
  * one claim. A claim about the replay target (its item, the turn of its hook, or the leading turn
  * of fallback 1) is marked `sealed`, whatever its text says. The habit card is sealed whenever
  * the target's ignored hook is one of the hooks its slot counts, whichever turns the claim cites:
- * its words are the generator's and may describe that hook. `basis` is settled.
+ * its words are the generator's and may describe that hook. A claim whose text or better
+ * question holds a secret term of an item the persona did not tell, a term nobody said in the
+ * session, is dropped: the same check on
+ * authored terms the scenario validator runs, so a comment never says what the result screen
+ * keeps back. `basis` is settled.
  */
 export function resolveClaims(raw: RawClaim[], context: { basis: RevealBasis; slots: CommentSlot[]; selection: ReplaySelection }): DraftClaim[] {
   const { basis, slots, selection } = context;
@@ -53,6 +58,14 @@ export function resolveClaims(raw: RawClaim[], context: { basis: RevealBasis; sl
   const hook = targetHook(basis.state, selection);
   const hookTurn = hook?.droppedAt ?? null;
   const bySlot = new Map<string, Omit<DraftClaim, "id">>();
+  const told = new Set(basis.state.disclosed.map((entry) => entry.itemId));
+  // A term someone already said in the session is on the learner's screen: quoting it tells nothing.
+  const spoken = basis.turns.map((turn) => `${turn.learnerText ?? ""} ${turn.personaText}`).join("\n");
+  const untoldTerms = scenario.items
+    .filter((item) => !told.has(item.id))
+    .flatMap((item) => item.secret_terms)
+    .filter((term) => !containsTerm(spoken, term));
+  const leaks = (text: string | null) => text !== null && untoldTerms.some((term) => containsTerm(text, term));
 
   for (const claim of raw) {
     const slot = slots.find((candidate) => candidate.id === claim.slot?.trim());
@@ -91,6 +104,8 @@ export function resolveClaims(raw: RawClaim[], context: { basis: RevealBasis; sl
     // The better question rewrites the slot's first turn, so the claim must cite that turn: the
     // pair shown is then that turn's question and its rewrite, and sealing sees the turn.
     if (NEEDS_SUGGESTION.has(slot.type) && citedTurns[0] !== slot.turns[0]) continue;
+
+    if (leaks(text) || leaks(suggestedQuestion)) continue;
 
     const sealed =
       selection.level === "primary"

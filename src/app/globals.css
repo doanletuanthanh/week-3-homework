@@ -582,6 +582,8 @@ p > .trefs{margin:0 6px 0 0;vertical-align:middle}
 .cmt{border-radius:12px;box-shadow:inset 0 0 0 1px var(--surface-container-high);padding:20px;display:flex;flex-direction:column;gap:16px}
 .cmt .added{color:var(--error);font-weight:600}
 .cmt .also{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cmt details summary{cursor:pointer;width:fit-content}
+.cmt details .also{margin-top:6px}
 .pair{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:stretch}
 .pair-c{padding:16px;border-radius:10px;display:flex;flex-direction:column;gap:6px}
 .pair-instead{background:rgba(255,218,214,.5)}

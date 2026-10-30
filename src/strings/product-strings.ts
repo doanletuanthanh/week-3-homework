@@ -54,7 +54,7 @@ export const FOOTER_DATA_NOTE =
 /** FR-48a: the one sentence under a marked stretch of the notes. The end judge's own reason is never shown. */
 export const CANVAS_EXPLANATION = {
   told: "{Persona} đã kể điều này ở lượt {turn}.",
-  unconfirmed: "Bạn đoán đúng, nhưng {persona} chưa xác nhận — trong buổi thật, bạn sẽ không biết mình đúng.",
+  unconfirmed: "Bạn đoán đúng, nhưng {persona} chưa xác nhận. Trong buổi thật, bạn sẽ không biết mình đúng.",
   unrevealed: "{Persona} chưa nói gì gợi tới điều này. Đây là phỏng đoán, chưa được xác nhận.",
   never_said: "{Persona} chưa từng nói điều này. Ghi chú này là giả định của bạn, không phải điều bạn nghe được.",
 } as const;
@@ -108,6 +108,14 @@ export const TOLD_SUMMARY = "Bạn đã khai thác được {count} điều";
 
 /** FR-19: follows the words the learner added, only when the verifier agreed they were new. */
 export const LEADING_NEVER_SAID = "{persona} chưa từng nói điều này.";
+
+/** Màn 6 "Mang về": its title (also the print sheet's), the line over a comment's other turns, and the line when there is no comment: none found, or found but none shown. */
+export const TAKEAWAY = {
+  title: "Đọc lại trước buổi phỏng vấn người dùng thật",
+  repeated: "Lặp lại ở {count} lượt khác",
+  empty: "Buổi này bạn không hỏi câu dẫn dắt nào và không bỏ qua lời gợi mở nào.",
+  notShown: "Chưa có nhận xét nào để hiện cho buổi này.",
+} as const;
 
 /** FR-48a, added under the note about the replay target once the replay opened that item. */
 export const CANVAS_REPLAY_OPENED = "Trong buổi chính {persona} chưa xác nhận; ở lần luyện lại bạn đã mở được nó.";
@@ -314,6 +322,7 @@ export function productStrings(): { key: string; text: string }[] {
     ...Object.entries(HINTS).map(([name, text]) => ({ key: `hints.${name}`, text })),
     { key: "told_summary", text: TOLD_SUMMARY },
     { key: "leading_never_said", text: LEADING_NEVER_SAID },
+    ...Object.entries(TAKEAWAY).map(([name, text]) => ({ key: `takeaway.${name}`, text })),
     { key: "canvas_replay_opened", text: CANVAS_REPLAY_OPENED },
     ...Object.entries(REPLAY_RESULT).map(([name, text]) => ({ key: `replay_result.${name}`, text })),
     ...Object.entries(CUSTOM_LABEL).map(([name, text]) => ({ key: `custom_label.${name}`, text })),

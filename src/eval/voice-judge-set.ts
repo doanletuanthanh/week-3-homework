@@ -6,7 +6,8 @@ import { mapPooled } from "./pool";
 
 /**
  * `voice-judge`: one text per line, with whether it reads as a real person or as model-written.
- * Plain cases come from the hand-written library, AI-voice cases are written by hand.
+ * Plain speech and identity cases come from the hand-written library; plain feedback cases,
+ * which the library has none of, and every AI-voice case are written by hand.
  */
 export const voiceCaseSchema = z.strictObject({
   id: z.string().min(1),

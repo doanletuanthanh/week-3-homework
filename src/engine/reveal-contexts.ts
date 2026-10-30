@@ -8,8 +8,9 @@ import type { Label, QuestionType } from "./types";
 /**
  * What each reveal call may see. The session has ended, so the end judge and the verifier read
  * every item. The generator is the exception: the replay target stays sealed until the replay
- * ends, so its builder leaves the target's content, sample question and hook line out. The
- * learner's guess is an input of none of them.
+ * ends, so its builder leaves the target's content, sample question and hook line out, and it
+ * gets nothing of any other untold item, so no comment can repeat what the result screen no
+ * longer shows. The learner's guess is an input of none of them.
  */
 
 const transcriptOf = (basis: RevealBasis): TranscriptLine[] =>
@@ -43,8 +44,6 @@ export type FeedbackContext = {
   persona: { displayName: string; identity: string };
   transcript: TranscriptLine[];
   slots: FeedbackSlot[];
-  /** Items the persona did not tell. Never the replay target. */
-  missedItems: { alias: string; content: string }[];
   /** The replay target, by alias only, with the turn of its hook: both are named so they can be avoided. */
   sealed: { itemAlias: string; hookTurn: number | null } | null;
   errorPatterns: Scenario["error_patterns"];
@@ -55,7 +54,6 @@ export type FeedbackContext = {
 export function buildFeedbackContext(basis: RevealBasis, selection: ReplaySelection, slots: CommentSlot[]): FeedbackContext {
   const { scenario, state } = basis;
   const targetId = selection.level === "primary" ? selection.targetItemId : null;
-  const told = new Set(state.disclosed.map((entry) => entry.itemId));
   return {
     persona: { displayName: scenario.persona.display_name, identity: scenario.persona.identity },
     transcript: transcriptOf(basis),
@@ -66,9 +64,6 @@ export function buildFeedbackContext(basis: RevealBasis, selection: ReplaySelect
       spans: slot.spans ?? [],
       note: slot.canvas ? { range: slot.canvas.range, text: slot.canvas.text, itemAlias: alias(scenario, "item", slot.canvas.itemId) } : null,
     })),
-    missedItems: scenario.items
-      .filter((item) => !told.has(item.id) && item.id !== targetId)
-      .map((item) => ({ alias: alias(scenario, "item", item.id), content: item.content })),
     sealed:
       targetId === null
         ? null

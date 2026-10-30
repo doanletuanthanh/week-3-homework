@@ -63,6 +63,23 @@ describe("resolveClaims: a claim with a broken reference is dropped whole (FR-21
     ]);
   });
 
+  it("drops a claim whose text or better question holds a secret term of an untold item, and keeps one about a told item", () => {
+    const told = new Set(basis.state.disclosed.map((entry) => entry.itemId));
+    const untold = chiThu.items.find((item) => !told.has(item.id))!;
+    const toldItem = chiThu.items.find((item) => told.has(item.id))!;
+    const term = untold.secret_terms[0];
+    expect(resolve([claim({ text: `Lần sau hỏi chị về ${term}.` })])).toEqual([]);
+    expect(resolve([claim({ suggested_question: `Chị có ${term.toUpperCase()} không ạ?` })])).toEqual([]);
+    expect(resolve([claim({ text: `Bạn bám vào ${toldItem.secret_terms[0]} rất đúng.` })])).toHaveLength(1);
+  });
+
+  it("keeps a claim that quotes an untold item's term the learner typed: it is already on the screen", () => {
+    const told = new Set(basis.state.disclosed.map((entry) => entry.itemId));
+    const term = chiThu.items.find((item) => !told.has(item.id))!.secret_terms[0];
+    const typed: RevealBasis = { ...basis, turns: basis.turns.map((turn, index) => (index === 1 ? { ...turn, learnerText: `${turn.learnerText} Chắc tại ${term} hả chị?` } : turn)) };
+    expect(resolve([claim({ text: `Ở lượt 4 bạn đoán sẵn là ${term}; lần sau hỏi chị Thu trước.` })], typed)).toHaveLength(1);
+  });
+
   it("drops one broken claim and keeps the others", () => {
     const kept = resolve([claim({ cited_turns: [99] }), claim({ slot: "S2", cited_turns: [5, 6] })]);
     expect(kept.map((entry) => entry.slot)).toEqual(["hypothetical_future"]);

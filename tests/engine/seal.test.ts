@@ -217,7 +217,7 @@ describe("what the primary fixtures seal, case by case", () => {
     const sealed = view(fixture, "revealed")!;
     expect(sealed.takeaway.comments).toEqual([]);
     // Something is held back, so the screen must not say there was nothing to note.
-    expect(sealed.takeaway.emptyLine).toBe(false);
+    expect(sealed.takeaway.emptyLine).toBeNull();
     expect(sealed.hints.find((hint) => hint.path === "trust")!.trustTurns).toEqual([3]);
     expect(marks(fixture.basis, fixture.reveal, "revealed")).toEqual([[3, "thêm cho"]]);
 
@@ -316,7 +316,7 @@ describe("toBrowserReveal: the offer screen of the main fixture", () => {
     expect(payload.takeaway.habit).toBeNull();
     expect(view(fixture, "replaying")!.takeaway.habit).toBeNull();
     expect(view(fixture, "done")!.takeaway.habit).toMatchObject({ type: "habit", turns: [3, 4] });
-    expect(payload.takeaway.emptyLine).toBe(false);
+    expect(payload.takeaway.emptyLine).toBeNull();
   });
 
   it("never sends the internal fields of a claim or a match", () => {
@@ -368,14 +368,14 @@ describe("toBrowserReveal: empty, unmatched and degraded states", () => {
     expect(toBrowserResult("done", reveal)).toEqual({ told: 2, total: 11, recognized: { state: "ungraded" } });
   });
 
-  it("generator or verifier failed: only the empty line is left of the takeaway, without praise", () => {
+  it("generator or verifier failed: only the neutral empty line is left of the takeaway, without praise", () => {
     const basis = basisOf(session, NOTES);
     for (const parts of [
       { ...fullParts(basis), verifier: { ok: false as const } },
       { judge: judgedNotes(), generator: { ok: false as const }, verifier: verifierFor(basis, { judge: judgedNotes(), generator: { ok: false } }) },
     ]) {
       const payload = toBrowserReveal({ status: "revealed", guess: 2, canvasText: NOTES, reveal: assemble(basis, parts), scenarioItems: chiThu.items })!;
-      expect(payload.takeaway).toEqual({ praise: null, comments: [], habit: null, emptyLine: true });
+      expect(payload.takeaway).toEqual({ praise: null, comments: [], habit: null, emptyLine: "not_shown" });
     }
   });
 
@@ -392,6 +392,6 @@ describe("toBrowserReveal: empty, unmatched and degraded states", () => {
     for (const item of chiThu.items) expect(JSON.stringify(payload)).not.toContain(item.content);
     expect(payload.held).toBe(0);
     expect(payload.missed).toBe(11);
-    expect(payload.takeaway).toEqual({ praise: null, comments: [], habit: null, emptyLine: true });
+    expect(payload.takeaway).toEqual({ praise: null, comments: [], habit: null, emptyLine: "nothing_found" });
   });
 });

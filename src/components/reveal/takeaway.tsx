@@ -2,7 +2,7 @@
 
 import { ArrowRightIcon, CheckIcon } from "@/components/icons";
 import type { BrowserClaim, BrowserReveal } from "@/engine/seal";
-import { LEADING_NEVER_SAID, fillTemplate } from "@/strings/product-strings";
+import { LEADING_NEVER_SAID, TAKEAWAY, fillTemplate } from "@/strings/product-strings";
 import { TurnRef } from "./turn-ref";
 
 type Persona = { displayName: string; displayNameCapitalized: string };
@@ -15,8 +15,7 @@ type Props = {
   print: { topicTitle: string; date: string; fileName: string };
 };
 
-const TITLE = "Thói quen hỏi của bạn — đọc lại trước buổi thật";
-const EMPTY = "Buổi này không có câu dẫn dắt hay hook bị bỏ qua nào được ghi nhận.";
+const emptyText = (line: "nothing_found" | "not_shown") => (line === "nothing_found" ? TAKEAWAY.empty : TAKEAWAY.notShown);
 
 /** What the comment is about, in fixed words around the learner's own (FR-30); the generator's sentence follows it. */
 function Evidence({ claim, persona, printed }: { claim: BrowserClaim; persona: Persona; printed?: boolean }) {
@@ -38,14 +37,20 @@ function Evidence({ claim, persona, printed }: { claim: BrowserClaim; persona: P
         )}
         {claim.text}
       </p>
-      {others.length > 0 && !printed && (
-        <p className="body-sm c-variant also">
-          Cũng thấy ở
-          {others.map((value) => (
-            <TurnRef key={value} turn={value} />
-          ))}
-        </p>
-      )}
+      {others.length > 0 &&
+        (printed ? (
+          <span className="code c-variant">(lượt {others.join(", ")})</span>
+        ) : (
+          // The other turns are the same habit again: folded, so the comment reads first.
+          <details className="body-sm c-variant">
+            <summary>{fillTemplate(TAKEAWAY.repeated, { count: others.length })}</summary>
+            <span className="also">
+              {others.map((value) => (
+                <TurnRef key={value} turn={value} />
+              ))}
+            </span>
+          </details>
+        ))}
     </>
   );
 }
@@ -104,7 +109,7 @@ function PrintSheet({ takeaway, persona, print }: Pick<Props, "takeaway" | "pers
       </div>
       <div>
         <span className="eyebrow">Mang về</span>
-        <h1 className="headline-lg">{TITLE}</h1>
+        <h1 className="headline-lg">{TAKEAWAY.title}</h1>
       </div>
       {takeaway.comments.map((claim) => (
         <div key={claim.id} className="print-blk">
@@ -122,7 +127,7 @@ function PrintSheet({ takeaway, persona, print }: Pick<Props, "takeaway" | "pers
           <Habit claim={takeaway.habit} printed />
         </div>
       )}
-      {takeaway.emptyLine && <p className="body-md print-blk">{EMPTY}</p>}
+      {takeaway.emptyLine && <p className="body-md print-blk">{emptyText(takeaway.emptyLine)}</p>}
     </div>
   );
 }
@@ -149,7 +154,7 @@ export function Takeaway({ takeaway, persona, canDownload, sessionId, print }: P
         <div>
           <span className="eyebrow">Mang về</span>
           <h2 id="takeaway-title" className="headline-lg">
-            {TITLE}
+            {TAKEAWAY.title}
           </h2>
         </div>
         <div className="takeaway-dl">
@@ -181,7 +186,7 @@ export function Takeaway({ takeaway, persona, canDownload, sessionId, print }: P
         </div>
       ))}
       {takeaway.habit && <Habit claim={takeaway.habit} />}
-      {takeaway.emptyLine && <p className="body-md c-variant">{EMPTY}</p>}
+      {takeaway.emptyLine && <p className="body-md c-variant">{emptyText(takeaway.emptyLine)}</p>}
 
       {/* Printing by the browser's own shortcut gets the same lock as the button. */}
       {canDownload && <PrintSheet takeaway={takeaway} persona={persona} print={print} />}

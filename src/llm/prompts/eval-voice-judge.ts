@@ -6,7 +6,7 @@ export const VOICE_VERDICTS = ["plain", "ai_voice"] as const;
 export type VoiceVerdict = (typeof VOICE_VERDICTS)[number];
 
 /** What a text is, as the judge is told: the same text reads differently as speech and as a description. */
-export const VOICE_TEXT_KINDS = { speech: "lời nhân vật nói ra", identity: "đoạn mô tả nhân vật là ai" } as const;
+export const VOICE_TEXT_KINDS = { speech: "lời nhân vật nói ra", identity: "đoạn mô tả nhân vật là ai", feedback: "lời nhận xét của người hướng dẫn cho người học" } as const;
 export type VoiceTextKind = keyof typeof VOICE_TEXT_KINDS;
 
 export const voiceJudgeSchema = z.object({ voice: z.enum(VOICE_VERDICTS), reason: z.string() });
@@ -19,6 +19,7 @@ const RULES = [
   "voice = \"ai_voice\" khi đoạn văn có một trong các dấu hiệu: gọi tên cảm xúc hay tính cách chung chung mà không kèm việc gì đã xảy ra; xếp nhiều tính từ khen chê liền nhau; từ sách vở, giọng bài viết hay khẩu hiệu không ai nói ngoài đời; kể xong một việc rồi kết bằng bài học, lời khuyên chung hay câu tóm tắt; câu dài nối nhiều vế cho trang trọng. Ví dụ: \"Với chị, mỗi lần sửa máy giặt là một dịp để trân trọng hơn những tiện nghi của gia đình.\".",
   "voice = \"plain\" khi đoạn văn kể việc cụ thể hay nêu sự thật bằng từ đời thường, câu ngắn như người thật nói, kể cả khi có từ đệm, câu cụt hay bỏ chủ ngữ. Một cảm xúc gắn với một việc cụ thể (sợ ai đó nghĩ gì, ngại làm gì) vẫn là plain. Ví dụ: \"Máy giặt kêu cạch cạch hai tuần chị mới gọi thợ, ổng lấy 400 nghìn.\".",
   "Với đoạn mô tả nhân vật, vài nét tính cách ngắn sau phần sự thật là bình thường; chỉ tính là ai_voice khi mô tả chủ yếu là tính từ chung chung, khẩu hiệu hay lời ca ngợi, kể cả khi chỉ câu cuối như vậy.",
+  "Với lời nhận xét, một câu ngắn chỉ ra người học nên hỏi gì, hay trích đúng lời đã được bám vào, là plain. Là ai_voice khi lời nhận xét khen bằng cách gọi tên kỹ năng hay phẩm chất của người học (kể cả khi có nhắc nội dung buổi trò chuyện), giảng giải vì sao một cách hỏi là không tốt, nói về người được phỏng vấn nói chung, hay nêu nguyên tắc nghiên cứu.",
   "Không chấm nội dung đúng sai hay hay dở, chỉ chấm giọng. reason: một câu ngắn bằng tiếng Việt chỉ ra chỗ quyết định.",
 ].join("\n");
 

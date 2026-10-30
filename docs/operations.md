@@ -65,13 +65,13 @@ Runs a hand-labelled set through the production prompt and prints the rates NFR-
 - `qa-plan`: the lean eval's planner. Each line names its own scenario file and mutation operator, so `--scenario` is not used.
 - `guide-check`: the learner guide checker. Each line is one guide, with the label of each question in order; no scenario is used. Gate: leading recall ≥ 90%.
 - `topic-route`: which item Call 1 routes a question to, read where code acts on it. Each line names its own scenario file, so one set pools several personas. `expected` is an item id, `broad` (a general question, or one about several topics) or `none` (no topic). Gates over the whole set: wrong-route ≤ 2.1% (one line in 48) and missed ≤ 20%. It also prints the confusion pairs (expected → predicted), which show which tags to rewrite.
-- `voice-judge`: whether a text reads as a real person or as model-written (the plain voice of the persona and scenario-generator prompts). Each line is one text, `kind` `speech` or `identity`; no scenario is used. Plain cases are copied word for word from `scenarios/`, model-written ones are written by hand. Runs on the STRING_CHECK role. Gates: model-written passed as plain ≤ 10%, library text flagged ≤ 10%. Own floor of 40 lines. No code matches words for voice; this set is the only measure.
+- `voice-judge`: whether a text reads as a real person or as model-written (the plain voice of the persona and scenario-generator prompts). Each line is one text, `kind` `speech`, `identity` or `feedback`; no scenario is used. Plain speech and identity cases are copied word for word from `scenarios/`; plain feedback cases and every model-written case are written by hand. Runs on the STRING_CHECK role. Gates: model-written passed as plain ≤ 10%, plain text (library and hand-written feedback) flagged ≤ 10%. Own floor of 40 lines. No code matches words for voice; this set is the only measure.
 
 The kind is taken from the file name when `--kind` is left out.
 
 `--batch` sends the Gemini calls through Batch Mode at half price, all cases at once. A run then takes minutes instead of seconds. `--concurrency N` sets how many cases run at the same time (default 1, or 64 with `--batch`). It applies to `topic-route`, `label-classifier`, `turn-verdict`, `guide-check` and `voice-judge`.
 
-Format: one JSON object per line, with an `id`, the input fields of that kind, `expected`, and a free `note`. The files in `evalsets/` are the reference for each kind's fields. A set proves a gate only from 100 lines up; the committed sets are starters of 8 to 24 lines. `topic-route` (56 lines) has its own floor of 48, `voice-judge` (46 lines) of 40.
+Format: one JSON object per line, with an `id`, the input fields of that kind, `expected`, and a free `note`. The files in `evalsets/` are the reference for each kind's fields. A set proves a gate only from 100 lines up; the committed sets are starters of 8 to 24 lines. `topic-route` (56 lines) has its own floor of 48, `voice-judge` (66 lines) of 40.
 
 ## Reading persona replies before and after a prompt change
 

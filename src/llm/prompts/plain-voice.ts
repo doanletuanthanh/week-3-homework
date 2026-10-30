@@ -5,7 +5,7 @@
  * model in eval only (`voice-judge` set), never at runtime.
  */
 
-/** Rule lines for every prompt whose output a learner reads as someone's words: today the persona and the scenario generator. */
+/** Rule lines for every prompt whose output a learner reads as someone's words: the persona, the scenario generator and the feedback generator. */
 export const PLAIN_VOICE_LINES = [
   "- Dùng từ đời thường như lời nói, không dùng từ sách vở hay kiểu \"một cách + tính từ\".",
   "- Không kết bằng bài học, lời khuyên chung hay câu tóm tắt.",

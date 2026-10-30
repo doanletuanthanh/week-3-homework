@@ -88,8 +88,10 @@ describe("runRevealGraph", () => {
     for (const sealed of [target.content, target.sample_question, target.hook_line, target.topic_tag, target.do_not_assert.text, target.id]) {
       expect(prompt).not.toContain(sealed);
     }
-    // Other items it did not tell are there, by alias.
-    expect(prompt).toContain(`${a("item", "shame")}: ${chiThu.items.find((item) => item.id === "shame")!.content}`);
+    // Of the other items it did not tell it gets nothing either.
+    const shame = chiThu.items.find((item) => item.id === "shame")!;
+    expect(prompt).not.toContain(shame.content);
+    expect(prompt).not.toContain(shame.topic_tag);
     expect(prompt).not.toMatch(new RegExp(`^${a("item", "paid-app")}: `, "m"));
   });
 

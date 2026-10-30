@@ -209,7 +209,7 @@ describe("reveal runner: resume and exhaustion", () => {
     expect(session.revealJson).toMatchObject({ failed: { judge: false, generator: true, verifier: true }, counts: { told: 2, recognizedFull: 2 }, claims: [] });
 
     await submitGuess(db(), learner, sessionId, { guess: 4 });
-    expect(await getRevealView(db(), learner, sessionId)).toMatchObject({ ready: true, reveal: { takeaway: { praise: null, comments: [], habit: null, emptyLine: true } } });
+    expect(await getRevealView(db(), learner, sessionId)).toMatchObject({ ready: true, reveal: { takeaway: { praise: null, comments: [], habit: null, emptyLine: "not_shown" } } });
     expect(await firstRun).toBe("lost");
   });
 

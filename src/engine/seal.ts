@@ -91,8 +91,12 @@ export type BrowserReveal = {
     praise: BrowserClaim | null;
     comments: BrowserClaim[];
     habit: BrowserClaim | null;
-    /** Nothing to take home, and nothing held back either: the fixed empty line is shown. */
-    emptyLine: boolean;
+    /**
+     * Nothing to take home and nothing held back: which fixed line is shown. `nothing_found`: no
+     * fault comment was triggered at all. `not_shown`: some were, but a call failed or none passed,
+     * so the screen must not claim the learner made no mistake. Null: no line.
+     */
+    emptyLine: "nothing_found" | "not_shown" | null;
   };
 };
 
@@ -195,6 +199,8 @@ export function toBrowserReveal(input: {
   const habit = shown.find((claim) => claim.slot === "habit");
   const praise = shown.find((claim) => claim.slot === "praise");
   const withheld = reveal.claims.some((claim) => claim.shown && !visible(claim));
+  // Every comment code triggered was written, and none was about a fault.
+  const nothingFound = !reveal.failed.generator && reveal.claims.length === reveal.slotCount && reveal.claims.every((claim) => claim.slot === "praise");
 
   const missed = reveal.items.filter((item) => item.state === "missed");
   const opened = open && input.replaySucceeded === true ? held : null;
@@ -234,7 +240,7 @@ export function toBrowserReveal(input: {
       praise: praise ? toClaim(praise) : null,
       comments,
       habit: habit ? toClaim(habit) : null,
-      emptyLine: comments.length === 0 && !habit && !withheld,
+      emptyLine: comments.length === 0 && !habit && !withheld ? (nothingFound ? "nothing_found" : "not_shown") : null,
     },
   };
 }

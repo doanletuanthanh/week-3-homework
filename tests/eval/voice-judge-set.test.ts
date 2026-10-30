@@ -20,11 +20,11 @@ describe("the voice-judge starter set", () => {
     }
   });
 
-  it("takes every plain case word for word from the hand-written library", () => {
+  it("takes every plain speech and identity case word for word from the hand-written library", () => {
     const library = curatedPersonas()
       .map(({ scenario }) => JSON.stringify(scenario))
       .join("\n");
-    for (const entry of voiceSet().filter((entry) => entry.expected === "plain")) expect(library, entry.id).toContain(JSON.stringify(entry.text).slice(1, -1));
+    for (const entry of voiceSet().filter((entry) => entry.expected === "plain" && entry.kind !== "feedback")) expect(library, entry.id).toContain(JSON.stringify(entry.text).slice(1, -1));
   });
 });
 

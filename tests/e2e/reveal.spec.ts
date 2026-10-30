@@ -28,7 +28,8 @@ const MONEY_HOME = "Mỗi tháng chị gửi ba mẹ 3 triệu và coi đó là 
 // Two missed items of the scenario, by the start of their text: neither may reach the page.
 const SHAME = "Chị bỏ không phải vì lười mà vì xấu hổ";
 const INSTALLMENT = "Chị đang trả góp một chiếc điện thoại";
-const TAKEAWAY_EMPTY = "Buổi này không có câu dẫn dắt hay hook bị bỏ qua nào được ghi nhận.";
+const TAKEAWAY_EMPTY = "Buổi này bạn không hỏi câu dẫn dắt nào và không bỏ qua lời gợi mở nào.";
+const TAKEAWAY_NOT_SHOWN = "Chưa có nhận xét nào để hiện cho buổi này.";
 
 const section = (page: Page, name: string) => page.getByRole("region", { name });
 const hintsList = (page: Page) => section(page, "Gợi ý cho lần luyện sau");
@@ -168,7 +169,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
 
     // 3 to 7, in this order: the takeaway, the hints for next time, what was told, the notes, the next step.
     const headings = await page.locator(".reveal-col h2").allTextContents();
-    const order = ["Thói quen hỏi của bạn", "Gợi ý cho lần luyện sau", "Bạn đã khai thác được 2 điều", "Ghi chú của bạn"].map((name) =>
+    const order = ["Đọc lại trước buổi phỏng vấn", "Gợi ý cho lần luyện sau", "Bạn đã khai thác được 2 điều", "Ghi chú của bạn"].map((name) =>
       headings.findIndex((text) => text.startsWith(name)),
     );
     expect(order.every((at, position) => at >= 0 && (position === 0 || at > order[position - 1])), headings.join(" | ")).toBe(true);
@@ -208,7 +209,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await expect(review.locator("mark").filter({ hasText: "đang trả phí" })).toHaveCount(0);
 
     // 3. The takeaway: praise first, the comments, the habit card. It cannot be downloaded yet.
-    const takeaway = section(page, "Thói quen hỏi của bạn — đọc lại trước buổi thật");
+    const takeaway = section(page, "Đọc lại trước buổi phỏng vấn người dùng thật");
     await expect(takeaway.locator(".praise")).toContainText("Nhận xét của stub cho ô praise.");
     await expect(takeaway.locator(".cmt")).toHaveCount(2);
     const leading = takeaway.locator('.cmt[data-type="leading"]');
@@ -427,7 +428,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await expect(page.getByRole("region", { name: /khai thác được/ })).toHaveCount(0);
 
     // The one comment cites the replayed turn: it is held back, and the empty line would be untrue.
-    const takeaway = section(page, "Thói quen hỏi của bạn — đọc lại trước buổi thật");
+    const takeaway = section(page, "Đọc lại trước buổi phỏng vấn người dùng thật");
     await expect(takeaway.locator(".cmt")).toHaveCount(0);
     await expect(takeaway.getByText(TAKEAWAY_EMPTY)).toHaveCount(0);
     expect(await page.content()).not.toContain("chị ngại ghi”");
@@ -445,7 +446,7 @@ test.describe("Màn 6: the reveal with a replay moment", () => {
     await expectResult(page, 3, 2);
 
     await expect(replayOffer(page).getByRole("heading")).toHaveText("Lượt 2: chị Thu vừa nhắc tới một điều. Thử hỏi lại từ đây.");
-    const takeaway = section(page, "Thói quen hỏi của bạn — đọc lại trước buổi thật");
+    const takeaway = section(page, "Đọc lại trước buổi phỏng vấn người dùng thật");
     await expect(takeaway.locator('.cmt[data-type="leading"]')).toHaveCount(0);
     await expect(takeaway.locator(".habit")).toHaveCount(0);
     await expect(takeaway.locator('.cmt[data-type="hypothetical_future"]')).toHaveCount(1);
@@ -516,7 +517,7 @@ test.describe("Màn 6: computing, empty and degraded states", () => {
     await page.emulateMedia({ media: "print" });
     const sheet = page.locator(".print-sheet");
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole("heading", { name: "Thói quen hỏi của bạn — đọc lại trước buổi thật" })).toBeVisible();
+    await expect(sheet.getByRole("heading", { name: "Đọc lại trước buổi phỏng vấn người dùng thật" })).toBeVisible();
     await expect(sheet.getByText("Chị Thu · Chi tiêu")).toBeVisible();
     // A blank line for the learner's own question under each comment; the praise stays on screen only.
     await expect(sheet.getByText("Câu của bạn, cho đề tài của bạn:")).toHaveCount(await sheet.locator(".pair").count());
@@ -564,8 +565,9 @@ test.describe("Màn 6: computing, empty and degraded states", () => {
     await guess(page, 2);
     await expectResult(page, 2, 2);
 
-    const takeaway = section(page, "Thói quen hỏi của bạn — đọc lại trước buổi thật");
-    await expect(takeaway.getByText(TAKEAWAY_EMPTY).first()).toBeVisible();
+    const takeaway = section(page, "Đọc lại trước buổi phỏng vấn người dùng thật");
+    await expect(takeaway.getByText(TAKEAWAY_NOT_SHOWN).first()).toBeVisible();
+    await expect(takeaway.getByText(TAKEAWAY_EMPTY)).toHaveCount(0);
     await expect(takeaway.locator(".praise, .cmt, .habit")).toHaveCount(0);
     await expect(replayOffer(page).getByRole("heading")).toHaveText("Lượt 2: chị Thu vừa nhắc tới một điều. Thử hỏi lại từ đây.");
     // The numbers and the notes do not depend on the verifier.
@@ -579,7 +581,7 @@ test.describe("Màn 6: computing, empty and degraded states", () => {
     await expectResult(page, 5, 0);
 
     await expect(page.getByText("Chưa chấm được ghi chú lần này")).toBeVisible();
-    await expect(page.getByText(TAKEAWAY_EMPTY).first()).toBeVisible();
+    await expect(page.getByText(TAKEAWAY_NOT_SHOWN).first()).toBeVisible();
     expect(await revealCallsOf(sessionId)).toHaveLength(9);
     expect((await db.session(sessionId)).revealJson).toMatchObject({ failed: { judge: true, generator: true, verifier: true } });
   });

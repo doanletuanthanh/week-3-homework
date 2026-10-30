@@ -192,7 +192,7 @@ test.describe("Màn 7: a primary replay", () => {
     await expect(page.locator(".cv-replay")).toHaveCount(1);
 
     // Nothing is held back any more: the habit card is there and the takeaway can be taken home.
-    const takeaway = page.getByRole("region", { name: "Thói quen hỏi của bạn — đọc lại trước buổi thật" });
+    const takeaway = page.getByRole("region", { name: "Đọc lại trước buổi phỏng vấn người dùng thật" });
     // (The sheet that prints carries the card a second time; it is hidden on screen.)
     await expect(takeaway.locator(".habit").first()).toBeVisible();
     await expect(download(page)).toBeEnabled();
@@ -447,7 +447,7 @@ test.describe("Màn 7: the replay of a leading question", () => {
     await expect(card.locator(".headline-sm")).toHaveText("Ba câu không dẫn dắt, có 1 câu bám vào lời chị Thu.");
     await expect(card.locator(".rr > .eyebrow")).toHaveText("Luyện lại từ lượt 1");
     // What was held for this replay is shown now: the leading turn's comment, and its mark in the transcript.
-    const takeaway = page.getByRole("region", { name: "Thói quen hỏi của bạn — đọc lại trước buổi thật" });
+    const takeaway = page.getByRole("region", { name: "Đọc lại trước buổi phỏng vấn người dùng thật" });
     await expect(takeaway.locator('.cmt[data-type="leading"]')).toContainText("Bạn tự thêm “chị ngại ghi”");
     await card.getByRole("button", { name: "Lượt 1" }).click();
     await expect(transcriptDrawer(page).locator('li[data-turn="1"] .lab')).toHaveText("Dẫn dắt");
