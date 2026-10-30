@@ -82,9 +82,9 @@ This phase does six things:
    - F1: tab icon (hard reload).
    - F3: finished persona → "Luyện lại từ đầu" → turn 0.
    - F4: the result shows ≤ 3 hints and a count line. Search the DevTools Network/RSC payload for two untold item texts of that persona; neither appears.
-   - F5: takeaway voice on a real session, checked with phase 7's word caps and 0 `slopHits`. One chị Thu session covers F3, F4 and F5.
+   - F5: takeaway voice on a real session, checked with phase 7's word caps and the `voice-judge` reading (every comment plain). One chị Thu session covers F3, F4 and F5.
    - F6: progress after two sessions with one persona shows "→" lines and no "%". The second session is the retry.
-   - Models: the same sessions run on OpenAI, and one custom topic generates on Sol with 0 `slopHits` in its visible fields.
+   - Models: the same sessions run on OpenAI, and one custom topic generates on Sol with every visible field judged plain by the `voice-judge` reading.
 7. **Report and close:**
    - Write `plans/reports/manual-test-261029-reviewer-feedback-fixes.md`: results, env applied (names only), latency, cost spent in phases 5, 6 and 9, and screenshots.
    - Check that memory `llm-budget-zero-paid-calls` still matches (it was updated on 2026-10-30).

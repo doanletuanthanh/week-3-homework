@@ -10,11 +10,11 @@ dependencies: [3, 6]
 # Phase 7: Takeaway copy without AI slop
 
 > **Updated 2026-10-30 (phases 4–6 added):** start after phase 6. Three changes follow:
-> 1. The banned list below is the feedback subset of `SLOP_PHRASES` in `src/llm/prompts/plain-voice.ts` (phase 6). Import it and `PLAIN_VOICE_RULES` instead of writing them inline in `RULES`, plus `FEEDBACK_ONLY_PHRASES` ("lắng nghe tốt", "feedback", "chia sẻ"). Add any entry of the list below that neither has.
+> 1. Import `PLAIN_VOICE_LINES` from `src/llm/prompts/plain-voice.ts` (phase 6) into `RULES`. **No banned-word list** (user, 2026-10-30, D13 revised): the "Never use" bullet below is replaced by those lines, the concrete next-step rule and the bad/good pair. Measure voice with the `voice-judge` set: add a `feedback` kind to `VOICE_TEXT_KINDS` (`src/llm/prompts/eval-voice-judge.ts`) and ≥ 10 feedback cases per side to `evalsets/voice-judge.jsonl`, plain ones written by hand, AI-voice ones from the reviewer's screenshot. The judge must still pass 3/3 after that.
 > 2. `LLM_FEEDBACK` is an OpenAI model (Terra, or Luna if phase 5's tiering moved it). The word caps stay in the prompt.
 > 3. The paid check runs on that model, and its approval is still asked right before it runs.
 >
-> The word caps and the e2e test can use `slopHits` from the same module.
+> The word caps live in the prompt and are read in the paid check; no code counts or matches words in a comment.
 
 ## Overview
 
@@ -37,7 +37,7 @@ Fix F5. Make "Mang về" read like a mentor's note: one short, concrete sentence
   - `text`: one sentence. Comments and habit ≤ 20 words; praise ≤ 25 words and quotes the persona words the learner followed.
   - Say what to ask or do next time. Name the persona ("chị Thu"), not "nhân vật".
   - `leading`: the screen already shows the added words and "… chưa từng nói điều này"; do not explain leading again; say what to ask first instead.
-  - Never use: "lắng nghe tốt", "đào sâu", "có xu hướng", "điều này (dễ) khiến", "thay vì để", "hãy nhớ", "quan trọng là", "một cách", "tuyệt vời", "chia sẻ", "trải nghiệm", "insight", "feedback", em dash, lists, quotes longer than 8 words.
+  - ~~Never use: a phrase list~~ (superseded 2026-10-30, D13 revised): `PLAIN_VOICE_LINES`, no em dash in the example, no lists, quotes ≤ 8 words.
   - `suggested_question`: one question, ≤ 15 words, as said aloud to a real person; no "của mình".
   - One neutral bad → good pair from a topic outside the library (as `HOME_SAMPLE` does), marked "chỉ để tham khảo giọng, không chép". Example: bad "Bạn có xu hướng đưa sẵn giả định vào câu hỏi, điều này dễ khiến câu trả lời bị định hướng." → good "Hỏi anh đã làm thế nào lần gần nhất, trước khi hỏi vì sao."
   - Keep: slot list, sealed-item rule, `DATA_BLOCK_RULE`, "không chứa nội dung của điều nào trong <dieu_bo_lo>".
@@ -64,7 +64,7 @@ Fix F5. Make "Mang về" read like a mentor's note: one short, concrete sentence
 1. Rewrite `RULES` and the example block in `buildFeedbackMessages`; keep the human message (blocks, slots) unchanged.
 2. `takeaway.tsx`: title, repeated-turns line with `<details>`, empty line; same in `PrintSheet`.
 3. Strings: `CANVAS_EXPLANATION.unconfirmed`, any new keys in `productStrings()`.
-4. `tests/llm/feedback-generator.test.ts`: messages from a fixture `FeedbackContext` contain the word caps, the banned list, the leading rule and the sealed-item sentence; the example text matches no `content`, `hook_line` or `sample_question` of any file under `scenarios/`.
+4. `tests/llm/feedback-generator.test.ts`: messages from a fixture `FeedbackContext` contain the word caps, `PLAIN_VOICE_LINES`, the leading rule and the sealed-item sentence; the example text matches no `content`, `hook_line` or `sample_question` of any file under `scenarios/`.
 5. e2e reveal: title and "Lặp lại ở {n} lượt khác" with the stub's claims.
 6. Paid check: ask the user right before running it, with the estimate (≤ 0.05 USD; user decision 2026-10-29: ask each time). Then DB health check (`pnpm il cost-report --days 1`), one 8-turn session on the local app with real keys, deliberately with 2+ leading questions and one ignored hint; screenshot "Mang về" next to the reviewer's; record texts, word counts and cost in the report. Without approval: ship on stub tests, read the first real session after release.
 
@@ -79,7 +79,7 @@ Fix F5. Make "Mang về" read like a mentor's note: one short, concrete sentence
 ## Success Criteria
 
 - [ ] Tests green
-- [ ] On a real session (gated check or first after release): each comment one sentence, ≤ 20 words (praise ≤ 25), none of the banned phrases, a concrete next question
+- [ ] On a real session (gated check or first after release): each comment one sentence, ≤ 20 words (praise ≤ 25), every comment judged plain by the `voice-judge` STRING_CHECK call, a concrete next question
 
 ## Risk Assessment
 

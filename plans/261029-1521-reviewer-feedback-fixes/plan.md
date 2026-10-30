@@ -45,7 +45,7 @@ Source: `Feedback Detail ( include screenshot ).pdf` (3 pages, 6 points, 1 of th
   - When the primary is exhausted, `callModel` calls the next spec.
   - A streamed reply switches only before its first piece, the same rule as retries.
 - **D12 Budget:** at most 1 USD of real model runs for phases 5, 6 and 9, each run asked for right before it runs.
-- **D13 Slop:** it is fixed in the prompts and measured in tests and eval. Wording never filters model output at runtime, which keeps the 2026-10-14 rule that no string heuristic decides anything semantic.
+- **D13 Slop (revised 2026-10-30, user):** it is fixed in the prompts by descriptive rules (`PLAIN_VOICE_LINES`) and a bad/good pair, with **no banned-word list and no keyword matching anywhere**, tests included. It is measured by an eval-only model judge: the `voice-judge` set (`evalsets/voice-judge.jsonl`, role STRING_CHECK on Luna, 46 cases, passed 3/3), and a person reads the before/after. Nothing filters model output at runtime, which keeps the 2026-10-14 rule that no string heuristic decides anything semantic.
 
 Models available to the key (`GET /v1/models`, 2026-10-30): `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6-astra`. The prices below are third-party figures; confirm them in the OpenAI console in phase 4.
 
@@ -74,7 +74,7 @@ Sources: https://apidog.com/blog/what-is-gpt-6-1-terra/ · https://aireiter.com/
 | 3 | [Result hints instead of secrets](./phase-03-result-hints-instead-of-secrets.md) | F4 | 2d | 2 | Done |
 | 4 | [Fallback chain and OpenAI readiness](./phase-04-provider-fallback-chain.md) | U1 | 1d | — | Done |
 | 5 | [Switch roles to OpenAI and measure tiers](./phase-05-switch-roles-to-openai-and-measure-tiers.md) | U1 | 0.75d | 4 | Done (≈ 0.28 USD) |
-| 6 | [Plain voice in prompts and generated scenarios](./phase-06-plain-voice-in-prompts-and-generated-scenarios.md) | F5 | 1.25d | 5 | Pending |
+| 6 | [Plain voice in prompts and generated scenarios](./phase-06-plain-voice-in-prompts-and-generated-scenarios.md) | F5 | 1.25d | 5 | Done (≈ 0.16 USD) |
 | 7 | [Takeaway copy without AI slop](./phase-07-takeaway-copy-without-ai-slop.md) | F5 | 1d | 3, 6 | Pending |
 | 8 | [Progress before and after](./phase-08-progress-before-and-after.md) | F6 | 1d | 2 | Pending |
 | 9 | [Docs, strings and release checks](./phase-09-docs-strings-and-release-checks.md) | all | 1d | 1–8 | Pending |
@@ -101,11 +101,11 @@ Before each run, print the estimate and the spend so far (`pnpm il cost-report -
 - [ ] Browser tab shows the green InterviewLab mark on every page; `/favicon.ico` no longer serves the ▲ (F1).
 - [ ] A learner who finished chị Thu sees "Luyện lại từ đầu" on the topic card, prep screen and result; it opens a new interview at turn 0; the old result stays in Buổi của tôi (F3).
 - [ ] No untold item text in any learner payload (page RSC, `/api/sessions/[id]/reveal`, replay end); result shows ≤ 3 hints + one count line (F4).
-- [ ] Takeaway: one short sentence per comment, banned phrases absent, no em dash, turn chips folded (F5).
+- [ ] Takeaway: one short sentence per comment, every comment judged plain by the `voice-judge` reading, no em dash, turn chips folded (F5).
 - [ ] `/progress` contains no "%"; with two sessions on one persona it reads "Lần trước → Lần này" in counts plus one before/after question of the learner's own (F6).
 - [ ] Every role runs on OpenAI locally and on production: turns, replay, reveal and one custom topic. Each role sits on the cheapest model that passed its set 3/3 (`plans/reports/model-tiering-261030-openai.md`) (U1).
 - [ ] When the primary fails (stubbed 500, 401, or 429 `insufficient_quota`), the fallback spec answers, and each attempt has its own `llm_call` row. A stream that already sent text does not fall back (U1).
-- [ ] The persona and generator prompts carry the shared voice rules. A generated scenario and an 8-turn transcript contain 0 `SLOP_PHRASES`, and each item has a concrete detail (F5).
+- [x] The persona and generator prompts carry the shared voice rules. A generated scenario (0/42 texts AI voice, before 1/42) and an 8-turn transcript (8/8 plain) pass the `voice-judge` reading, and each item has a concrete detail (F5; `plans/reports/manual-test-261030-plain-voice.md`).
 - [ ] Real model spend for phases 5, 6, 7 and 9 is ≤ 1 USD, according to the cost report (D12).
 - [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm test:int && pnpm test:e2e && pnpm build` green.
 - [ ] Home hero and design tokens unchanged except the sample result's missed card wording (F2).

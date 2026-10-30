@@ -1,13 +1,22 @@
 ---
 phase: 6
 title: "Plain voice in prompts and generated scenarios"
-status: pending
+status: completed
 priority: P1
 effort: "1.25d"
 dependencies: [5]
 ---
 
 # Phase 6: Plain voice in prompts and generated scenarios
+
+> **Changed during implementation (user, 2026-10-30):**
+> - **No banned-word list and no keyword matching**, in prompts or tests. `SLOP_PHRASES`, `FEEDBACK_ONLY_PHRASES` and `slopHits` were built, then removed. The prompts carry descriptive rules (`PLAIN_VOICE_LINES`) and the bad/good pair only.
+> - Voice is measured by the eval-only `voice-judge` set (`src/eval/voice-judge-set.ts`, `src/llm/prompts/eval-voice-judge.ts`, `evalsets/voice-judge.jsonl`), run on the role STRING_CHECK. No new env var.
+> - Length caps follow the library maximum (`VOICE_CAPS`: surface fact 28, hook 16, sample question 22 words). A unit test holds the library to them.
+> - Identity keeps one sentence of traits after the facts, as the library does.
+> - The concrete-detail line covers only the spoken fields (opening_line, surface_facts, content, hook_line). The persona gets the shared lines without it, so it does not clash with the guard rule against invented numbers.
+>
+> Where the Requirements below still describe the list, this note supersedes them.
 
 ## Overview
 
@@ -86,17 +95,21 @@ Write one shared set of voice rules and use it in the three prompts whose output
 
 ## Todo
 
-- [ ] Shared module + tests
-- [ ] Generator prompt
-- [ ] Persona prompt
-- [ ] Library files clean
-- [ ] Paid before/after (approved) + report
+- [x] Shared module + tests (descriptive lines and caps, no phrase list)
+- [x] Generator prompt
+- [x] Persona prompt
+- [x] Library within the caps; `voice-judge` set passes 3/3 on Luna
+- [x] Paid before/after (approved) + report
 
 ## Success Criteria
 
-- [ ] Tests green. The library scenarios have 0 `slopHits`.
-- [ ] After-generation: 0 `slopHits` in learner-visible fields, and every item has a concrete detail. The validator passes, with at most the same repair count as before.
-- [ ] Transcript: 0 `slopHits`. No two consecutive replies start with the same word. The existing transcript gates (`no_leaks`, reply length) still pass.
+- [x] Tests green. The library stays within `VOICE_CAPS`, and the hardened `voice-judge` set (46 cases) passes 3/3: AI voice passed 0/23, library flagged 2/23.
+- [x] After-generation: 0/42 visible texts judged AI voice (before: 1/42 on the fixed judge), and 8/8 items have a concrete detail. The validator passes with 1 repair, the same as before.
+- [x] Transcript: 8/8 judged plain, 0 lists. No filler opener ("Dạ", "Ừm") repeated. Turns 1–2 both open with the pronoun "Chị", which the user accepted on 2026-10-30: the rule covers fillers, not pronouns.
+
+## Results (2026-10-30)
+
+Report: `plans/reports/manual-test-261030-plain-voice.md`. Phase spend ≈ 0.157 USD; plan total ≈ 0.43 USD of 1 USD.
 
 ## Risk Assessment
 
