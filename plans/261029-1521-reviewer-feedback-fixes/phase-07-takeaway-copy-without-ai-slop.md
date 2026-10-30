@@ -1,13 +1,20 @@
 ---
-phase: 4
+phase: 7
 title: "Takeaway copy without AI slop"
 status: pending
 priority: P1
 effort: "1d"
-dependencies: [3]
+dependencies: [3, 6]
 ---
 
-# Phase 4: Takeaway copy without AI slop
+# Phase 7: Takeaway copy without AI slop
+
+> **Updated 2026-10-30 (phases 4–6 added):** start after phase 6. Three changes follow:
+> 1. The banned list below is the feedback subset of `SLOP_PHRASES` in `src/llm/prompts/plain-voice.ts` (phase 6). Import it and `PLAIN_VOICE_RULES` instead of writing them inline in `RULES`, plus `FEEDBACK_ONLY_PHRASES` ("lắng nghe tốt", "feedback", "chia sẻ"). Add any entry of the list below that neither has.
+> 2. `LLM_FEEDBACK` is an OpenAI model (Terra, or Luna if phase 5's tiering moved it). The word caps stay in the prompt.
+> 3. The paid check runs on that model, and its approval is still asked right before it runs.
+>
+> The word caps and the e2e test can use `slopHits` from the same module.
 
 ## Overview
 
@@ -22,7 +29,7 @@ Fix F5. Make "Mang về" read like a mentor's note: one short, concrete sentence
 - Verifier (`src/llm/prompts/verifier.ts`) checks grounding of each claim; leave its job as is.
 - UI: `src/components/reveal/takeaway.tsx`: `TITLE` "Thói quen hỏi của bạn — đọc lại trước buổi thật", `Evidence` "Cũng thấy ở" chips, `EMPTY` mentions "hook", print sheet.
 - `CANVAS_EXPLANATION.unconfirmed` (`src/strings/product-strings.ts`) uses an em dash.
-- Budget: little Gemini credit (memory: no paid call without an explicit OK). No judgement set exists for FEEDBACK (`evalsets/`).
+- Budget: Gemini credit spent; models are OpenAI since phase 5 (memory: no paid call without an explicit OK). No judgement set exists for FEEDBACK (`evalsets/`).
 
 ## Requirements
 
@@ -42,9 +49,9 @@ Fix F5. Make "Mang về" read like a mentor's note: one short, concrete sentence
   - "Cũng thấy ở" + chips → "Lặp lại ở {n} lượt khác", chips inside `<details>`; print keeps "(lượt 3, 4, …)".
   - `EMPTY` → "Buổi này bạn không hỏi câu dẫn dắt nào và không bỏ qua lời gợi mở nào."
   - `CANVAS_EXPLANATION.unconfirmed`: em dash → period.
-  - New/changed strings go through `productStrings()` (approval in phase 6).
+  - New/changed strings go through `productStrings()` (approval in phase 9).
 - Untold item text out of the takeaway (user decision 2026-10-30, found in the phase 3 review): Màn 6 no longer shows untold items, but `buildFeedbackContext` still hands the generator their `content` (`<dieu_bo_lo>`), so a comment or suggested question can repeat it. Give the generator each untold item's `topic_tag` instead of its `content`, and in code drop a claim whose `text` or `suggested_question` contains a `secret_terms` entry of an untold item (`containsTerm`, as the scenario validator does). This is a leak guard on authored terms, the same check `validate.ts` runs, not a judgement on wording, so the "no string heuristics" rule below is not broken. Tests: a claim quoting an untold item's secret term is not in the payload; the context carries no untold `content`.
-- Non-functional: no new call; schema unchanged (Gemini structured output may ignore `maxLength`; word limits live in the prompt); no runtime filter that drops a comment for its wording (plan 261014 rule: no string heuristics decide anything semantic).
+- Non-functional: no new call; schema unchanged (the provider's structured output may ignore `maxLength`; word limits live in the prompt); no runtime filter that drops a comment for its wording (plan 261014 rule: no string heuristics decide anything semantic).
 
 ## Related Code Files
 

@@ -1,5 +1,5 @@
 ---
-phase: 5
+phase: 8
 title: "Progress before and after"
 status: pending
 priority: P1
@@ -7,7 +7,7 @@ effort: "1d"
 dependencies: [2]
 ---
 
-# Phase 5: Progress before and after
+# Phase 8: Progress before and after
 
 ## Overview
 

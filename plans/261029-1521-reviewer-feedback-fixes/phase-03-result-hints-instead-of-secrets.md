@@ -142,7 +142,7 @@ Review (`plans/reports/code-reviewer-261029-2045-phase-03-result-hints.md`) foll
 - User decision 2026-10-30: the takeaway generator still receives untold item text (`reveal-contexts.ts` `missedItems`), so a comment can repeat it. Fixed in phase 4 (topic tags instead of item text, plus a code check that drops a claim containing a secret term of an untold item).
 - Left as is (low): an item heard in a partial replay can still show as a hint; the replay card's hint carries no fiction label on a custom topic (it had none before); a Màn 7 page loaded before the deploy breaks on the new outcome shape until reloaded (deploy at a quiet hour); `BrowserReveal.replay.target` has no reader (kept per plan).
 
-For phase 6:
+For phase 9:
 - Strings to check (paid): `path_tip.*`, `hints.*`, `told_summary`, `home_sample.missed_kind`, `home_sample.missed_item`.
 - Docs: the PRD (`_bmad-output/.../prd.md`) still describes the missed list, the no-replay sample question and the stop dialog's "mở ra"; the design artboards (`docs/design/artboards/Reveal*`, `ReplayFail`, `ReplayStates`, `Main`) show the old copy. Both are design records: note them, do not redraw.
 
