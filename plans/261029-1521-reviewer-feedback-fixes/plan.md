@@ -73,7 +73,7 @@ Sources: https://apidog.com/blog/what-is-gpt-6-1-terra/ · https://aireiter.com/
 | 2 | [Retry a persona from scratch](./phase-02-retry-from-scratch.md) | F3 | 1.5d | — | Done (migration on prod in 9) |
 | 3 | [Result hints instead of secrets](./phase-03-result-hints-instead-of-secrets.md) | F4 | 2d | 2 | Done |
 | 4 | [Fallback chain and OpenAI readiness](./phase-04-provider-fallback-chain.md) | U1 | 1d | — | Done |
-| 5 | [Switch roles to OpenAI and measure tiers](./phase-05-switch-roles-to-openai-and-measure-tiers.md) | U1 | 0.75d | 4 | Pending |
+| 5 | [Switch roles to OpenAI and measure tiers](./phase-05-switch-roles-to-openai-and-measure-tiers.md) | U1 | 0.75d | 4 | Done (≈ 0.28 USD) |
 | 6 | [Plain voice in prompts and generated scenarios](./phase-06-plain-voice-in-prompts-and-generated-scenarios.md) | F5 | 1.25d | 5 | Pending |
 | 7 | [Takeaway copy without AI slop](./phase-07-takeaway-copy-without-ai-slop.md) | F5 | 1d | 3, 6 | Pending |
 | 8 | [Progress before and after](./phase-08-progress-before-and-after.md) | F6 | 1d | 2 | Pending |

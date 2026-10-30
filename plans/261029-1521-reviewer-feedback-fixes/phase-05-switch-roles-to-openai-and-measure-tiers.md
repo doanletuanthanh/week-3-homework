@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Switch roles to OpenAI and measure tiers"
-status: pending
+status: completed
 priority: P1
 effort: "0.75d"
 dependencies: [4]
@@ -60,19 +60,30 @@ Starting map, which every run tests against:
 
 ## Todo
 
-- [ ] Pre-flight
-- [ ] Smoke (approved)
-- [ ] Terra baseline + Luna 3× (approved)
-- [ ] Report + `.env.example`
+- [x] Pre-flight
+- [x] Smoke (approved)
+- [x] Luna 3× on the 8 app sets; Terra 1× on the 3 ANALYSIS sets (both approved). Terra on sets Luna passed was skipped: a Luna pass decides the move without it
+- [x] Report + `.env.example`
 
 ## Success Criteria
 
-- [ ] Every role answered once on its primary OpenAI model with a valid parse.
-- [ ] Each role's final model is backed by a 3/3 pass in the report, or for roles without a set by the starting map.
-- [ ] Spend so far ≤ 0.45 USD.
+- [x] Every role answered once on its primary OpenAI model with a valid parse.
+- [x] Each role's final model is backed by a 3/3 pass in the report, or for roles without a set by the starting map.
+- [x] Spend so far ≤ 0.45 USD.
 
 ## Risk Assessment
 
 - Small sets rank models and do not prove gates (same caveat as 2026-10-14). The report says so.
 - Luna could pass ANALYSIS and still read the Vietnamese routing worse in live use. The decision stays with the user and is recorded with the numbers.
 - Latency NFR-2 (p95 ≤ 6 s per turn) is measured in phase 9 on the deployed app (`pnpm il measure-latency`).
+
+## Results (2026-10-30)
+
+Full report: `plans/reports/model-tiering-261030-openai.md`.
+
+- The smoke run passed: every schema was accepted under strict mode, and PERSONA spends 0 reasoning tokens. `minimal` is not accepted by any gpt-6 model, so `none` was added to `EFFORTS` and PERSONA uses it.
+- Luna passed 3/3 for REPLAY_JUDGE, END_JUDGE, VERIFIER, MODERATION and SAFETY. MODERATION and SAFETY move down from the starting map.
+- Luna failed label-classifier 3/3 (83.3% against a gate of 85%; its misses are between the two "good question" labels). Terra passed all three ANALYSIS sets, so ANALYSIS stays on Terra.
+- The two operator-only roles, EVAL_LEAK_JUDGE and QA_PLANNER, were not measured (user choice) and stay on Terra.
+- Spend was ≈ 0.28 USD (smoke 0.007, block A 0.103, block B 0.170). The prompt cache served 66–84% of input on long prompts.
+- Final chains are in `.env.example`. The user updates `.env.local` and Vercel (phase 9).
