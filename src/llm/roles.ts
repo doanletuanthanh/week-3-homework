@@ -1,7 +1,11 @@
 export const PROVIDERS = ["google", "openai"] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
-export const EFFORTS = ["minimal", "low", "medium", "high"] as const;
+/**
+ * Reasoning effort per call. OpenAI's gpt-6 models accept `none` (gpt-6.1-terra, gpt-6-luna) but
+ * not `minimal`; `minimal` is kept for the models that still take it.
+ */
+export const EFFORTS = ["none", "minimal", "low", "medium", "high"] as const;
 export type Effort = (typeof EFFORTS)[number];
 
 /**

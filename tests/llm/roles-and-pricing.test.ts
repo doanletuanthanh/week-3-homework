@@ -5,6 +5,7 @@ import { parseRoleChain, parseRoleSpec } from "@/llm/roles";
 describe("parseRoleSpec", () => {
   it("parses provider, model and effort", () => {
     expect(parseRoleSpec("openai:gpt-6.1-sol:medium")).toEqual({ provider: "openai", model: "gpt-6.1-sol", effort: "medium" });
+    expect(parseRoleSpec("openai:gpt-6-luna:none").effort).toBe("none");
     expect(parseRoleSpec(" google : gemini-3.8-flash : low ")).toEqual({
       provider: "google",
       model: "gemini-3.8-flash",
