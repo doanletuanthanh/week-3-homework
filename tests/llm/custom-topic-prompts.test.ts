@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { buildModerationMessages, clampModeration } from "@/llm/prompts/moderation";
 import { buildOutputSafetyMessages, safetyFields } from "@/llm/prompts/output-safety";
-import { DRAFT_ID, REPAIR_MODE, applyRepair, buildGeneratorMessages, buildRepairMessages, repairMode, toScenarioFile } from "@/llm/prompts/scenario-generator";
+import { PLAIN_VOICE_RULES, VOICE_CAPS } from "@/llm/prompts/plain-voice";
+import {
+  DRAFT_ID,
+  REPAIR_MODE,
+  VOICE_REFERENCE,
+  applyRepair,
+  buildGeneratorMessages,
+  buildRepairMessages,
+  repairMode,
+  repairSystem,
+  toScenarioFile,
+} from "@/llm/prompts/scenario-generator";
+import { tokenize } from "@/scenario/text-normalize";
 import type { Violation } from "@/scenario/validate";
 import { validateScenario } from "@/scenario/validate";
+import { curatedPersonas } from "../helpers/curated-scenarios";
 import { generatedFrom } from "../helpers/custom-fixtures";
 import { chiThu } from "../helpers/engine-fixtures";
 
@@ -144,6 +157,29 @@ describe("buildGeneratorMessages: the rules for tags, items and voice", () => {
     expect(prompt).toContain("kể một điều không được làm lộ một điều khác");
     expect(prompt).toContain("một người trả lời ngắn gọn và chỉ nói đúng điều được hỏi");
     expect(prompt).toContain("nhắm đúng vào khía cạnh của topic_tag");
+  });
+
+  it("carries the plain-voice rules and the reference pair, in the generator and in a repair", () => {
+    expect(prompt).toContain(PLAIN_VOICE_RULES);
+    expect(prompt).toContain(VOICE_REFERENCE);
+    expect(prompt).toContain("có ít nhất một chi tiết cụ thể");
+    expect(prompt).toContain(`không quá ${VOICE_CAPS.hookLine} chữ`);
+    expect(prompt).not.toContain("Không dùng các cụm");
+    expect(repairSystem({ focus: "general", constraints: [] })).toContain(PLAIN_VOICE_RULES);
+  });
+
+  it("keeps the first sentence the e2e stub picks the generator by", () => {
+    expect(prompt.startsWith("Bạn là người soạn kịch bản nhân vật cho một sản phẩm luyện phỏng vấn người dùng.")).toBe(true);
+  });
+
+  it("gives a reference pair that shares no four-word run with a library scenario, so there is nothing of the library to copy", () => {
+    const library = curatedPersonas().flatMap(({ scenario }) => scenario.items.flatMap((item) => [item.content, item.hook_line, item.sample_question]));
+    const runs = (text: string) => {
+      const words = tokenize(text);
+      return words.slice(0, -3).map((_, start) => words.slice(start, start + 4).join(" "));
+    };
+    const libraryRuns = new Set(library.flatMap(runs));
+    expect(runs(VOICE_REFERENCE).filter((run) => libraryRuns.has(run))).toEqual([]);
   });
 });
 

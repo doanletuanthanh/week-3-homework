@@ -122,7 +122,7 @@ export const safetyCaseSchema = z.strictObject({
 });
 export type SafetyCase = z.infer<typeof safetyCaseSchema>;
 
-export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan", "guide-check", "topic-route"] as const;
+export const SET_KINDS = ["label-classifier", "turn-verdict", "canvas-judge", "leading-novelty", "moderation", "output-safety", "reply-judge", "qa-plan", "guide-check", "topic-route", "voice-judge"] as const;
 export type SetKind = (typeof SET_KINDS)[number];
 
 /** NFR-7: a set proves a gate only from this size up. */

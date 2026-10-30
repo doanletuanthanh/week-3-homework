@@ -24,6 +24,7 @@ import {
 import { guideCaseSchema, runGuideSet } from "@/eval/guide-check-set";
 import { qaPlanCaseSchema, replyJudgeCaseSchema, runQaPlanSet, runReplyJudgeSet } from "@/eval/qa/judgement-sets";
 import { routeCaseSchema, runTopicRouteSet } from "@/eval/topic-route-set";
+import { runVoiceSet, voiceCaseSchema } from "@/eval/voice-judge-set";
 import type { CallModelDeps } from "@/llm/call-model";
 import { batchLlmDeps, type BatchCollectorOptions, type GeminiBatchCollector } from "@/llm/gemini-batch";
 import type { Scenario } from "@/scenario/schema";
@@ -38,6 +39,7 @@ const SCENARIO_NOTE: Partial<Record<SetKind, string>> = {
   "qa-plan": "mỗi ca một kịch bản riêng",
   "topic-route": "mỗi ca một kịch bản riêng",
   "guide-check": "không dùng kịch bản",
+  "voice-judge": "không dùng kịch bản",
 };
 /** A batch job holds up to 200 calls, so a whole starter set fits in one. */
 const MAX_CONCURRENCY = 64;
@@ -111,6 +113,7 @@ export function runJudgementEval(
         "output-safety": () => runSafetySet(scenario, parseTestSet(raw, safetyCaseSchema), options),
         "reply-judge": () => runReplyJudgeSet(scenario, parseTestSet(raw, replyJudgeCaseSchema), options),
         "guide-check": () => runGuideSet(parseTestSet(raw, guideCaseSchema), options),
+        "voice-judge": () => runVoiceSet(parseTestSet(raw, voiceCaseSchema), options),
         "qa-plan": async () => {
           const cases = parseTestSet(raw, qaPlanCaseSchema);
           return runQaPlanSet(cases, await loadScenarios(cases), options);

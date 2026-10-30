@@ -5,6 +5,7 @@ import type { TurnPlan } from "@/engine/plan-turn";
 import { initialState, type EngineState } from "@/engine/types";
 import { ROUTING_RULES, buildAnalysisMessages } from "@/llm/prompts/analysis";
 import { PERSONA_GUARD_RULES, SHAPE_TEXT, buildPersonaMessages } from "@/llm/prompts/persona";
+import { PLAIN_VOICE_LINES } from "@/llm/prompts/plain-voice";
 import { REPLY_SHAPES } from "@/engine/reply-plan";
 import { buildTurnJudgeMessages } from "@/llm/prompts/turn-judge";
 import { isolationViolations, sealedParts } from "@/eval/isolation";
@@ -191,6 +192,15 @@ describe("prompt layout", () => {
     expect(system).toContain("Không liệt kê hay gạch đầu dòng");
     for (const rule of PERSONA_GUARD_RULES) expect(system).toContain(`${rule}
 `);
+  });
+
+  it("asks for the shared plain voice and a varied first word, with no list of banned words", () => {
+    const system = buildPersonaMessages(engineSession().turn().personaContext)[0].text;
+    for (const line of PLAIN_VOICE_LINES) expect(system).toContain(`${line}
+`);
+    expect(system).toContain("Không mở đầu hai lượt liền nhau bằng cùng một từ");
+    expect(system).not.toContain("Không dùng các cụm");
+    expect(system.startsWith(`Bạn đóng vai ${chiThu.persona.display_name} trong một buổi phỏng vấn người dùng.`)).toBe(true);
   });
 
   it("keeps the system message identical across the turns of a session", () => {

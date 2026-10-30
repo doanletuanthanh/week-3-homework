@@ -4,6 +4,7 @@ import type { Focus, ModerationConstraint } from "@/db/schema";
 import { ITEM_COUNT, MIN_SURFACE_FACTS, OPENNESS_MAX, UNLOCK_PATHS } from "@/scenario/schema";
 import type { Violation, ViolationCode } from "@/scenario/validate";
 import { DATA_BLOCK_RULE, dataBlock } from "./data-block";
+import { PLAIN_VOICE_RULES, VOICE_CAPS } from "./plain-voice";
 
 const generatedItemSchema = z.object({
   id: z.string(),
@@ -76,27 +77,42 @@ export function toScenarioFile(generated: GeneratedScenario): unknown {
 
 const PRODUCT_LINE = "Người học phỏng vấn một nhân vật hư cấu; nhân vật giữ một số \"điều riêng\" chỉ kể khi được hỏi đúng cách.";
 
+/**
+ * One bad and one good version of the same persona, on a topic no library scenario covers, so the
+ * model hears the voice without a file it could copy.
+ */
+export const VOICE_REFERENCE = [
+  "Ví dụ về giọng, chủ đề đưa mèo đi khám thú y (chỉ để tham khảo giọng, không chép):",
+  "- identity chưa tốt: \"Anh Tín là một người năng động, luôn cố gắng cân bằng giữa công việc và cuộc sống.\"",
+  "- identity tốt: \"Tín, 34 tuổi, sửa xe máy ở Thủ Đức, nuôi hai con mèo trong tiệm.\"",
+  "- content chưa tốt: \"Anh cảm thấy rất áp lực về chi phí chăm sóc thú cưng và luôn trăn trở về điều đó.\"",
+  "- content tốt: \"Lần con Mướp bỏ ăn ba ngày, anh chở nó đi khám, hết 850 nghìn tiền xét nghiệm. Về nhà anh nói với vợ là 300.\"",
+  "- hook_line tốt: \"Bữa đi khám cho con Mướp tốn hơn anh tính.\"",
+].join("\n");
+
 /** The rules every field of a scenario follows: shared by the generator and by a targeted repair. */
 const FILE_RULES = [
   "Nhân vật và mọi chi tiết đều hư cấu. Không dùng tên của người thật, và không nêu tên tổ chức, công ty, sản phẩm hay thương hiệu có thật: dùng cách gọi chung (\"một app giao đồ ăn\", \"ngân hàng chị dùng\"). Không nêu số liệu hay nhận định về người dùng thật nói chung.",
   "Các trường:",
-  "- persona.display_name: cách gọi trong câu, viết thường đại từ (ví dụ \"anh Nam\"); persona.name: tiêu đề thẻ (\"Anh Nam, 31 tuổi\"); persona.tagline: một dòng về nghề hay hoàn cảnh; persona.identity: 2–4 câu mô tả nhân vật là ai; persona.voice_notes: cách xưng hô và giọng nói, của một người trả lời ngắn gọn và chỉ nói đúng điều được hỏi. Tất cả là lời MÔ TẢ nhân vật ở ngôi thứ ba, không phải lời dặn ai làm gì: không viết câu mệnh lệnh, không viết \"bạn là\", \"hãy\", không nhắc tới chỉ dẫn hay lời nhắc.",
+  "- persona.display_name: cách gọi trong câu, viết thường đại từ (ví dụ \"anh Nam\"); persona.name: tiêu đề thẻ (\"Anh Nam, 31 tuổi\"); persona.tagline: một dòng về nghề hay hoàn cảnh; persona.identity: 2–4 câu, sự thật trước (tuổi, nghề, ở đâu, sống với ai, và một chi tiết khác với khuôn mẫu của chủ đề), rồi một câu về tính cách nói bằng cách cư xử (ví dụ \"hơi kiệm lời với người mới quen\"); persona.voice_notes: cách xưng hô, giọng vùng hay từ đệm, và một thói quen nói cụ thể, của một người trả lời ngắn gọn và chỉ nói đúng điều được hỏi. Tất cả là lời MÔ TẢ nhân vật ở ngôi thứ ba, không phải lời dặn ai làm gì: không viết câu mệnh lệnh, không viết \"bạn là\", \"hãy\", không nhắc tới chỉ dẫn hay lời nhắc.",
   "- research_goal: một câu hỏi nghiên cứu, kết thúc bằng dấu chấm hỏi, về một quy trình hoặc khía cạnh phụ của chủ đề (không phải câu hỏi hiển nhiên nhất), và là câu hỏi mà các điều riêng bên dưới trả lời được.",
   "- opening_line: câu chào đầu buổi của nhân vật, không lộ điều riêng nào.",
-  `- surface_facts: ít nhất ${MIN_SURFACE_FACTS} sự thật bề mặt nhân vật sẵn sàng kể ngay (công việc, nếp sinh hoạt, thói quen liên quan tới chủ đề), đủ chất liệu cho 30 lượt hỏi.`,
-  `- items: ${ITEM_COUNT.min}–${ITEM_COUNT.max} điều riêng. Mỗi điều là một trải nghiệm, thói quen hay cảm nhận nhân vật chưa kể, không phải tên hay tuổi. Ít nhất 2 điều là thứ người mới vào nghề không đoán được từ khuôn mẫu của chủ đề. Nội dung các điều không chồng lên nhau: kể một điều không được làm lộ một điều khác.`,
-  "  - id: một mã ngắn bất kỳ, khác nhau giữa các điều; content: nội dung điều riêng, 1–2 câu, lời của nhân vật.",
+  `- surface_facts: ít nhất ${MIN_SURFACE_FACTS} sự thật bề mặt nhân vật sẵn sàng kể ngay (công việc, nếp sinh hoạt, thói quen liên quan tới chủ đề), đủ chất liệu cho 30 lượt hỏi. Mỗi dòng một sự thật, không quá ${VOICE_CAPS.surfaceFact} chữ.`,
+  `- items: ${ITEM_COUNT.min}–${ITEM_COUNT.max} điều riêng. Mỗi điều là một việc đã xảy ra hay một thói quen nhân vật chưa kể, không phải tên hay tuổi. Ít nhất 2 điều là thứ người mới vào nghề không đoán được từ khuôn mẫu của chủ đề. Nội dung các điều không chồng lên nhau: kể một điều không được làm lộ một điều khác.`,
+  "  - id: một mã ngắn bất kỳ, khác nhau giữa các điều; content: nội dung điều riêng, 1–2 câu, lời của nhân vật, có ít nhất một chi tiết cụ thể (con số, ngày, đồ vật, nơi chốn); cảm xúc thì thể hiện qua việc nhân vật đã làm, không gọi tên.",
   "  - secret_terms: 1–3 cụm từ chép NGUYÊN VĂN từ content, là những cụm mang phần bí mật. Các cụm này KHÔNG được xuất hiện ở bất kỳ chỗ nào khác người học thấy được trước khi điều đó mở: research_goal, opening_line, habit_card_label, mọi trường persona, surface_facts, và topic_tag, hook_line, do_not_assert của mọi điều.",
   "  - topic_tag: nhãn công khai cho biết điều đó nói về mảng gì mà không lộ nội dung. Mỗi nhãn chỉ một khía cạnh riêng, và không có câu hỏi nào hợp với hai nhãn cùng lúc.",
   "  - path, đường mở, chọn đúng một: surface (mở khi người hỏi hỏi thẳng về mảng đó); follow_up (mở khi người hỏi bám vào câu gợi mở nhân vật vừa nói và hỏi tiếp); past_story (mở khi người hỏi kéo về một lần cụ thể đã xảy ra); trust (mở khi nhân vật đã đủ tin người hỏi). Cả bốn đường đều phải có ít nhất một điều.",
   `  - trust_threshold: chỉ điều đường trust mới có, là số nguyên lớn hơn openness_start và không quá ${OPENNESS_MAX}; mọi điều khác để null.`,
   "  - prerequisite_id: id của một điều khác phải mở trước, hoặc null. Dùng ít, không tạo vòng.",
-  "  - hook_line: một câu nhân vật có thể buột miệng nói, gợi rằng có chuyện ở mảng đó mà không lộ nội dung.",
+  `  - hook_line: một câu đời thường nhân vật có thể buột miệng nói, không quá ${VOICE_CAPS.hookLine} chữ, gợi rằng có chuyện ở mảng đó mà không lộ nội dung.`,
   "  - do_not_assert: một câu mô tả điều nhân vật không tự nói ra khi điều đó chưa mở (ví dụ \"Không tự nêu số tiền cụ thể.\").",
-  "  - weight: độ quan trọng, từ 1 đến 3; sample_question: một câu hỏi tốt, không dẫn dắt, của người phỏng vấn mà sau câu gợi mở sẽ mở được điều đó; câu hỏi nhắm đúng vào khía cạnh của topic_tag của điều đó.",
+  `  - weight: độ quan trọng, từ 1 đến 3; sample_question: một câu hỏi tốt, không dẫn dắt, viết như nói thành lời, không quá ${VOICE_CAPS.sampleQuestion} chữ, của người phỏng vấn mà sau câu gợi mở sẽ mở được điều đó; câu hỏi nhắm đúng vào khía cạnh của topic_tag của điều đó.`,
   `- openness_start: mức cởi mở ban đầu, số nguyên từ 0 đến ${OPENNESS_MAX}, thường là 4.`,
   "- error_patterns: ba câu mô tả, với chính nhân vật này, một câu hỏi đóng (closed), một câu hỏi về tương lai giả định (hypothetical_future) và một lỗi hỏi khác (other) trông như thế nào và nhân vật đáp lại ra sao.",
   "- habit_card_label: nhãn ngắn cho thói quen \"nghe một chi tiết rồi chuyển sang chuyện khác\" của người hỏi.",
+  PLAIN_VOICE_RULES,
+  VOICE_REFERENCE,
 ].join("\n");
 
 const FOCUS_RULES: Record<Focus, string> = {

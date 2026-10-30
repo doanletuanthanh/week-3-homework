@@ -31,7 +31,7 @@ export const APP_ROLES = [
  * Roles of evaluation and the fixed-string check, called by the operator CLI and, for the lean
  * eval and the string check, by the admin console. Their variables are optional, so a deployment
  * where nobody runs them does not have to set them. EVAL_LEAK_JUDGE reads the replies of the
- * lean eval's probes against the whole scenario, STRING_CHECK looks for claims about real users in fixed strings. QA_PLANNER is the persona QA
+ * lean eval's probes against the whole scenario, STRING_CHECK looks for claims about real users in fixed strings and, in eval only, judges whether a text keeps the plain voice. QA_PLANNER is the persona QA
  * agent: it reads the whole scenario, plans the probes and reflects on what they showed.
  */
 export const EVAL_ROLES = ["EVAL_LEAK_JUDGE", "STRING_CHECK", "QA_PLANNER"] as const;
