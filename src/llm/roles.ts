@@ -37,7 +37,7 @@ export type Role = (typeof ROLES)[number];
 
 export type RoleSpec = { provider: Provider; model: string; effort: Effort };
 
-/** Parses the `LLM_<ROLE>` value: `provider:model:effort`. */
+/** Parses one spec of an `LLM_<ROLE>` value: `provider:model:effort`. */
 export function parseRoleSpec(raw: string): RoleSpec {
   const parts = raw.split(":").map((part) => part.trim());
   if (parts.length !== 3 || parts.some((part) => part === "")) {
@@ -51,4 +51,19 @@ export function parseRoleSpec(raw: string): RoleSpec {
     throw new Error(`unknown effort "${effort}" (expected ${EFFORTS.join(" | ")})`);
   }
   return { provider: provider as Provider, model, effort: effort as Effort };
+}
+
+/**
+ * Parses a whole `LLM_<ROLE>` value: one spec, or several separated by commas. The first answers
+ * every call; each later one is tried only when the ones before it have failed.
+ */
+export function parseRoleChain(raw: string): RoleSpec[] {
+  return raw.split(",").map((part, index) => {
+    try {
+      return parseRoleSpec(part);
+    } catch (error) {
+      if (!raw.includes(",")) throw error;
+      throw new Error(`spec ${index + 1}: ${(error as Error).message}`);
+    }
+  });
 }

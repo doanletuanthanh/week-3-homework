@@ -271,4 +271,173 @@ describe("callModel", () => {
       expect(records.map((record) => record.ok)).toEqual([false, false, false]);
     });
   });
+  describe("fallback models", () => {
+    const PRIMARY = { provider: "openai", model: "gpt-6.1-terra", effort: "low" } as const;
+    const FALLBACK = { provider: "google", model: "gemini-3.8-flash", effort: "low" } as const;
+
+    /** One scripted client per model, so each attempt shows which model answered it. */
+    function chain(primarySteps: ScriptedStep[], fallbackSteps: ScriptedStep[]) {
+      const primary = scriptedModel(primarySteps);
+      const fallback = scriptedModel(fallbackSteps);
+      const records: LlmCallRecord[] = [];
+      const deps: Partial<CallModelDeps> = {
+        roleSpec: () => PRIMARY,
+        fallbackSpecs: () => [FALLBACK],
+        createModel: (spec) => (spec.model === PRIMARY.model ? primary.model : fallback.model),
+        recordCall: async (record) => void records.push(record),
+        attemptTimeoutMs: 1_000,
+      };
+      return { deps, records, primaryCalls: primary.calls, fallbackCalls: fallback.calls };
+    }
+    const rows = (records: LlmCallRecord[]) => records.map((record) => [record.attempt, record.model, record.ok]);
+    const rejected = (fields: Record<string, unknown>): ScriptedStep => ({ error: Object.assign(new Error("rejected"), fields) });
+    const noCredit = () => rejected({ status: 429, rateLimitType: "stop" });
+
+    /** Runs with console.warn captured, so the fallback log neither clutters the output nor goes unchecked. */
+    async function withWarnings<T>(run: () => Promise<T>): Promise<{ result: T; warnings: string[] }> {
+      const warnings: string[] = [];
+      const warn = console.warn;
+      console.warn = (line: string) => void warnings.push(line);
+      try {
+        return { result: await run(), warnings };
+      } finally {
+        console.warn = warn;
+      }
+    }
+
+    it("asks the fallback once the primary's retries are spent, and numbers every attempt across both", async () => {
+      const { deps, records } = chain([{ error: new Error("500") }, { error: new Error("500") }, { error: new Error("500") }], [{ text: "từ Google" }]);
+
+      const { result } = await withWarnings(() => callModel("PERSONA", messages, options, deps));
+
+      expect(result.output).toBe("từ Google");
+      expect(result.attempts).toBe(4);
+      expect(rows(records)).toEqual([
+        [1, "gpt-6.1-terra", false],
+        [2, "gpt-6.1-terra", false],
+        [3, "gpt-6.1-terra", false],
+        [4, "gemini-3.8-flash", true],
+      ]);
+      expect(result.costUsd).toBe(records[3].costUsd);
+    });
+
+    // Shapes read off the real clients: OpenAI's RateLimitError and Google's RequestError.
+    it.each([
+      ["OpenAI credit used up", { status: 429, code: "insufficient_quota", rateLimitType: "stop" }],
+      ["Google credit used up", { statusCode: 429, rateLimitType: "stop" }],
+      ["a bad key", { status: 401 }],
+      ["a bad key reported by the Google client", { statusCode: 401 }],
+    ])("goes to the fallback at once, without retrying, on %s", async (_case, fields) => {
+      const { deps, records, primaryCalls } = chain([rejected(fields), { text: "never used" }], [{ text: "được" }]);
+
+      const { result } = await withWarnings(() => callModel("PERSONA", messages, options, deps));
+
+      expect(result.output).toBe("được");
+      expect(primaryCalls).toHaveLength(1);
+      expect(rows(records)).toEqual([
+        [1, "gpt-6.1-terra", false],
+        [2, "gemini-3.8-flash", true],
+      ]);
+    });
+
+    it("still retries a passing rate limit on the primary", async () => {
+      const { deps, records } = chain([rejected({ status: 429, rateLimitType: "capacity" }), { text: "lần hai" }], []);
+
+      const result = await callModel("PERSONA", messages, options, deps);
+
+      expect(result.output).toBe("lần hai");
+      expect(rows(records)).toEqual([
+        [1, "gpt-6.1-terra", false],
+        [2, "gpt-6.1-terra", true],
+      ]);
+    });
+
+    it("does not fall back once a streamed piece was handed over", async () => {
+      const { deps, records, fallbackCalls } = chain([{ text: "một hai ba", failAfterChunks: 1 }], [{ text: "không dùng" }]);
+      const pieces: string[] = [];
+
+      await expect(callModel("PERSONA", messages, { ...options, onDelta: (text) => pieces.push(text) }, deps)).rejects.toMatchObject({
+        name: "LlmCallError",
+        attempts: 1,
+      });
+
+      expect(pieces).toEqual(["một "]);
+      expect(fallbackCalls).toHaveLength(0);
+      expect(records).toHaveLength(1);
+    });
+
+    it("falls back for a stream that failed before its first piece", async () => {
+      const { deps } = chain([noCredit()], [{ text: "từ Google" }]);
+      const pieces: string[] = [];
+
+      const { result } = await withWarnings(() => callModel("PERSONA", messages, { ...options, onDelta: (text) => pieces.push(text) }, deps));
+
+      expect(result.output).toBe("từ Google");
+      expect(pieces.join("")).toBe("từ Google");
+    });
+
+    it("does not fall back after the caller aborts", async () => {
+      const { deps, fallbackCalls } = chain([{ hang: true }], [{ text: "không dùng" }]);
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 20);
+
+      await expect(callModel("PERSONA", messages, { ...options, signal: controller.signal }, deps)).rejects.toBeInstanceOf(LlmCallError);
+
+      expect(fallbackCalls).toHaveLength(0);
+    });
+
+    it("fails with the total attempt count when every model of the chain failed", async () => {
+      const { deps, records } = chain([noCredit()], [noCredit()]);
+
+      await expect(withWarnings(() => callModel("PERSONA", messages, options, deps))).rejects.toMatchObject({ name: "LlmCallError", attempts: 2 });
+
+      expect(rows(records)).toEqual([
+        [1, "gpt-6.1-terra", false],
+        [2, "gemini-3.8-flash", false],
+      ]);
+    });
+
+    it("falls back when the primary never returns a valid structured object", async () => {
+      const schema = z.object({ label: z.enum(["open", "closed"]) });
+      const { deps, records } = chain([{ structured: {} }, { structured: {} }, { structured: {} }], [{ structured: { label: "open" } }]);
+
+      const { result } = await withWarnings(() => callModel("ANALYSIS", messages, { ...options, schema }, deps));
+
+      expect(result.output).toEqual({ label: "open" });
+      expect(records.at(-1)).toMatchObject({ model: "gemini-3.8-flash", ok: true, attempt: 4 });
+    });
+
+    it("logs each fallback with role, models and status only, never the error text", async () => {
+      const { deps } = chain([rejected({ status: 401, message: "prompt text" })], [{ text: "được" }]);
+
+      const { warnings } = await withWarnings(() => callModel("PERSONA", messages, options, deps));
+
+      expect(warnings).toEqual(["[callModel] PERSONA: gpt-6.1-terra failed (401), falling back to gemini-3.8-flash"]);
+    });
+
+    it("never falls back in an evaluation, so every score belongs to the model it names", async () => {
+      const { deps, records, fallbackCalls } = chain([noCredit()], [{ text: "không dùng" }]);
+
+      await expect(callModel("ANALYSIS", messages, { meta: {}, scope: { scope: "eval" } }, deps)).rejects.toMatchObject({ attempts: 1 });
+
+      expect(fallbackCalls).toHaveLength(0);
+      expect(rows(records)).toEqual([[1, "gpt-6.1-terra", false]]);
+    });
+
+    it("treats an insufficient_quota code as final even without the client's rate-limit marker", async () => {
+      const { deps, primaryCalls } = chain([rejected({ status: 429, code: "insufficient_quota" }), { text: "never used" }], [{ text: "được" }]);
+
+      const { result } = await withWarnings(() => callModel("PERSONA", messages, options, deps));
+
+      expect(result.output).toBe("được");
+      expect(primaryCalls).toHaveLength(1);
+    });
+
+    it("uses no fallback when the caller picks the model and names none", async () => {
+      const { deps, records } = harness([rejected({ status: 401 })]);
+
+      await expect(callModel("PERSONA", messages, options, deps)).rejects.toMatchObject({ attempts: 1 });
+      expect(records).toHaveLength(1);
+    });
+  });
 });

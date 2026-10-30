@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { costUsd, hasPrice } from "@/llm/pricing";
-import { parseRoleSpec } from "@/llm/roles";
+import { parseRoleChain, parseRoleSpec } from "@/llm/roles";
 
 describe("parseRoleSpec", () => {
   it("parses provider, model and effort", () => {
@@ -14,6 +14,22 @@ describe("parseRoleSpec", () => {
 
   it.each(["", "google", "google:gemini-3.8-flash", "google::low", "google:a:b:c"])("rejects %j", (raw) => {
     expect(() => parseRoleSpec(raw)).toThrow();
+  });
+});
+
+describe("parseRoleChain", () => {
+  it("reads one spec as a chain of one, and several in order", () => {
+    expect(parseRoleChain("openai:gpt-6-luna:low")).toEqual([{ provider: "openai", model: "gpt-6-luna", effort: "low" }]);
+    expect(parseRoleChain("openai:gpt-6.1-terra:low , google:gemini-3.8-flash:low")).toEqual([
+      { provider: "openai", model: "gpt-6.1-terra", effort: "low" },
+      { provider: "google", model: "gemini-3.8-flash", effort: "low" },
+    ]);
+  });
+
+  it("names the spec that is wrong, and keeps the plain message for a single spec", () => {
+    expect(() => parseRoleChain("openai:gpt-6-luna:low,azure:x:low")).toThrow(/^spec 2: unknown provider "azure"/);
+    expect(() => parseRoleChain("openai:gpt-6-luna:low,")).toThrow(/^spec 2: expected/);
+    expect(() => parseRoleChain("azure:x:low")).toThrow(/^unknown provider "azure"/);
   });
 });
 
@@ -37,6 +53,7 @@ describe("costUsd", () => {
 
   it("refuses a model without a price", () => {
     expect(hasPrice("gemini-3.8-flash")).toBe(true);
+    expect(hasPrice("gpt-6.1-terra")).toBe(true);
     expect(hasPrice("made-up")).toBe(false);
     expect(() => costUsd("made-up", { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, reasoningTokens: 0 })).toThrow(
       /no price configured/,

@@ -1,6 +1,7 @@
 /**
  * USD per 1M tokens, standard tier. Source: plans/reports/researcher-261003-1707-langgraph-llm-stack.md §3
- * (medium confidence). Confirm each price in the vendor console before pointing a role at the model.
+ * (medium confidence); the three gpt-6 prices were confirmed in the OpenAI console on 2026-10-30. Confirm each price
+ * in the vendor console before pointing a role at the model.
  */
 type Price = { input: number; cachedInput: number; output: number };
 
@@ -10,6 +11,7 @@ const PRICES: Record<string, Price> = {
   "gemini-3.5-flash-lite": { input: 0.3, cachedInput: 0.03, output: 2.5 },
   "gemini-3.1-flash-lite": { input: 0.25, cachedInput: 0.025, output: 1.5 },
   "gpt-6.1-sol": { input: 2, cachedInput: 0.1, output: 10 },
+  "gpt-6.1-terra": { input: 1, cachedInput: 0.05, output: 5 },
   "gpt-6-sol": { input: 2, cachedInput: 0.2, output: 10 },
   "gpt-6-luna": { input: 0.1, cachedInput: 0.01, output: 0.5 },
 };

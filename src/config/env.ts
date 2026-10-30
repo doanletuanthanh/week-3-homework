@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { QUOTA_HASH_SECRET_MIN_LENGTH } from "@/config/limits";
-import { parseRoleSpec, ROLES, type Role, type RoleSpec } from "@/llm/roles";
+import { parseRoleChain, ROLES, type Role, type RoleSpec } from "@/llm/roles";
 import { hasPrice } from "@/llm/pricing";
 
 /** Comma-separated emails, lower-cased so every comparison is case-insensitive. */
@@ -20,15 +20,19 @@ const optionalKey = z
   .optional()
   .transform((value) => value?.trim() || undefined);
 
-/** `provider:model:effort`, and the model must have a price so its cost can be recorded. */
+/**
+ * `provider:model:effort`, or a comma-separated chain of them tried in order (the later ones are
+ * fallbacks). Every model in the chain must have a price so its cost can be recorded.
+ */
 const roleSpec = z.string().transform((raw, ctx) => {
   try {
-    const spec = parseRoleSpec(raw);
-    if (!hasPrice(spec.model)) {
-      ctx.addIssue({ code: "custom", message: `no price configured for model "${spec.model}"` });
+    const chain = parseRoleChain(raw);
+    const unpriced = chain.find((spec) => !hasPrice(spec.model));
+    if (unpriced) {
+      ctx.addIssue({ code: "custom", message: `no price configured for model "${unpriced.model}"` });
       return z.NEVER;
     }
-    return spec;
+    return chain;
   } catch (error) {
     ctx.addIssue({ code: "custom", message: (error as Error).message });
     return z.NEVER;
@@ -82,7 +86,7 @@ const envSchema = z
 
     const keyByProvider = { google: "GOOGLE_API_KEY", openai: "OPENAI_API_KEY" } as const;
     for (const provider of ["google", "openai"] as const) {
-      const users = ROLES.filter((role) => env[`LLM_${role}`]?.provider === provider).map((role) => `LLM_${role}`);
+      const users = ROLES.filter((role) => env[`LLM_${role}`]?.some((spec) => spec.provider === provider)).map((role) => `LLM_${role}`);
       if (users.length > 0 && !env[keyByProvider[provider]]) {
         ctx.addIssue({
           code: "custom",
@@ -121,9 +125,19 @@ export function getEnv(): Env {
   return cached;
 }
 
-/** The model a role runs on. A CLI-only role that was left unset fails here, with the variable to set. */
+/** Every model a role may run on, primary first. A CLI-only role that was left unset fails here, with the variable to set. */
+export function roleChainFromEnv(role: Role): RoleSpec[] {
+  const chain = getEnv()[`LLM_${role}`];
+  if (!chain) throw new Error(`LLM_${role} is not set (expected "provider:model:effort" in .env.local)`);
+  return chain;
+}
+
+/** The model a role runs on: the first of its chain. */
 export function roleSpecFromEnv(role: Role): RoleSpec {
-  const spec = getEnv()[`LLM_${role}`];
-  if (!spec) throw new Error(`LLM_${role} is not set (expected "provider:model:effort" in .env.local)`);
-  return spec;
+  return roleChainFromEnv(role)[0];
+}
+
+/** The models a role falls back to, in order, after its primary has failed. */
+export function fallbackSpecsFromEnv(role: Role): RoleSpec[] {
+  return roleChainFromEnv(role).slice(1);
 }

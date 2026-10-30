@@ -25,7 +25,7 @@ describe("parseEnv", () => {
     const env = parseEnv({ ...valid, ADMIN_EMAILS: " Admin@Example.com , second@example.com ,," });
     expect(env.ADMIN_EMAILS).toEqual(["admin@example.com", "second@example.com"]);
     expect(env.DEMO_ACCOUNT_EMAILS).toEqual(["demo@example.com"]);
-    expect(env.LLM_PERSONA).toEqual({ provider: "google", model: "gemini-3.8-flash", effort: "low" });
+    expect(env.LLM_PERSONA).toEqual([{ provider: "google", model: "gemini-3.8-flash", effort: "low" }]);
   });
 
   it("treats missing email lists as empty", () => {
@@ -56,7 +56,7 @@ describe("parseEnv", () => {
   it("requires the API key of the provider a role uses", () => {
     expect(() => parseEnv({ ...valid, GOOGLE_API_KEY: undefined })).toThrow(/GOOGLE_API_KEY/);
     expect(() => parseEnv({ ...valid, LLM_PERSONA: "openai:gpt-6-luna:low" })).toThrow(/OPENAI_API_KEY/);
-    expect(parseEnv({ ...valid, LLM_PERSONA: "openai:gpt-6-luna:low", OPENAI_API_KEY: "o-key" }).LLM_PERSONA.provider).toBe(
+    expect(parseEnv({ ...valid, LLM_PERSONA: "openai:gpt-6-luna:low", OPENAI_API_KEY: "o-key" }).LLM_PERSONA[0].provider).toBe(
       "openai",
     );
   });
@@ -93,8 +93,8 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ ...valid, LLM_ANALYSIS: undefined })).toThrow(/LLM_ANALYSIS/);
     expect(() => parseEnv({ ...valid, LLM_REPLAY_JUDGE: undefined })).toThrow(/LLM_REPLAY_JUDGE/);
     const env = parseEnv(valid);
-    expect(env.LLM_ANALYSIS).toEqual({ provider: "google", model: "gemini-3.8-flash", effort: "low" });
-    expect(env.LLM_REPLAY_JUDGE).toEqual({ provider: "google", model: "gemini-3.5-flash-lite", effort: "low" });
+    expect(env.LLM_ANALYSIS).toEqual([{ provider: "google", model: "gemini-3.8-flash", effort: "low" }]);
+    expect(env.LLM_REPLAY_JUDGE).toEqual([{ provider: "google", model: "gemini-3.5-flash-lite", effort: "low" }]);
   });
 
   it("requires the key of every provider any role uses, and names the roles that need it", () => {
@@ -128,12 +128,12 @@ describe("parseEnv", () => {
       expect(() => parseEnv({ ...valid, [name]: undefined })).toThrow(new RegExp(name));
       expect(() => parseEnv({ ...valid, [name]: "  " })).toThrow(new RegExp(name));
     }
-    expect(parseEnv(valid).LLM_SCENARIO_GENERATOR).toEqual({ provider: "google", model: "gemini-3.8-flash", effort: "medium" });
+    expect(parseEnv(valid).LLM_SCENARIO_GENERATOR).toEqual([{ provider: "google", model: "gemini-3.8-flash", effort: "medium" }]);
   });
 
   it("checks a CLI role like any other once it is set: format, price and provider key", () => {
     const env = parseEnv({ ...valid, LLM_QA_PLANNER: "google:gemini-3.5-flash:medium", GOOGLE_API_KEY_BATCH: "g-batch" });
-    expect(env.LLM_QA_PLANNER).toEqual({ provider: "google", model: "gemini-3.5-flash", effort: "medium" });
+    expect(env.LLM_QA_PLANNER).toEqual([{ provider: "google", model: "gemini-3.5-flash", effort: "medium" }]);
     expect(env.GOOGLE_API_KEY_BATCH).toBe("g-batch");
     expect(() => parseEnv({ ...valid, LLM_EVAL_LEAK_JUDGE: "google:gemini-unknown:low" })).toThrow(/LLM_EVAL_LEAK_JUDGE: no price configured/);
     expect(() => parseEnv({ ...valid, LLM_STRING_CHECK: "gemini" })).toThrow(/LLM_STRING_CHECK: expected "provider:model:effort"/);
@@ -142,5 +142,30 @@ describe("parseEnv", () => {
     );
     // The batch key is an extra, not a substitute: the provider's own key is still required.
     expect(() => parseEnv({ ...valid, LLM_EVAL_LEAK_JUDGE: "openai:gpt-6-luna:low", OPENAI_API_KEY_BATCH: "o-batch" })).toThrow(/OPENAI_API_KEY/);
+  });
+  it("accepts a chain of models tried in order, and checks every model of it", () => {
+    const chain = "openai:gpt-6.1-terra:low, google:gemini-3.8-flash:low";
+    const env = parseEnv({ ...valid, LLM_PERSONA: chain, OPENAI_API_KEY: "o-key" });
+    expect(env.LLM_PERSONA).toEqual([
+      { provider: "openai", model: "gpt-6.1-terra", effort: "low" },
+      { provider: "google", model: "gemini-3.8-flash", effort: "low" },
+    ]);
+    expect(() => parseEnv({ ...valid, LLM_PERSONA: "openai:gpt-6.1-terra:low,google:gemini-unknown:low", OPENAI_API_KEY: "o-key" })).toThrow(
+      /LLM_PERSONA: no price configured for model "gemini-unknown"/,
+    );
+    expect(() => parseEnv({ ...valid, LLM_PERSONA: "openai:gpt-6.1-terra:low,azure:x:low", OPENAI_API_KEY: "o-key" })).toThrow(
+      /LLM_PERSONA: spec 2: unknown provider "azure"/,
+    );
+    expect(() => parseEnv({ ...valid, LLM_PERSONA: "openai:gpt-6.1-terra:low,", OPENAI_API_KEY: "o-key" })).toThrow(/LLM_PERSONA: spec 2/);
+  });
+
+  it("requires the key of a provider that only a fallback uses", () => {
+    const openAi = "openai:gpt-6-luna:low";
+    const allOpenAi = Object.fromEntries(Object.entries(valid).map(([name, value]) => [name, name.startsWith("LLM_") ? openAi : value]));
+    const withGoogleFallback = { ...allOpenAi, LLM_PERSONA: `${openAi},google:gemini-3.8-flash:low`, OPENAI_API_KEY: "o-key" };
+    expect(() => parseEnv({ ...withGoogleFallback, GOOGLE_API_KEY: undefined })).toThrow(
+      /GOOGLE_API_KEY: required because LLM_PERSONA uses provider "google"/,
+    );
+    expect(() => parseEnv(withGoogleFallback)).not.toThrow();
   });
 });

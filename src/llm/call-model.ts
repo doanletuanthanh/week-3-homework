@@ -2,7 +2,7 @@ import { awaitAllCallbacks } from "@langchain/core/callbacks/promises";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { AIMessage, AIMessageChunk, BaseMessage } from "@langchain/core/messages";
 import type { z } from "zod";
-import { roleSpecFromEnv } from "@/config/env";
+import { fallbackSpecsFromEnv, roleSpecFromEnv } from "@/config/env";
 import { LLM_ATTEMPT_TIMEOUT_MS, LLM_MAX_RETRIES, MAX_OUTPUT_TOKENS } from "@/config/limits";
 import { getDb } from "@/db/client";
 import { recordLlmCall, type LlmCallRecord } from "@/db/repo/llm-calls";
@@ -41,6 +41,11 @@ export type CallModelResult<T> = {
 /** Seams for tests: the provider client and the `llm_call` writer. */
 export type CallModelDeps = {
   roleSpec: (role: Role) => RoleSpec;
+  /**
+   * The models tried, in order, once the role's model has failed for good. A caller that sets
+   * `roleSpec` has picked the one model it wants, so it gets no fallbacks unless it sets these too.
+   */
+  fallbackSpecs: (role: Role) => RoleSpec[];
   createModel: (spec: RoleSpec, options?: ModelOptions) => BaseChatModel;
   recordCall: (record: LlmCallRecord) => Promise<void>;
   attemptTimeoutMs: number;
@@ -71,6 +76,7 @@ export const recordCallToDb: CallModelDeps["recordCall"] = async (record) => {
 
 const defaultDeps: CallModelDeps = {
   roleSpec: roleSpecFromEnv,
+  fallbackSpecs: fallbackSpecsFromEnv,
   createModel: (spec, options) => createChatModel(spec, options),
   recordCall: recordCallToDb,
   attemptTimeoutMs: LLM_ATTEMPT_TIMEOUT_MS,
@@ -109,21 +115,35 @@ class BilledAttemptError extends Error {
   }
 }
 
+type ProviderError = { status?: unknown; statusCode?: unknown; rateLimitType?: unknown; code?: unknown };
+
 /**
- * A request the provider rejected (bad key, bad request, blocked content) fails the same way
- * every time, so it is not repeated. Timeouts, rate limits, server errors and bad replies are.
+ * A request the provider rejected (bad key, bad request, blocked content, credit or quota used
+ * up) fails the same way every time, so it is not repeated. Timeouts, passing rate limits, server
+ * errors and bad replies are. The OpenAI client reports the HTTP status as `status`, the Google
+ * client as `statusCode`; both mark a 429 that waiting will not cure with `rateLimitType: "stop"`
+ * (OpenAI also with the code `insufficient_quota`).
  */
 function isRetryable(error: unknown): boolean {
-  const status = (error as { status?: unknown } | null)?.status;
-  if (typeof status !== "number") return true;
-  return status < 400 || status >= 500 || status === 408 || status === 429;
+  const { status, statusCode, rateLimitType, code: errorCode } = (error ?? {}) as ProviderError;
+  if (rateLimitType === "stop" || errorCode === "insufficient_quota") return false;
+  const code = typeof status === "number" ? status : statusCode;
+  if (typeof code !== "number") return true;
+  return code < 400 || code >= 500 || code === 408 || code === 429;
+}
+
+function statusOf(error: unknown): string {
+  const { status, statusCode } = (error ?? {}) as ProviderError;
+  return String(typeof status === "number" ? status : (statusCode ?? "no status"));
 }
 
 /**
  * The single entry point for model calls. Resolves the role to provider, model and effort from
  * env, applies a per-attempt timeout, retries technical failures, writes one `llm_call` row per
- * attempt (success or failure) as it returns, and flushes tracing before resolving. With
- * `onDelta` the reply is streamed; a technical retry is then possible only before the first piece.
+ * attempt (success or failure) as it returns, and flushes tracing before resolving. When the
+ * role's model fails for good (retries spent, or a failure no retry can fix), the role's fallback
+ * models are tried in turn, each with its own retries. With `onDelta` the reply is streamed; a
+ * retry or a fallback is then possible only before the first piece.
  */
 export async function callModel(
   role: Role,
@@ -143,11 +163,16 @@ export async function callModel<T>(
   options: CallModelOptions<T>,
   depsOverride: Partial<CallModelDeps> = {},
 ): Promise<CallModelResult<T | string>> {
-  const deps = { ...defaultDeps, ...depsOverride };
+  const deps: CallModelDeps = {
+    ...defaultDeps,
+    ...(depsOverride.roleSpec && !depsOverride.fallbackSpecs ? { fallbackSpecs: () => [] } : {}),
+    ...depsOverride,
+  };
   const messages = deps.rewriteMessages ? deps.rewriteMessages(role, builtMessages) : builtMessages;
-  const spec = deps.roleSpec(role);
-  const model = deps.createModel(spec, { maxOutputTokens: MAX_OUTPUT_TOKENS[role] });
   const { schema, scope, onDelta } = options;
+  // An evaluation measures one model: a reply from a fallback would be scored, cached and priced
+  // as the primary's. A failed eval call fails, and the operator reruns it.
+  const specs = [deps.roleSpec(role), ...(scope.scope === "eval" ? [] : deps.fallbackSpecs(role))];
   const signal = options.signal && deps.signal ? AbortSignal.any([options.signal, deps.signal]) : (options.signal ?? deps.signal);
   let deltaSent = false;
   const runConfig = {
@@ -156,7 +181,7 @@ export async function callModel<T>(
     metadata: { ...options.meta, call_role: role },
   };
 
-  const runAttempt = async (attemptSignal: AbortSignal): Promise<{ output: T | string; usage: TokenUsage }> => {
+  const runAttempt = async (model: BaseChatModel, attemptSignal: AbortSignal): Promise<{ output: T | string; usage: TokenUsage }> => {
     const config = { ...runConfig, signal: attemptSignal };
     if (schema) {
       // includeRaw keeps the AIMessage, which is the only place usage is reported.
@@ -190,51 +215,64 @@ export async function callModel<T>(
 
   try {
     let lastError: unknown;
-    for (let attempt = 1; attempt <= LLM_MAX_RETRIES + 1; attempt++) {
-      const startedAt = Date.now();
-      const timeout = AbortSignal.timeout(deps.attemptTimeoutMs);
-      const attemptSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-      const record = (ok: boolean, usage: TokenUsage) => {
-        const cost = costUsd(spec.model, usage, deps.priceTier?.(spec));
-        const latencyMs = Date.now() - startedAt;
-        return deps
-          .recordCall({
-            scope: scope.scope,
-            sessionId: scope.sessionId,
-            branchId: scope.branchId,
-            turnIndex: scope.turnIndex,
-            attemptId: scope.attemptId,
-            role,
-            model: spec.model,
-            tokensIn: usage.inputTokens,
-            tokensOut: usage.outputTokens,
-            tokensCached: usage.cachedInputTokens,
-            tokensReasoning: usage.reasoningTokens,
-            costUsd: cost,
-            latencyMs,
-            attempt,
-            ok,
-          })
-          .then(() => ({ cost, latencyMs }));
-      };
-
-      // Only the model attempt is guarded. A failure to write the `llm_call` row is not a model
-      // failure: it propagates as it is, and the model is never called again because of it.
-      let result: Awaited<ReturnType<typeof runAttempt>> | undefined;
-      try {
-        result = await runAttempt(attemptSignal);
-      } catch (error) {
-        lastError = error;
+    // Counts every attempt of the call, across the chain, so each `llm_call` row has its own number.
+    let attempt = 0;
+    for (const [index, spec] of specs.entries()) {
+      if (index > 0) {
+        // Role, models and status only: never the prompt or the reply.
+        console.warn(`[callModel] ${role}: ${specs[index - 1].model} failed (${statusOf(lastError)}), falling back to ${spec.model}`);
       }
+      const model = deps.createModel(spec, { maxOutputTokens: MAX_OUTPUT_TOKENS[role] });
+      for (let specAttempt = 1; specAttempt <= LLM_MAX_RETRIES + 1; specAttempt++) {
+        attempt++;
+        const startedAt = Date.now();
+        const timeout = AbortSignal.timeout(deps.attemptTimeoutMs);
+        const attemptSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+        const record = (ok: boolean, usage: TokenUsage) => {
+          const cost = costUsd(spec.model, usage, deps.priceTier?.(spec));
+          const latencyMs = Date.now() - startedAt;
+          return deps
+            .recordCall({
+              scope: scope.scope,
+              sessionId: scope.sessionId,
+              branchId: scope.branchId,
+              turnIndex: scope.turnIndex,
+              attemptId: scope.attemptId,
+              role,
+              model: spec.model,
+              tokensIn: usage.inputTokens,
+              tokensOut: usage.outputTokens,
+              tokensCached: usage.cachedInputTokens,
+              tokensReasoning: usage.reasoningTokens,
+              costUsd: cost,
+              latencyMs,
+              attempt,
+              ok,
+            })
+            .then(() => ({ cost, latencyMs }));
+        };
 
-      if (result) {
-        const { cost, latencyMs } = await record(true, result.usage);
-        return { output: result.output, usage: result.usage, costUsd: cost, latencyMs, attempts: attempt };
+        // Only the model attempt is guarded. A failure to write the `llm_call` row is not a model
+        // failure: it propagates as it is, and the model is never called again because of it.
+        let result: Awaited<ReturnType<typeof runAttempt>> | undefined;
+        try {
+          result = await runAttempt(model, attemptSignal);
+        } catch (error) {
+          lastError = error;
+        }
+
+        if (result) {
+          const { cost, latencyMs } = await record(true, result.usage);
+          return { output: result.output, usage: result.usage, costUsd: cost, latencyMs, attempts: attempt };
+        }
+        await record(false, lastError instanceof BilledAttemptError ? lastError.usage : ZERO_USAGE);
+        // Text already handed over, or a caller that gave up: no other model may answer instead.
+        if (signal?.aborted || deltaSent) throw new LlmCallError(role, attempt, lastError);
+        // The same request would fail the same way on this model: go to the next one, if any.
+        if (!isRetryable(lastError)) break;
       }
-      await record(false, lastError instanceof BilledAttemptError ? lastError.usage : ZERO_USAGE);
-      if (signal?.aborted || deltaSent || !isRetryable(lastError)) throw new LlmCallError(role, attempt, lastError);
     }
-    throw new LlmCallError(role, LLM_MAX_RETRIES + 1, lastError);
+    throw new LlmCallError(role, attempt, lastError);
   } finally {
     // Serverless: tracing callbacks must finish before the function is frozen.
     await awaitAllCallbacks();
