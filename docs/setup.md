@@ -36,12 +36,12 @@ pnpm test:e2e            # builds the app, starts it on port 3100 with a model s
 
 ### 2.3 Model and tracing keys
 
-- `GOOGLE_API_KEY`: a Gemini API key. Before real learners, use a key from a billing-enabled project (see `docs/launch-checklist.md`).
-- `OPENAI_API_KEY`: an OpenAI API key.
+- `OPENAI_API_KEY`: an OpenAI API key. Every role runs on OpenAI first.
+- `GOOGLE_API_KEY`: a Gemini API key for the fallback specs. Before real learners, use a key from a billing-enabled project (see `docs/launch-checklist.md`).
 - `LANGSMITH_API_KEY`: a LangSmith key, or set `LANGSMITH_TRACING=false`.
 - Optional `GOOGLE_API_KEY_BATCH` and `OPENAI_API_KEY_BATCH`: second keys for the CLI and scenario generation, so their load does not share a rate limit with live turns.
 
-Each model call role has its own variable (`LLM_ANALYSIS`, `LLM_PERSONA`, ...) in the form `provider:model:effort`. Confirm every model ID and its price in the vendor console first: a model without a price in `src/llm/pricing.ts` stops the app at start.
+Each model call role has its own variable (`LLM_ANALYSIS`, `LLM_PERSONA`, ...): a comma-separated chain of `provider:model:effort` specs, tried in order when one is exhausted. `.env.example` holds the measured chains. Confirm every model ID and its price in the vendor console first: a model without a price in `src/llm/pricing.ts` stops the app at start.
 
 ### 2.4 Environment file
 

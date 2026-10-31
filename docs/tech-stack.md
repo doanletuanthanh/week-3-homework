@@ -13,7 +13,7 @@ Approved 2026-10-03. Product requirements were `_bmad-output/planning-artifacts/
 | Authorization | `user_id` filter in one repository layer | RLS enabled on every table with no policies, anon/authenticated grants revoked, so the publishable key reads nothing |
 | Auth | Supabase Auth, Google OAuth, `@supabase/ssr` | Verify with `getClaims()` in every handler; admin and demo accounts come from `ADMIN_EMAILS` and `DEMO_ACCOUNT_EMAILS` |
 | Agent engine | LangGraph JS 1.x, no checkpointer | State lives in `turn` / `snapshot`; one DB transaction per turn after the graph returns |
-| Models | Gemini only: 3.8 Flash for the persona, analysis, generators, moderation and safety; 3.5 Flash-Lite for the turn judge, end judge and verifier | One env var per call role. Each role runs the cheapest model that passed its judgement set three times in three; roles without a set stay on Flash (`plans/reports/model-tiering-261014-2250-judgement-sets.md`). Writer and checker are no longer different families: separate calls and prompts, and the sets, stand in for that |
+| Models | OpenAI first, Google as a per-call fallback: `gpt-6.1-terra` for the persona, analysis, feedback and the operator roles; `gpt-6-luna` for the turn judge, end judge, verifier, moderation, safety and the string check; `gpt-6.1-sol` for scenario generation | One env var per call role, a chain `LLM_<ROLE>=spec[,spec…]` with each spec `provider:model:effort`. When a spec fails for good (its retries spent, or an error no retry can fix, such as a spent quota) the call runs on the next one; a streamed reply switches only before its first piece, and an eval call never falls back, so it measures one model. Every attempt writes its own `llm_call` row. Each role runs the cheapest model that passed its judgement set three times in three (`plans/reports/model-tiering-261030-openai.md`); roles without a set stay on Terra. The plain voice of persona, generator and feedback text is set in the prompts and measured by the eval-only `voice-judge` set, never filtered at runtime |
 | Tracing | LangSmith | Full prompts and replies, plus metadata: session, turn, call role. Flush before the function ends. Off for CLI eval runs unless `--trace` is given (free plan: 5k traces/month, 14-day retention) |
 | Background work | `after()` + job row + heartbeat, `maxDuration = 300` | Reveal, custom-scenario generation and the lean eval. Poll endpoint marks stale jobs failed or hands them to a new runner; no cron |
 | Persona evaluation | Persona QA agent (LangGraph plan → execute → judge → reflect) as a resumable job | Started from `/admin/scenarios` or `pnpm il eval`; under 0.10 USD a persona (`eval_lean_budget_usd`) |
@@ -30,6 +30,8 @@ Approved 2026-10-03. Product requirements were `_bmad-output/planning-artifacts/
 - **There is an admin console** (`/admin`), where the PRD had only the operator CLI in this slice.
 - **Unpublished personas are playable by every learner** until the `require_published` config row is turned on; the publish gate still runs and records its result.
 - **Anonymous quota counters survive account deletion**, keyed by a keyed hash of the Google account, with no learner content.
+- **A learner may play a persona again after finishing it** (FR-5 lifted, user decision 2026-10-29). At most one unfinished session per persona and learner; only `session_daily_cap_usd` bounds spend.
+- **The result screen no longer lists untold items.** It shows at most 3 hints for next time (the topic to ask about, how to ask, and a suggested question behind a tap) and one count line for the rest. No untold item text reaches a learner's browser in any state.
 - **LangSmith receives full prompts and replies in every environment.** The data notice names it; traces are not removed by account deletion and expire with LangSmith retention.
 
 ## Measured numbers
@@ -41,7 +43,7 @@ None yet: the app has not been deployed. `pnpm il measure-latency` measures turn
 The full list, with status, is `docs/launch-checklist.md`.
 
 
-- Switch the Gemini key to a billing-enabled project: free-tier content is used to improve Google products (PRD §12.4).
+- OpenAI does not train on API data unless the organization opts in, and keeps abuse-monitoring logs, which can hold prompts and replies, for up to 30 days ([OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data)). The Google fallback key should still come from a billing-enabled project: free-tier content is used to improve Google products (PRD §12.4).
 - Move off Vercel Hobby if the product charges anyone.
 - Measure p95 turn latency in Vietnamese on the deployed app before locking model IDs (NFR-2: ≤ 6 s).
 - Supabase free projects may pause after 7 days of low activity.

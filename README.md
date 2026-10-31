@@ -1,6 +1,6 @@
 # InterviewLab
 
-A Vietnamese web app for practising user interviews. A learner interviews an AI persona that holds 8–12 things it will only say when asked well, takes notes, guesses how much it was told, then sees what the persona told (KHAI THÁC) and what the notes caught (NHẬN BIẾT), replays the moment it missed, and takes home a habit sheet. Personas are grouped into topics in a library with a role filter (UX, BA, PM). A learner can also have a persona generated for a topic of their own.
+A Vietnamese web app for practising user interviews. A learner interviews an AI persona that holds 8–12 things it will only say when asked well, takes notes, guesses how much it was told, then sees what the persona told (KHAI THÁC) and what the notes caught (NHẬN BIẾT), replays the moment it missed, takes home a habit sheet, and gets up to three hints for playing the persona again from the start. Personas are grouped into topics in a library with a role filter (UX, BA, PM). A learner can also have a persona generated for a topic of their own.
 
 Next.js 16 (App Router) on Vercel, Supabase Postgres and Auth (Google sign-in), LangGraph JS with Gemini and OpenAI models, LangSmith tracing. The reasons for each choice are in [docs/tech-stack.md](docs/tech-stack.md).
 
